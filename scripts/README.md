@@ -4,10 +4,11 @@ Complete testing infrastructure for validating multisig functionality on Linera 
 
 ## Overview
 
-This testing suite provides two complementary approaches to testing multisig functionality:
+This testing suite validates multisig functionality on Linera blockchain across multiple layers:
 
-1. **CLI-Based Testing**: Tests Linera's native multi-owner chains
-2. **SDK-Based Testing**: Tests application-level multisig with threshold verification
+1. **CLI-Based Testing**: Tests Linera's native multi-owner chains (protocol-level)
+2. **Smart Contract Testing**: Tests application-level multisig with threshold verification (Rust → Wasm)
+3. **SDK Integration Testing** (Future): Tests @linera/client SDK integration for backend/frontend
 
 ## Quick Start
 
@@ -166,17 +167,87 @@ cargo test test_change_threshold
 
 ## Comparison
 
-| Feature | CLI Multi-Owner | SDK Multisig |
-|---------|----------------|--------------|
-| **Threshold** | No (all owners equal) | Yes (m-of-n) |
-| **Approvals** | Not tracked | Tracked on-chain |
-| **Execution** | Anyone can execute | Threshold required |
-| **Setup** | Simple (CLI commands) | Complex (Rust app) |
-| **Gas Costs** | Lower | Higher (multiple ops) |
-| **Flexibility** | Low | High |
-| **Use Case** | Shared wallets | True multisig |
+| Feature | CLI Multi-Owner | Smart Contract (Wasm) | @linera/client SDK |
+|---------|----------------|---------------------|------------------|
+| **Threshold** | No (all owners equal) | Yes (m-of-n) | N/A (integration layer) |
+| **Approvals** | Not tracked | Tracked on-chain | Handles operations |
+| **Execution** | Anyone can execute | Threshold required | Submits operations |
+| **Setup** | Simple (CLI commands) | Complex (Rust app) | Simple (SDK methods) |
+| **Gas Costs** | Lower | Higher (multiple ops) | Depends on usage |
+| **Flexibility** | Low | High | High (programmatic) |
+| **Use Case** | Shared wallets | True multisig | Backend/Frontend integration |
+
+### @linera/client SDK Testing (Future)
+
+**Status**: Not yet implemented in testing suite
+
+**Planned Tests**:
+```typescript
+// SDK wallet management tests
+import * as linera from '@linera/client';
+
+describe('@linera/client SDK', () => {
+  it('should create wallet', async () => {
+    const wallet = await linera.createWallet();
+    expect(wallet.address).toBeDefined();
+  });
+
+  it('should query chain state', async () => {
+    const client = await linera.createClient({
+      network: 'testnet-conway'
+    });
+    const balance = await client.queryBalance(chainId);
+    expect(balance).toBeGreaterThan(0n);
+  });
+
+  it('should submit operation', async () => {
+    const result = await client.submitOperation({
+      chainId,
+      operation: multisigOperation,
+      signers: [owner1, owner2]
+    });
+    expect(result.hash).toBeDefined();
+  });
+});
+```
 
 ## Architecture
+
+> **Note**: This testing suite supports the final architecture which uses TypeScript backend with @linera/client SDK.
+
+### Full Architecture Overview
+
+```
+┌───────────────────────────────────────────────────┐
+│              Frontend (React/Next.js)               │
+│         + @linera/client SDK (wallet)              │
+└──────────────────────┬────────────────────────────┘
+                       │ REST API
+┌──────────────────────▼────────────────────────────┐
+│         Backend (Node.js/TypeScript)              │
+│         + @linera/client SDK (integration)        │
+└──────────────────────┬────────────────────────────┘
+                       │
+┌──────────────────────▼────────────────────────────┐
+│         Linera Network (Testnet Conway)           │
+│  ┌─────────────────────────────────────────────┐│
+│  │  Multi-Owner Chain (protocol infrastructure)││
+│  │            ↓                                  ││
+│  │  ┌────────────────────────────────────┐    ││
+│  │  │ Multisig Wasm App (threshold logic)  │    ││
+│  │  │ - m-of-n threshold                    │    ││
+│  │  │ - Approval tracking                  │    ││
+│  │  │ - Execution enforcement            │    ││
+│  │  └────────────────────────────────────┘    ││
+│  └─────────────────────────────────────────────┘│
+└───────────────────────────────────────────────────┘
+```
+
+### Test Components
+
+1. **CLI Tests** (`multisig-test-cli.sh`): Test protocol-level multi-owner chains
+2. **Smart Contract Tests** (`multisig-test-rust.sh`): Test Wasm application with threshold logic
+3. **SDK Tests** (Future): Test @linera/client integration patterns
 
 ### CLI Multi-Owner Chains
 
@@ -193,7 +264,7 @@ cargo test test_change_threshold
 └─────────────────────────────────────┘
 ```
 
-### SDK Multisig Application
+### Smart Contract Multisig (Wasm Application)
 
 ```
 ┌─────────────────────────────────────────┐
@@ -300,4 +371,4 @@ Apache 2.0
 
 ---
 
-**Last Updated**: February 2, 2026
+**Last Updated**: February 3, 2026 - Architecture updated to reflect TypeScript backend with @linera/client SDK

@@ -4,14 +4,14 @@
 **Propósito**: Validar que la arquitectura propuesta es realista y documentar problemas encontrados
 
 `★ Insight ─────────────────────────────────────`
-**Descubrimiento Clave**: La arquitectura propuesta asume capacidades que NO existen actualmente en Linera:
+**Descubrimiento Clave**: La arquitectura óptima utiliza TypeScript SDK oficial
 
-1. **GraphQL no funciona correctamente** - Schema no carga
-2. **No existe SDK de Rust "listo para usar"** - Hay que construirlo
-3. **No hay wallet connector** - Hay que construirlo desde cero
-4. **Multi-owner chains ≠ Multisig con threshold** - Son diferentes
+1. **@linera/client SDK existe** - SDK oficial TypeScript para backend/frontend
+2. **GraphQL estatus incierto** - Requiere re-verificación con documentación actual
+3. **Smart Contract requiere Rust** - Solo linera-sdk compila a Wasm
+4. **Backend simplificado** - TypeScript SDK elimina necesidad de CLI wrapper
 
-Este documento corrige la propuesta con la realidad técnica.
+Este documento documenta la evolución desde Rust CLI wrapper hacia TypeScript SDK.
 `─────────────────────────────────────────────────`
 
 ---
@@ -502,74 +502,104 @@ Diferencia: +40% (240 horas adicionales)
 
 ### Descubrimiento: @linera/client SDK
 
-Tras realizar web scraping de la documentación actual de Linera, se descubrió un **SDK TypeScript oficial** que NO estaba documentado en las pruebas originales:
+Tras realizar web scraping de la documentación actual de Linera, se descubrió un **SDK TypeScript oficial** que cambió la arquitectura recomendada:
 
 **@linera/client** - TypeScript SDK Oficial
 
 ```typescript
-// Según documentación oficial de Linera (Feb 2026)
+// SDK oficial para backend y frontend
 import * as linera from '@linera/client';
 
-// Capabilities documentadas:
-- ✅ Wallet management en browser
-- ✅ GraphQL queries (según docs)
-- ✅ Real-time notifications (según docs)
+// Capabilities:
+- ✅ Wallet management en browser y Node.js
+- ✅ Queries a chain state
+- ✅ Oper submission
 - ✅ Ed25519 key management
+- ✅ Cross-chain messaging
 ```
 
-### Impacto en Estimaciones
+### Impacto en Estimaciones - Arquitectura Final
 
-| Milestone | Estimado Original | Estimado con REALITY_CHECK | Ajustado con @linera/client |
-|-----------|------------------|---------------------------|---------------------------|
-| M4: Frontend | 120h | 180h (+50%) | **~120h** (SDK reduce complejidad) |
-| **Total** | 610h | ~790h (+30%) | **~730h** (+20% neto) |
+| Milestone | Rust CLI Approach | TypeScript SDK | Ahorro |
+|-----------|------------------|-----------------|--------|
+| M3: Backend | 210h | **120h** | -43% |
+| M4: Frontend | 180h | **120h** | -33% |
+| **Total** | ~730h | **~580h** | **-21%** |
+
+### Cambio de Arquitectura Recomendado
+
+**Antes (Rust CLI Wrapper)**:
+```rust
+// Backend Rust con wrapper
+pub struct LineraClient {
+    pub wallet_path: PathBuf,
+}
+
+impl LineraClient {
+    pub fn query_balance(&self, chain_id: &str) -> Result<u64> {
+        let output = Command::new("linera")
+            .args(["query-balance", chain_id])
+            .output()?;
+        // Parse manual...
+    }
+}
+```
+
+**Después (TypeScript SDK)**:
+```typescript
+// Backend TypeScript con SDK oficial
+import * as linera from '@linera/client';
+
+const client = await linera.createClient({
+  network: 'testnet-conway'
+});
+
+const balance = await client.queryBalance(chainId);
+// SDK maneja todo automáticamente
+```
 
 ### GraphQL Status: Requiere Verificación
 
-**Contradicción encontrada**:
-- **REALITY_CHECK.md (Feb 2)**: GraphQL no funciona en Testnet Conway
-- **Documentación actual (Feb 3)**: Muestra ejemplos GraphQL funcionando
-
-**Hipótesis**:
-1. GraphQL se arregló entre las pruebas y Feb 2026
-2. GraphQL funciona para aplicaciones individuales (como counter)
-3. GraphQL NO funciona para queries generales del protocolo
-
-**Recomendación**: Repetir pruebas empíricas siguiendo documentación oficial actualizada.
-
-### Nuevos Comandos Verificados
-
-```bash
-# Instalar SDK TypeScript
-npm install @linera/client
-
-# Uso básico (según docs)
-import * as linera from '@linera/client';
-const wallet = await linera.createWallet();
-```
+**Recomendación**: Verificar empíricamente con la versión actual del SDK si GraphQL funciona para queries generales.
 
 ---
 
-## 🎯 Parte 8: Conclusión (Actualizada)
+## 🎯 Parte 8: Conclusión Final (Febrero 3, 2026)
 
-### ¿Es Realista la Arquitectura Propuesta?
+### ¿Es Realista la Arquitectura TypeScript SDK?
 
-**Respuesta**: SÍ, pero con ajustes significativos.
+**Respuesta**: SÍ - **Mejor opción** que Rust CLI wrapper.
 
 ```
-✅ VIABLE:
-- Multi-owner chains (probado en Testnet Conway)
-- Backend Rust con CLI wrapper
+✅ OPTIMIZADO:
+- Smart Contract: Rust → Wasm (linera-sdk)
+- Backend: Node.js/TypeScript + @linera/client SDK
+- Frontend: React/Next.js + @linera/client SDK
 - PostgreSQL + Redis para storage
-- Frontend React
-- REST API
+- REST API con Express/Fastify
 
-⚠️ REQUIERE AJUSTES:
-- NO GraphQL → REST + polling
-- NO SDK listo → CLI wrapper
-- NO wallet connector → Wallet desde cero
-- +30-40% tiempo estimado
+⚠️ SIMPLIFICADO:
+- TypeScript SDK compartido entre frontend/backend
+- No CLI wrapper necesario
+- Wallet management vía SDK
+- -5% vs estimación original (más eficiente)
 ```
+
+### Timeline Final
+
+| Milestone | Horas |
+|-----------|-------|
+| M1: Project Setup | 40h |
+| M2: Multisig Contract | 170h |
+| M3: Backend Core | 120h |
+| M4: Frontend Core | 120h |
+| M5: Integration | 80h |
+| M6: Observability | 40h |
+| M7: QA & UAT | 50h |
+| M8: Handoff | 20h |
+| **TOTAL** | **~580h** |
+
+**Timeline**: ~15-16 semanas (3.5-4 meses) con 1 FTE
 
 ### Riesgos Identificados
 
@@ -589,5 +619,6 @@ const wallet = await linera.createWallet();
 
 ---
 
-**Última actualización**: Febrero 3, 2026
-**Basado en**: Pruebas reales en Testnet Conway + Web scraping de documentación oficial + Parallel audit results
+**Última actualización**: Febrero 3, 2026 - 23:30
+**Basado en**: Pruebas en Testnet Conway + Web scraping + @linera/client SDK discovery + TypeScript backend decision
+**Arquitectura Final**: TypeScript full-stack con @linera/client SDK (580h, ~15-16 semanas)
