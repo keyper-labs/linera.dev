@@ -158,27 +158,41 @@ graph TB
     style Contract fill:#c8e6c9
     style Inboxes fill:#fff9c4
     style Validators fill:#fff9c4
-``` ### Linera Integration Approach **Important**: Linera's multisig approach differs from traditional chains: **Primary Method: Application-Level Multisig on Multi-Owner Chains**
+```
+
+### Linera Integration Approach
+
+**Important**: Linera's multisig approach differs from traditional chains:
+
+**Primary Method: Application-Level Multisig on Multi-Owner Chains**
 - Deploy multi-owner chain with N owners
 - Deploy custom Wasm multisig application
 - Application implements m-of-n threshold logic
 - Owners propose transactions via operations
 - Other owners approve via application operations
-- Execution occurs when threshold met **Key Integration Points**:
+- Execution occurs when threshold met
+
+**Key Integration Points**:
 1. **Multi-Owner Chain Creation**: Use Linera SDK to create chains with multiple owners
 2. **Smart Contract Deployment**: Deploy multisig Wasm bytecode
 3. **Operation Submission**: Owners create blocks with operations
 4. **Cross-Chain Messaging**: Notify owners of pending approvals
-5. **State Queries**: Read application state for approvals/transactions **Wallet Integration**:
+5. **State Queries**: Read application state for approvals/transactions
+
+**Wallet Integration**:
 - **If Linera wallet exists**: Integrate via wallet connector
 - **If no wallet**: Manual key entry or QR code signing
-- **Future**: Browser extension when available **Cryptographic Scheme**:
+- **Future**: Browser extension when available
+
+**Cryptographic Scheme**:
 - **Signature Scheme**: Ed25519 (Linera's standard)
 - **Chain Ownership**: N owners with individual key pairs
 - **Authentication**: Block signer authentication propagates via messages
 - **Application-Level Authorization**: Custom logic in multisig contract
 
-### Key Flow: Propose → Approve → Execute ```mermaid
+### Key Flow: Propose → Approve → Execute
+
+```mermaid
 sequenceDiagram
     participant O1 as Owner 1
     participant O2 as Owner 2
@@ -221,7 +235,9 @@ sequenceDiagram
     LC-->>SC: Transaction executed
     API-->>UI: Status: executed
     SC->>LC: Send completion notifications
-``` **Key Differences from Traditional Multisig**:
+```
+
+**Key Differences from Traditional Multisig**:
 - No signature aggregation at protocol level
 - Each approval is a separate on-chain operation
 - Application tracks approvals in state
@@ -230,7 +246,11 @@ sequenceDiagram
 
 ---
 
-## 5) Milestones & Deliverables ### Timeline Overview ```mermaid
+## 5) Milestones & Deliverables
+
+### Timeline Overview
+
+```mermaid
 gantt
     dateFormat YYYY-MM-DD
     title Linera Multisig Platform Delivery Timeline
@@ -262,14 +282,20 @@ gantt
 
 *Note: Timeline assumes 8-hour workdays. Total: ~10-11 weeks.*
 
-### Detailed Milestone Breakdown #### M1 Project Setup — 40h **Tasks**:
+### Detailed Milestone Breakdown
+
+#### M1 Project Setup — 40h
+
+**Tasks**:
 - Requirements definition and refinement (8h)
 - Architecture design and documentation (8h)
 - Development environment setup (4h)
 - Linera testnet access and configuration (8h)
 - CI/CD pipeline setup (GitHub Actions) (4h)
 - Database schema design (4h)
-- API contract definition (4h) **Deliverables**:
+- API contract definition (4h)
+
+**Deliverables**:
 - Requirements document
 - System architecture diagrams
 - Development environments configured
@@ -279,7 +305,11 @@ gantt
 
 ---
 
-#### M2 Multisig Smart Contract — 120h **Tasks**: | Task | Hours | Description |
+#### M2 Multisig Smart Contract — 120h
+
+**Tasks**:
+
+| Task | Hours | Description |
 |------|-------|-------------|
 | Contract State Design | 16h | Define structures for owners, threshold, pending txs, approvals |
 | Propose Operation | 16h | Implement transaction proposal with validation |
@@ -288,7 +318,9 @@ gantt
 | Owner Management | 12h | Add/remove owners, change threshold |
 | Edge Cases | 16h | Revoke, replace, timeout, cancellation |
 | Unit Tests | 16h | Comprehensive test coverage |
-| Integration Tests | 12h | Test with Linera SDK and testnet | **Deliverables**:
+| Integration Tests | 12h | Test with Linera SDK and testnet |
+
+**Deliverables**:
 - Multisig Wasm application bytecode
 - Comprehensive unit test suite
 - Integration tests with Linera testnet
@@ -299,7 +331,11 @@ gantt
 
 ---
 
-#### M3 Backend Core — 150h **Tasks**: | Task | Hours | Description |
+#### M3 Backend Core — 150h
+
+**Tasks**:
+
+| Task | Hours | Description |
 |------|-------|-------------|
 | API Framework Setup | 12h | FastAPI project structure, middleware |
 | Linera SDK Integration | 30h | FFI or Python bindings, chain operations |
@@ -310,7 +346,9 @@ gantt
 | Caching & Rate Limiting | 10h | Redis integration |
 | Authentication | 10h | Ed25519 signature verification |
 | WebSocket Server | 10h | Real-time updates |
-| Unit Tests | 10h | Service-level tests | **Deliverables**:
+| Unit Tests | 10h | Service-level tests |
+
+**Deliverables**:
 - REST API with all endpoints
 - Linera SDK integration
 - PostgreSQL database with migrations
@@ -322,7 +360,11 @@ gantt
 
 ---
 
-#### M4 Frontend Core — 120h **Tasks**: | Task | Hours | Description |
+#### M4 Frontend Core — 120h
+
+**Tasks**:
+
+| Task | Hours | Description |
 |------|-------|-------------|
 | Project Setup | 8h | Next.js, TypeScript, state management |
 | Wallet Integration | 24h | Manual key entry or QR code (if no connector) |
@@ -332,7 +374,9 @@ gantt
 | Real-time Updates | 12h | WebSocket integration |
 | Dashboard | 12h | Wallet overview, activity feed |
 | Error Handling | 8h | User-friendly error messages |
-| Unit Tests | 8h | Component and service tests | **Deliverables**:
+| Unit Tests | 8h | Component and service tests |
+
+**Deliverables**:
 - Responsive web application
 - Wallet integration (manual or connector)
 - Multisig creation wizard
@@ -344,14 +388,20 @@ gantt
 
 ---
 
-#### M5 Integration & Testing — 80h **Tasks**: | Task | Hours | Description |
+#### M5 Integration & Testing — 80h
+
+**Tasks**:
+
+| Task | Hours | Description |
 |------|-------|-------------|
 | End-to-End Integration | 20h | Frontend → Backend → Blockchain |
 | Cross-Chain Messaging | 12h | Owner notification flow |
 | Multi-Owner Testing | 16h | Simulate multiple owners |
 | Edge Case Testing | 12h | Failure scenarios, timeouts |
 | Performance Testing | 8h | Load testing, latency checks |
-| Bug Fixes | 12h | Address integration issues | **Deliverables**:
+| Bug Fixes | 12h | Address integration issues
+
+**Deliverables**:
 - Fully integrated platform
 - End-to-end test scenarios
 - Performance benchmarks
@@ -361,13 +411,19 @@ gantt
 
 ---
 
-#### M6 Observability & Hardening — 40h **Tasks**: | Task | Hours | Description |
+#### M6 Observability & Hardening — 40h
+
+**Tasks**:
+
+| Task | Hours | Description |
 |------|-------|-------------|
 | Metrics | 12h | Prometheus metrics, Grafana dashboards |
 | Logging | 8h | Structured logging, Loki integration |
 | Health Checks | 6h | API health, blockchain connectivity |
 | Rate Limiting Tuning | 6h | Optimize rate limits |
-| Security Hardening | 8h | Input validation, CORS, headers | **Deliverables**:
+| Security Hardening | 8h | Input validation, CORS, headers
+
+**Deliverables**:
 - Monitoring dashboards
 - Structured logging
 - Health check endpoints
@@ -375,24 +431,36 @@ gantt
 
 ---
 
-#### M7 QA & UAT — 40h **Tasks**: | Task | Hours | Description |
+#### M7 QA & UAT — 40h
+
+**Tasks**:
+
+| Task | Hours | Description |
 |------|-------|-------------|
 | Test Scenarios | 16h | Multi-owner, timeout, failures |
 | Regression Testing | 8h | Ensure no regressions |
 | User Acceptance Testing | 12h | Real-world usage scenarios |
-| Bug Fixes | 4h | Address QA findings | **Deliverables**:
+| Bug Fixes | 4h | Address QA findings
+
+**Deliverables**:
 - Comprehensive test report
 - UAT sign-off
 - Bug fixes applied
 
 ---
 
-#### M8 Handoff — 20h **Tasks**: | Task | Hours | Description |
+#### M8 Handoff — 20h
+
+**Tasks**:
+
+| Task | Hours | Description |
 |------|-------|-------------|
 | Documentation | 8h | API docs, deployment guides |
 | Demos | 4h | Stakeholder demonstrations |
 | Runbooks | 4h | Operations, DR, rollback |
-| Final Handoff | 4h | Knowledge transfer | **Deliverables**:
+| Final Handoff | 4h | Knowledge transfer
+
+**Deliverables**:
 - API documentation
 - Deployment guides
 - Operations runbooks
@@ -406,7 +474,9 @@ gantt
 
 ## 6) Technical Implementation
 
-### Smart Contract Interface (Rust Pseudo-code) ```rust
+### Smart Contract Interface (Rust Pseudo-code)
+
+```rust
 // Multisig application state
 struct MultisigState {
     owners: Vec<Owner>,
@@ -526,32 +596,46 @@ GET    /metrics                              - Prometheus metrics
 
 ---
 
-## 7) Testing Strategy ### Testing Levels **Unit Tests**:
+## 7) Testing Strategy
+
+### Testing Levels
+
+**Unit Tests**:
 - Smart contract operations (propose, approve, execute)
 - Backend service logic
 - Frontend components
-- Signature verification **Integration Tests**:
+- Signature verification
+
+**Integration Tests**:
 - Backend + Linera testnet
 - Frontend + Backend API
 - Cross-chain messaging
-- Database operations **End-to-End Tests**:
+- Database operations
+
+**End-to-End Tests**:
 - Complete multisig workflows
 - Multi-owner scenarios
 - Edge cases (timeout, revoke, failure)
 
-### Test Scenarios **Happy Path**:
+### Test Scenarios
+
+**Happy Path**:
 1. Create 2-of-3 multisig wallet
 2. Owner 1 proposes transfer
 3. Owner 2 approves
 4. Owner 3 approves
 5. Owner 1 executes
-6. Verify transaction executed **Edge Cases**:
+6. Verify transaction executed
+
+**Edge Cases**:
 1. Proposal timeout (expires before threshold)
 2. Revoke proposal (cancel before execution)
 3. Execute without threshold (should fail)
 4. Duplicate approval (should be idempotent)
 5. Non-owner approval (should fail)
-6. Remove owner with pending proposals **Failure Scenarios**:
+6. Remove owner with pending proposals
+
+**Failure Scenarios**:
 1. Network failure during approval
 2. Invalid signature
 3. Insufficient balance
@@ -574,31 +658,51 @@ GET    /metrics                              - Prometheus metrics
 
 ---
 
-## 9) Dependencies ### External Dependencies **Blockchain**:
+## 9) Dependencies
+
+### External Dependencies
+
+**Blockchain**:
 - Linera testnet access and stability
 - Linera Rust SDK maturity
-- Documentation completeness **Wallet**:
+- Documentation completeness
+
+**Wallet**:
 - Linera web wallet (if exists) OR manual key entry
-- Browser compatibility **Infrastructure**:
+- Browser compatibility
+
+**Infrastructure**:
 - PostgreSQL database
 - Redis cache
-- Hosting provider (Vercel/AWS/etc.) ### Team Requirements **Must Have**:
+- Hosting provider (Vercel/AWS/etc.)
+
+### Team Requirements
+
+**Must Have**:
 - Senior Rust developer (smart contract)
 - Backend developer (Python/FastAPI)
 - Frontend developer (React/Next.js)
-- DevOps engineer **Nice to Have**:
+- DevOps engineer
+
+**Nice to Have**:
 - Security auditor
 - Linera ecosystem expert
 
 ---
 
-## 10) Next Steps **Immediate Actions** (Week 1): 1. **Verify Linera Testnet Access**: Ensure testnet is stable and accessible
+## 10) Next Steps
+
+**Immediate Actions** (Week 1):
+
+1. **Verify Linera Testnet Access**: Ensure testnet is stable and accessible
 2. **Research SDK Documentation**: Deep dive into Linera Rust SDK
 3. **Explore Wallet Options**: Check if Linera wallet exists, evaluate alternatives
 4. **Proof of Concept**: Build minimal multisig contract on testnet
 5. **Refine Hour Estimates**: After PoC, adjust estimates based on findings
 6. **Assemble Team**: Hire/assign developers for each role
-7. **Security Planning**: Identify auditors, plan for review **Decision Points**:
+7. **Security Planning**: Identify auditors, plan for review
+
+**Decision Points**:
 - After PoC (Week 2): Confirm feasibility or pivot approach
 - After M2 (Week 5): Review contract and approve for backend integration
 - After M4 (Week 10): UX review and refinement
@@ -615,7 +719,9 @@ GET    /metrics                              - Prometheus metrics
 | **SDK Maturity** | Mature | Mature | Emerging |
 | **Documentation** | Good | Good | Limited |
 | **Complexity** | Medium | Medium | High |
-| **Testing** | Standard | Extensive | Extensive | **Why Linera is Higher**:
+| **Testing** | Standard | Extensive | Extensive |
+
+**Why Linera is Higher**:
 - Custom smart contract development (+120h)
 - Application-level multisig logic (more complex than native)
 - Less mature SDK (more research/learning)
@@ -626,13 +732,17 @@ GET    /metrics                              - Prometheus metrics
 
 ## Conclusion
 
-**Feasibility**: **FEASIBLE** with custom implementation **Key Considerations**:
+**Feasibility**: **FEASIBLE** with custom implementation
+
+**Key Considerations**:
 - No native multisig - must implement smart contract
 - Higher complexity than Hathor/Supra
 - Leverages Linera's unique multi-owner chains
 - Cross-chain messaging enables coordination
 - Sub-second finality improves UX
-- Wallet integration uncertain **Recommendation**: **PROCEED** with proof of concept to validate assumptions, then commit to full development.
+- Wallet integration uncertain
+
+**Recommendation**: **PROCEED** with proof of concept to validate assumptions, then commit to full development.
 
 **Total Effort**: 610 hours (~15 weeks with 1 FTE or ~8 weeks with 2 FTEs)
 
