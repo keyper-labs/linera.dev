@@ -1,4 +1,4 @@
-# Linera Multisig Platform Proposal (Frontend + Backend)
+# Linera Multisig Platform Proposal (Frontend + Backend Rust)
 
 **Document scope**: objectives, architecture, milestones, deliverables, risks, and dependencies for a production-ready multisig platform on Linera blockchain, leveraging multi-owner chains and cross-chain messaging.
 
@@ -27,11 +27,11 @@
 - Responsive design for desktop and mobile
 - Error states and user-friendly notifications
 
-### Backend (FastAPI)
-- REST API for multisig operations
+### Backend (Rust)
+- REST API for multisig operations using Actix-web or Axum
 - PostgreSQL database (proposals, approvals, wallet metadata)
 - Redis for caching and rate limiting
-- **Linera SDK integration** (Rust SDK via FFI or Python bindings)
+- **Linera SDK integration** (Native Rust SDK)
 - **Multisig application management**: Deploy and interact with custom multisig smart contract
 - Proposal lifecycle management
 - WebSocket server for real-time updates
@@ -99,7 +99,7 @@ graph TB
         Queue[Transaction Queue<br/>Pending Approvals]
     end
 
-    subgraph "Backend (Python/FastAPI)"
+    subgraph "Backend (Rust/Actix-web)"
         API[REST API]
         MultisigSvc[Multisig Service<br/>Contract Management]
         ProposalSvc[Proposal Service<br/>Lifecycle Management]
@@ -339,12 +339,12 @@ gantt
 
 | Task | Hours | Description |
 |------|-------|-------------|
-| API Framework Setup | 12h | FastAPI project structure, middleware |
-| Linera SDK Integration | 30h | FFI or Python bindings, chain operations |
+| API Framework Setup | 12h | Actix-web/Axum project structure, middleware |
+| Linera SDK Integration | 24h | Native Rust SDK, chain operations |
 | Multisig Service | 24h | Contract deployment, interaction |
 | Proposal Service | 20h | CRUD operations, lifecycle management |
 | Message Service | 16h | Cross-chain notification handling |
-| Database Layer | 18h | SQLAlchemy models, migrations |
+| Database Layer | 18h | Diesel/SeaORM models, migrations |
 | Caching & Rate Limiting | 10h | Redis integration |
 | Authentication | 10h | Ed25519 signature verification |
 | WebSocket Server | 10h | Real-time updates |
@@ -358,7 +358,7 @@ gantt
 - WebSocket server for real-time updates
 - Comprehensive test suite
 
-**Complexity**: High - Linera SDK integration and custom multisig logic
+**Complexity**: High - Linera SDK integration (native Rust) and custom multisig logic
 
 ---
 
@@ -681,8 +681,8 @@ GET    /metrics                              - Prometheus metrics
 ### Team Requirements
 
 **Must Have**:
-- Senior Rust developer (smart contract)
-- Backend developer (Python/FastAPI)
+- Senior Rust developer (smart contract + backend)
+- Backend developer (Rust/Actix-web or Axum)
 - Frontend developer (React/Next.js)
 - DevOps engineer
 
@@ -729,6 +729,7 @@ GET    /metrics                              - Prometheus metrics
 - Less mature SDK (more research/learning)
 - Unknown wallet integration (may need custom)
 - Cross-chain messaging coordination
+- Full Rust stack required (smart contract + backend)
 
 ---
 
@@ -739,6 +740,8 @@ GET    /metrics                              - Prometheus metrics
 **Key Considerations**:
 - No native multisig - must implement smart contract
 - Higher complexity than Hathor/Supra
+- Full Rust stack required (smart contract + backend)
+- Native Linera SDK integration (no FFI/bridges needed)
 - Leverages Linera's unique multi-owner chains
 - Cross-chain messaging enables coordination
 - Sub-second finality improves UX
@@ -752,3 +755,4 @@ GET    /metrics                              - Prometheus metrics
 
 **Produced by Palmera DAO Team**
 **Date**: February 2, 2026
+**Updated**: February 2, 2026 - Architecture corrected to Rust Full-Stack
