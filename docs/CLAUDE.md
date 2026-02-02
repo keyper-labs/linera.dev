@@ -1,6 +1,8 @@
-# Linera.dev Documentation
+# Linera.dev Documentation - Claude Code Index
 
-> **⚠️ CRITICAL**: Before implementing anything, read [`docs/REALITY_CHECK.md`](REALITY_CHECK.md) for findings from real Testnet Conway testing that invalidate several assumptions in earlier documentation.
+> **For Human Developers**: See the main [`README.md`](../README.md) in the repository root.
+
+> **⚠️ CRITICAL**: Before implementing anything, read [`REALITY_CHECK.md`](REALITY_CHECK.md) for findings from real Testnet Conway testing.
 
 ---
 
@@ -92,6 +94,7 @@ linera query-balance "$CHAIN_ID"
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #20859 | 10:11 PM | ✅ | Repository modifications pending commit | ~159 |
+| #20865 | 10:11 PM | ✅ | Staged modifications to CLAUDE.md and infrastructure analysis document | ~152 |
+| #20859 | " | ✅ | Repository modifications pending commit | ~159 |
 | #20809 | 8:40 PM | ✅ | Staged documentation files for git commit | ~223 |
 </claude-mem-context>

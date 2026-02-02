@@ -1,4 +1,6 @@
-# Linera Multisig Platform - Proposal Documentation
+# Linera Multisig Platform - Proposal Documentation (Claude Code Index)
+
+> **For Human Developers**: See the main [`README.md`](../../README.md) in the repository root.
 
 > **⚠️ CRITICAL**: Read [`../REALITY_CHECK.md`](../REALITY_CHECK.md) before using this proposal. It contains critical findings from Testnet Conway testing.
 
