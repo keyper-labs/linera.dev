@@ -498,7 +498,59 @@ Diferencia: +40% (240 horas adicionales)
 
 ---
 
-## 🎯 Parte 7: Conclusión
+## 🔄 Parte 7: Actualización Post-Scrape (Febrero 3, 2026)
+
+### Descubrimiento: @linera/client SDK
+
+Tras realizar web scraping de la documentación actual de Linera, se descubrió un **SDK TypeScript oficial** que NO estaba documentado en las pruebas originales:
+
+**@linera/client** - TypeScript SDK Oficial
+
+```typescript
+// Según documentación oficial de Linera (Feb 2026)
+import * as linera from '@linera/client';
+
+// Capabilities documentadas:
+- ✅ Wallet management en browser
+- ✅ GraphQL queries (según docs)
+- ✅ Real-time notifications (según docs)
+- ✅ Ed25519 key management
+```
+
+### Impacto en Estimaciones
+
+| Milestone | Estimado Original | Estimado con REALITY_CHECK | Ajustado con @linera/client |
+|-----------|------------------|---------------------------|---------------------------|
+| M4: Frontend | 120h | 180h (+50%) | **~120h** (SDK reduce complejidad) |
+| **Total** | 610h | ~790h (+30%) | **~730h** (+20% neto) |
+
+### GraphQL Status: Requiere Verificación
+
+**Contradicción encontrada**:
+- **REALITY_CHECK.md (Feb 2)**: GraphQL no funciona en Testnet Conway
+- **Documentación actual (Feb 3)**: Muestra ejemplos GraphQL funcionando
+
+**Hipótesis**:
+1. GraphQL se arregló entre las pruebas y Feb 2026
+2. GraphQL funciona para aplicaciones individuales (como counter)
+3. GraphQL NO funciona para queries generales del protocolo
+
+**Recomendación**: Repetir pruebas empíricas siguiendo documentación oficial actualizada.
+
+### Nuevos Comandos Verificados
+
+```bash
+# Instalar SDK TypeScript
+npm install @linera/client
+
+# Uso básico (según docs)
+import * as linera from '@linera/client';
+const wallet = await linera.createWallet();
+```
+
+---
+
+## 🎯 Parte 8: Conclusión (Actualizada)
 
 ### ¿Es Realista la Arquitectura Propuesta?
 
@@ -537,5 +589,5 @@ Diferencia: +40% (240 horas adicionales)
 
 ---
 
-**Última actualización**: Febrero 2, 2026
-**Basado en**: Pruebas reales en Testnet Conway + Documentación oficial de Linera
+**Última actualización**: Febrero 3, 2026
+**Basado en**: Pruebas reales en Testnet Conway + Web scraping de documentación oficial + Parallel audit results
