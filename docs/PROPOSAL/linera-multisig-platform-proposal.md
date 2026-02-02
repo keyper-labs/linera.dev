@@ -711,28 +711,6 @@ GET    /metrics                              - Prometheus metrics
 
 ---
 
-## Comparison with Reference Projects
-
-| Aspect | Hathor (320h) | Supra (446h) | Linera (610h) |
-|--------|---------------|--------------|---------------|
-| **Multisig Type** | Native P2SH | Native module | Application-level |
-| **Wallet Integration** | Headless Wallet | StarKey | Manual/QR (unknown) |
-| **Smart Contract** | None | None | Custom Wasm app |
-| **SDK Maturity** | Mature | Mature | Emerging |
-| **Documentation** | Good | Good | Limited |
-| **Complexity** | Medium | Medium | High |
-| **Testing** | Standard | Extensive | Extensive |
-
-**Why Linera is Higher**:
-- Custom smart contract development (+120h)
-- Application-level multisig logic (more complex than native)
-- Less mature SDK (more research/learning)
-- Unknown wallet integration (may need custom)
-- Cross-chain messaging coordination
-- Full Rust stack required (smart contract + backend)
-
----
-
 ## Conclusion
 
 **Feasibility**: **FEASIBLE** with custom implementation
