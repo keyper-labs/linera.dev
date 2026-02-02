@@ -17,13 +17,13 @@
 ## 2) In-Scope
 
 ### Frontend (React/Next.js)
-- Web application with wallet connector (if Linera wallet exists) OR standalone app
-- **Wallet integration**: Manual key entry or QR code if no wallet connector available
+- Web application standalone (no wallet connector disponible actualmente)
+- **Custom wallet implementation**: Ed25519 key generation, storage, y signing
 - Multisig wallet creation wizard (2-of-3, 3-of-5, custom thresholds)
 - Proposal builder with visual transaction interface
 - Owner management (add/remove signatories)
 - Transaction queue (pending approvals, executed, expired)
-- Real-time updates via WebSocket (leveraging Linera's push notifications)
+- Polling-based updates (5-10s intervals) hasta que Linera soporte WebSocket nativo
 - Responsive design for desktop and mobile
 - Error states and user-friendly notifications
 
@@ -31,10 +31,10 @@
 - REST API for multisig operations using Actix-web or Axum
 - PostgreSQL database (proposals, approvals, wallet metadata)
 - Redis for caching and rate limiting
-- **Linera SDK integration** (Native Rust SDK)
-- **Multisig application management**: Deploy and interact with custom multisig smart contract
+- **Linera CLI wrapper**: Wrapper sobre comandos CLI nativos (no SDK listo para usar)
+- **Multisig application management**: Deploy and interact with custom multisig Wasm application
 - Proposal lifecycle management
-- WebSocket server for real-time updates
+- Polling-based updates (GraphQL no soportado actualmente)
 - Cross-chain message coordination
 
 ### Core Features
@@ -63,7 +63,127 @@
 
 ---
 
-## 3) Out-of-Scope - Cross-chain bridges (Bitcoin, Ethereum, etc.)
+## 3) Technical Constraints & Reality Check
+
+**Importante**: Basado en pruebas reales en Testnet Conway (Feb 2025), las siguientes limitaciones técnicas han sido identificadas y la arquitectura propuesta ha sido ajustada para reflejar la realidad actual de Linera.
+
+### 3.1) GraphQL Limitations
+
+**Estado Actual**: NO FUNCIONAL
+- GraphiQL UI carga correctamente en Node Service
+- Schema GraphQL no está disponible o accesible
+- Queries fallan con errores: "Unknown field", "data: null"
+- Introspección no funciona: `__type` devuelve null
+
+**Impacto**:
+- ❌ No se puede usar GraphQL como API principal
+- ✅ Solución: REST API + CLI wrapper
+- ⚠️ Posible implementación futura cuando Linera lo soporte
+
+**Pruebas realizadas**:
+```bash
+# Test 1: Query básica
+query { chains { chainId } }
+# Resultado: "Unknown field chainId"
+
+# Test 2: Introspección
+query { __type(name: "Query") }
+# Resultado: "__type: null"
+
+# Test 3: gRPC directo
+grpcurl validator-1.testnet-conway.linera.net:443 list
+# Resultado: ✅ Funciona (servicios disponibles)
+```
+
+### 3.2) Linera SDK Availability
+
+**Estado Actual**: BÁSICO, NO listo para usar
+- `linera-sdk` crate existe para Rust
+- Es para construir aplicaciones Wasm, NO un client SDK
+- NO hay funciones "ready-to-use" para backend
+- Documentación enfocada en desarrollo de aplicaciones, no consumo
+
+**Impacto**:
+- ❌ NO hay "LineraClient" o similar
+- ✅ Solución: CLI wrapper usando `std::process::Command`
+- ⚠️ Requiere +40 horas para desarrollo vs. SDK "plug-and-play"
+
+**Arquitectura realista**:
+```rust
+// Lo que NO existe:
+let client = LineraClient::new("testnet-conway");
+let balance = client.query_balance(chain_id).await?;
+
+// La realidad:
+pub struct LineraClient {
+    pub wallet_path: PathBuf,
+}
+
+impl LineraClient {
+    pub fn query_balance(&self, chain_id: &str) -> Result<u64, Error> {
+        let output = Command::new("linera")
+            .args(["query-balance", chain_id])
+            .env("LINERA_WALLET", &self.wallet_path)
+            .output()?;
+        // Parsear output manualmente...
+    }
+}
+```
+
+### 3.3) Wallet Connector Availability
+
+**Estado Actual**: NO DISPONIBLE
+- NO existe wallet connector para navegadores
+- NO existe extensión de browser
+- NO existe estándar de wallet para Linera
+
+**Impacto**:
+- ❌ NO se puede integrar wallet connector
+- ✅ Solución: Wallet custom construida desde cero
+- ⚠️ Requiere implementar: Ed25519 keys, storage, signing, QR codes
+
+**Componentes necesarios**:
+- Ed25519 key generation
+- Secure key storage (encriptado en localStorage)
+- Transaction signing
+- QR code import/export
+- Chain management (multi-owner chains)
+
+### 3.4) Multi-Owner Chain vs Threshold Multisig
+
+**Diferencia clave**:
+
+| Aspecto | Multi-Owner Chain | Multisig Application |
+|---------|-------------------|----------------------|
+| **Nivel** | Protocolo (nativo) | Application (Wasm) |
+| **Creación** | CLI: `open-multi-owner-chain` | Desarrollo Wasm + deploy |
+| **Threshold** | NO tiene (1-of-N) | Configurable m-of-N |
+| **Time-locks** | NO soportado | Configurable |
+| **Confirmado** | ✅ Funciona en Testnet Conway | ⚠️ Por validar |
+| **Complejidad** | Baja | Alta |
+
+**Recomendación**:
+1. MVP: Multi-owner chains (protocolo) - rápido de implementar
+2. Fase 2: Aplicación Wasm con threshold - desarrollo adicional
+
+### 3.5) Timeline Adjustments
+
+Basado en estas limitaciones, los estimados han sido ajustados:
+
+| Milestone | Original | Ajustado | Diferencia | Razón Principal |
+|-----------|----------|----------|------------|------------------|
+| M1: Project Setup | 40h | 40h | 0% | ✅ Realista |
+| M2: Multisig Contract | 120h | 170h | +42% | +aprender linera-sdk |
+| M3: Backend Core | 150h | 210h | +40% | +CLI wrapper + polling |
+| M4: Frontend | 120h | 180h | +50% | +custom wallet |
+| M5: Integration | 80h | 100h | +25% | +ajustes arquitectónicos |
+| **TOTAL** | **~610h** | **~800h** | **+31%** | |
+
+**Nuevo timeline**: 14-16 semanas (3.5-4 meses) vs. original 10-11 semanas.
+
+---
+
+## 4) Out-of-Scope
 - EVM support (planned for Q2'25, not available)
 - Hardware wallet integration (future phase)
 - Mobile native apps (responsive web only)
@@ -340,15 +460,15 @@ gantt
 | Task | Hours | Description |
 |------|-------|-------------|
 | API Framework Setup | 12h | Actix-web/Axum project structure, middleware |
-| Linera SDK Integration | 24h | Native Rust SDK, chain operations |
-| Multisig Service | 24h | Contract deployment, interaction |
-| Proposal Service | 20h | CRUD operations, lifecycle management |
-| Message Service | 16h | Cross-chain notification handling |
-| Database Layer | 18h | Diesel/SeaORM models, migrations |
-| Caching & Rate Limiting | 10h | Redis integration |
-| Authentication | 10h | Ed25519 signature verification |
-| WebSocket Server | 10h | Real-time updates |
-| Unit Tests | 10h | Service-level tests |
+| Linera CLI Wrapper | 40h | Wrapper sobre comandos CLI nativos (sync, query-balance, publish) |
+| Multisig Service | 30h | Contract deployment, interaction via CLI |
+| Proposal Service | 24h | CRUD operations, lifecycle management |
+| Message Service | 20h | Cross-chain notification handling |
+| Database Layer | 24h | Diesel/SeaORM models, migrations + sync con blockchain |
+| Caching & Rate Limiting | 12h | Redis integration |
+| Authentication | 16h | Ed25519 signature verification, key management |
+| Polling Service | 20h | Polling updates (reemplazo de WebSocket) |
+| Unit Tests | 12h | Service-level tests |
 
 **Deliverables**:
 - REST API with all endpoints
