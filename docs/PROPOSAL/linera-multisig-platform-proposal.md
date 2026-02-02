@@ -86,7 +86,9 @@
 - **Secure**: Best practices for key management and transaction validation
 - **Cross-Chain Coordination**: Use Linera's messaging for owner notifications
 
-### System Architecture ```mermaid
+### System Architecture
+
+```mermaid
 graph TB
     subgraph "Frontend (React/Next.js)"
         UI[User Interface]
