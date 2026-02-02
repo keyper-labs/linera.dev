@@ -40,3 +40,10 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Duplicate CLAUDE.md files (use root CLAUDE.md only)
+docs/CLAUDE.md
+docs/PROPOSAL/CLAUDE.md
+open-agents/CLAUDE.md
+open-agents/agents/CLAUDE.md
+scripts/CLAUDE.md
