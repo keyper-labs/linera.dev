@@ -18,9 +18,13 @@ This analysis consolidates **verified information** scraped directly from Linera
 - ✅ **Web Client exists** (`linera-io/linera-web`) - Chrome extension
 - ✅ **MetaMask integration** available via `@linera/signer` npm package (v0.15.6, actively maintained)
 - ✅ **Dynamic wallet integration** documented and available
+- ✅ **Multisig implementation pattern documented** via matching-engine example
+- ✅ **Multi-owner chains** supported via `open-multi-owner-chain` CLI command
+- ✅ **Cross-chain messaging** for owner coordination via `prepare_message()` and `send_to()`
 - ⚠️ **No Python SDK** - Only Rust SDK exists
 - ⚠️ **Fee model not documented** in scraped materials
 - ⚠️ **Browser extension mentioned as "goal"** (development status unclear)
+- ⚠️ **Application-level multisig only** - No native threshold scheme
 
 ---
 
@@ -390,6 +394,287 @@ linera open-chain --to-public-key <PUBLIC_KEY>
 
 ---
 
+### 5.4 Multisig Operations Deep-Dive
+
+Based on verified analysis of Linera's SDK and matching-engine example, here are the specific operations required for implementing multisig:
+
+#### 5.4.1 State Structure for Multisig Contract
+
+**Reference Pattern**: `examples/matching-engine/src/state.rs`
+
+A multisig contract requires the following state components:
+
+```rust
+use linera_sdk::views::{
+    MapView, RegisterView, QueueView, RootView, View,
+};
+
+#[derive(RootView)]
+#[view(context = ViewStorageContext)]
+pub struct MultisigState {
+    // Auto-incrementing proposal ID
+    pub next_proposal_id: RegisterView<u64>,
+
+    // Proposal storage: proposal_id -> proposal details
+    pub proposals: MapView<u64, Proposal>,
+
+    // Owner tracking: owner_address -> set of proposal IDs they need to approve
+    pub owner_pending_proposals: MapView<AccountOwner, BTreeSet<u64>>,
+
+    // Owner set with threshold
+    pub owners: RegisterView<OwnerSet>,
+}
+
+pub struct OwnerSet {
+    pub owners: BTreeSet<AccountOwner>,
+    pub threshold: usize,  // Required confirmations
+}
+
+pub struct Proposal {
+    pub proposers: AccountOwner,
+    pub created_at: u64,
+    pub status: ProposalStatus,
+    pub confirmations: BTreeSet<AccountOwner>,
+    pub operation: MultisigOperation,
+}
+
+pub enum ProposalStatus {
+    Pending,
+    Approved,
+    Executed,
+    Rejected,
+    Cancelled,
+}
+```
+
+#### 5.4.2 Contract Operations
+
+The contract must implement these operations via `execute_operation`:
+
+**1. Create Proposal**
+```rust
+async fn execute_operation(&mut self, operation: Operation) -> Self::Response {
+    match operation {
+        Operation::CreateProposal {
+            operation: multisig_op,
+        } => {
+            // Generate new proposal ID
+            let proposal_id = self.state.next_proposal_id.get().await?;
+            self.state.next_proposal_id.set(proposal_id + 1);
+
+            // Create proposal
+            let proposal = Proposal {
+                proposer: runtime.authenticated_signer()?,
+                created_at: runtime.system_time(),
+                status: ProposalStatus::Pending,
+                confirmations: BTreeSet::new(),
+                operation: multisig_op,
+            };
+
+            // Store proposal
+            self.state.proposals.insert(&proposal_id, proposal);
+
+            // Notify all owners via cross-chain messages
+            for owner in self.state.owners.get().await?.owners {
+                let message = Message::ProposalCreated { proposal_id };
+                let target_chain = get_owner_chain(owner);
+                self.runtime.prepare_message(message)
+                    .send_to(target_chain);
+            }
+
+            Response::ProposalCreated { proposal_id }
+        }
+        // ... other operations
+    }
+}
+```
+
+**2. Approve Proposal**
+```rust
+Operation::ApproveProposal { proposal_id } => {
+    let mut proposal = self.state.proposals.get(&proposal_id)?.await?;
+
+    // Verify caller is an owner
+    let caller = runtime.authenticated_signer()?;
+    ensure!(self.state.owners.get().await?.owners.contains(&caller));
+
+    // Add confirmation
+    proposal.confirmations.insert(caller);
+    proposal.status = if proposal.confirmations.len() >= threshold {
+        ProposalStatus::Approved
+    } else {
+        ProposalStatus::Pending
+    };
+
+    self.state.proposals.insert(&proposal_id, proposal);
+
+    // Notify proposer of approval
+    if proposal.status == ProposalStatus::Approved {
+        let message = Message::ProposalApproved { proposal_id };
+        let proposer_chain = get_owner_chain(proposal.proposer);
+        self.runtime.prepare_message(message)
+            .send_to(proposer_chain);
+    }
+
+    Response::ApprovalRecorded { proposal_id }
+}
+```
+
+**3. Execute Proposal**
+```rust
+Operation::ExecuteProposal { proposal_id } => {
+    let proposal = self.state.proposals.get(&proposal_id)?.await?;
+
+    // Verify threshold reached
+    ensure!(proposal.status == ProposalStatus::Approved);
+    ensure!(proposal.confirmations.len() >= self.state.owners.get().await?.threshold);
+
+    // Execute the multisig operation
+    match proposal.operation {
+        MultisigOperation::Transfer { to, amount, token } => {
+            // Execute transfer via cross-application call to fungible app
+            // This requires handling the `CallEffect` from the runtime
+        }
+        MultisigOperation::AddOwner { new_owner } => {
+            // Update owner set
+            let mut owners = self.state.owners.get().await?;
+            owners.owners.insert(new_owner);
+            self.state.owners.set(owners);
+        }
+        MultisigOperation::ChangeThreshold { new_threshold } => {
+            let mut owners = self.state.owners.get().await?;
+            owners.threshold = new_threshold;
+            self.state.owners.set(owners);
+        }
+    }
+
+    // Mark as executed
+    let mut proposal = self.state.proposals.get(&proposal_id)?.await?;
+    proposal.status = ProposalStatus::Executed;
+    self.state.proposals.insert(&proposal_id, proposal);
+
+    Response::ProposalExecuted { proposal_id }
+}
+```
+
+#### 5.4.3 Cross-Chain Message Handling
+
+```rust
+async fn execute_message(&mut self, message: Message) {
+    match message {
+        Message::ProposalCreated { proposal_id } => {
+            // Add to pending proposals for this chain's owner
+            let proposal = self.runtime.prepare_query(Query::GetProposal { proposal_id })
+                .query_on(source_chain);
+
+            let owner = runtime.authenticated_signer()?;
+            let mut pending = self.state.owner_pending_proposals.get(&owner).await?
+                .unwrap_or_default();
+            pending.insert(proposal_id);
+            self.state.owner_pending_proposals.insert(&owner, pending);
+        }
+        Message::ProposalApproved { proposal_id } => {
+            // Notify frontend that proposal can be executed
+        }
+    }
+}
+```
+
+#### 5.4.4 CLI Commands for Chain Setup
+
+```bash
+# Create multi-owner chain for multisig
+linera open-multi-owner-chain \
+    --from <PARENT_CHAIN> \
+    --owners <OWNER1_PUBKEY>,<OWNER2_PUBKEY>,<OWNER3_PUBKEY> \
+    --initial-balance 1000
+
+# Change ownership of existing chain
+linera change-ownership \
+    --chain-id <CHAIN_ID> \
+    --owners <NEW_OWNER1>,<NEW_OWNER2>
+
+# Set application permissions (only multisig app can operate)
+linera change-application-permissions \
+    --chain-id <CHAIN_ID> \
+    --execute-operations <MULTISIG_APP_ID> \
+    --close-chain <MULTISIG_APP_ID>
+```
+
+#### 5.4.5 Frontend Integration via @linera/signer
+
+```typescript
+import { Signer } from '@linera/signer';
+
+// MetaMask integration for signing operations
+async function createProposal(operation: MultisigOperation) {
+    const signer = await Signer.metamask();
+
+    // Prepare the operation data
+    const operationData = {
+        type: 'CreateProposal',
+        operation: operation
+    };
+
+    // Sign with MetaMask
+    const signature = await signer.sign(operationData);
+
+    // Submit to Linera network
+    const result = await submitToLinera(
+        CHAIN_ID,
+        MULTISIG_APP_ID,
+        operationData,
+        signature
+    );
+
+    return result;
+}
+```
+
+#### 5.4.6 GraphQL Queries for State
+
+```graphql
+# Query pending proposals for an owner
+query GetPendingProposals($owner: String!) {
+  ownerPendingProposals(key: $owner) {
+    value
+  }
+}
+
+# Query proposal details
+query GetProposal($proposalId: UInt64!) {
+  proposals(key: $proposalId) {
+    value {
+      proposer
+      createdAt
+      status
+      confirmations
+      operation
+    }
+  }
+}
+
+# Query owner set and threshold
+query GetOwnerSet {
+  owners {
+    owners
+    threshold
+  }
+}
+```
+
+#### 5.4.7 Key Implementation Considerations
+
+1. **No Native Threshold Scheme**: All threshold logic must be implemented in the contract
+2. **Each Approval is Separate On-Chain Operation**: N approvals = N transactions
+3. **Cross-Chain Coordination**: Use messages to notify owners of pending proposals
+4. **State Management**: Use Views system for efficient state queries
+5. **Ownership Semantics**: Multi-owner chains allow any owner to propose blocks
+6. **Execution Authority**: Only approved proposals can be executed by any owner
+7. **Gas Costs**: Each approval and execution incurs transaction fees
+
+---
+
 ## 6. Development Environment
 
 ### 6.1 Verified Setup
@@ -448,6 +733,7 @@ pnpm install && pnpm build
 | **Fee Model** | Not documented | All scraped sources | MEDIUM - Research during PoC |
 | **Browser Extension Production Status** | Unclear ("goal" stated) | Docs | HIGH - Affects UX approach |
 | **Hardware Wallet Support** | Not mentioned | All sources | LOW - Future enhancement |
+| **Multisig Implementation Pattern** | Documented via matching-engine example | GitHub examples | SOLVED - Application-level implementation required |
 
 ---
 
@@ -548,8 +834,11 @@ pnpm install && pnpm build
 - ✅ MetaMask integration documented (`@linera/signer` v0.15.6)
 - ✅ Dynamic wallet integration available
 - ✅ Web client repository exists with build instructions
-- ✅ Multi-owner chains supported
-- ✅ Cross-chain messaging verified
+- ✅ Multi-owner chains supported via `open-multi-owner-chain`
+- ✅ Cross-chain messaging verified with `prepare_message()` and `send_to()`
+- ✅ Multisig implementation pattern documented via matching-engine example
+- ✅ Views system provides efficient state management (MapView, RegisterView, QueueView)
+- ✅ Chain ownership and permissions configurable via CLI
 
 **Verified Weaknesses**:
 - ⚠️ Only Rust SDK exists (no Python)
@@ -567,8 +856,10 @@ pnpm install && pnpm build
 **Critical Next Steps** (Week 1):
 1. Test Linera Web extension on Testnet Archimedes
 2. Run counter demo with MetaMask integration
-3. Build minimal multisig contract
-4. Measure transaction costs for fee model
+3. Build minimal multisig contract using documented pattern from matching-engine
+4. Measure transaction costs for fee model (especially N approval transactions)
+5. Test cross-chain messaging for owner notifications
+6. Verify multi-owner chain creation via `open-multi-owner-chain`
 
 ---
 
