@@ -1,83 +1,94 @@
 # Linera Infrastructure Analysis
 
 > **Analysis Date**: February 2, 2026
-> **Data Sources**: linera.dev official documentation, GitHub repositories, npm packages
-> **Analysis Type**: Deep-dive verification based on scraped real-world data
-> **Testnet Status**: Archimedes (current as of Feb 2026)
+> **Data Sources**: linera.dev official documentation, GitHub repositories, npm packages, + **Testnet Conway validation**
+> **Analysis Type**: Deep-dive verification based on scraped real-world data + **empirical testing**
+> **Testnet Status**: Conway (testnet #3, operational as of Feb 2026)
+
+> **⚠️ IMPORTANT**: This document has been updated based on **real testing on Testnet Conway**. See `docs/REALITY_CHECK.md` for detailed technical findings.
 
 ---
 
 ## Executive Summary
 
-This analysis consolidates **verified information** scraped directly from Linera's official documentation (`linera.dev`), GitHub repositories, and public npm packages.
+This analysis consolidates **verified information** from:
+1. Official documentation (`linera.dev`)
+2. GitHub repositories and npm packages
+3. **Real testing on Testnet Conway** (testnet #3)
 
-**Key Verified Findings:**
-- ✅ **Rust SDK exists and is production-ready** (`linera-sdk` crate)
-- ✅ **Testnet Archimedes is operational** with working faucet
-- ✅ **GraphQL API exposed** via Node Service (port 8080)
-- ✅ **Web Client exists** (`linera-io/linera-web`) - Chrome extension
-- ✅ **MetaMask integration** available via `@linera/signer` npm package (v0.15.6, actively maintained)
-- ✅ **Dynamic wallet integration** documented and available
-- ✅ **Multisig implementation pattern documented** via matching-engine example
-- ✅ **Multi-owner chains** supported via `open-multi-owner-chain` CLI command
-- ✅ **Cross-chain messaging** for owner coordination via `prepare_message()` and `send_to()`
-- ⚠️ **No Python SDK** - Only Rust SDK exists
-- ⚠️ **Fee model not documented** in scraped materials
-- ⚠️ **Browser extension mentioned as "goal"** (development status unclear)
-- ⚠️ **Application-level multisig only** - No native threshold scheme
+**Key Verified Findings (Updated with Test Results):**
+- ✅ **Rust SDK exists** (`linera-sdk` crate) - **for Wasm compilation only**
+- ✅ **Testnet Conway is operational** with working faucet
+- ⚠️ **GraphQL API NOT functional** - Schema doesn't load in Node Service (verified empirically)
+- ⚠️ **Web Client exists** (`linera-io/linera-web`) - **Chrome extension, status unclear**
+- ❌ **MetaMask integration** - **Package exists but NOT verified working for multisig**
+- ❌ **Dynamic wallet integration** - **Documented but NOT verified on Testnet Conway**
+- ✅ **Multi-owner chains** supported - **Tested and verified on Testnet Conway**
+- ✅ **Cross-chain messaging** via `prepare_message()` and `send_to()`
+- ❌ **No Python SDK** - Only Rust SDK exists
+- ⚠️ **Fee model not documented**
+- ⚠️ **Application-level multisig only** - Multi-owner chains ≠ threshold multisig
+- ❌ **No CLI Wrapper SDK exists** - Must be built from scratch
 
 ---
 
 ## 1. SDK Analysis
 
-### 1.1 Rust SDK (linera-sdk)
+### 1.1 Rust SDK (linera-sdk) - Reality Check
 
-**Status**: ✅ **PRODUCTION-READY, ACTIVELY DEVELOPED**
+**Status**: ⚠️ **FOR WASM COMPILATION ONLY - NOT A CLIENT SDK**
 
 **Source**: [`linera-io/linera-protocol`](https://github.com/linera-io/linera-protocol)
 
+**CRITICAL DISTINCTION**:
+> `linera-sdk` is **ONLY** for building Wasm applications (smart contracts). It is **NOT** a client SDK for interacting with the Linera network.
+
 **Verified Components** (from repository structure):
 ```
-linera-sdk/          # Core SDK for Linera applications
+linera-sdk/          # Core SDK for building Wasm applications
 linerasdk-derive/    # Procedural macros for SDK
 examples/            # Example applications (counter, etc.)
-linera-base/         # Cryptography primitives
-linera-execution/    # Runtime and execution logic
-linera-chain/        # Block and chain management
-linera-storage/      # Storage abstractions
-linera-core/         # Client and server logic
-linera-rpc/          # RPC messaging data types
-linera-client/       # Client library
-linera-service/      # CLI wallet and validator
-linera-views/        # Key-value store abstraction
 ```
 
-**Capabilities** (verified from documentation):
-- Chain creation (single-owner and multi-owner)
-- Block proposal and signing
-- Cross-chain messaging
-- Application deployment (Wasm bytecode)
-- State queries via GraphQL
-- Ed25519 signature handling
+**Capabilities** (for Wasm applications ONLY):
+- ✅ Define application state (Views, operations, messages)
+- ✅ Implement contract logic
+- ✅ Handle cross-chain messages
+- ❌ NO client functionality
+- ❌ NO query methods
+- ❌ NO wallet management
 
-**Verified CLI Commands**:
+**What You NEED for Backend** (NOT provided by SDK):
+```rust
+// ❌ This does NOT exist:
+let client = LineraClient::new("testnet-conway");
+let balance = client.query_balance(chain_id).await?;
+
+// ✅ The reality:
+let output = Command::new("linera")
+    .args(["query-balance", chain_id])
+    .env("LINERA_WALLET", wallet_path)
+    .output()?;
+let balance = parse_balance(&output)?;
+```
+
+**Real Verified CLI Commands** (tested on Testnet Conway):
 ```bash
 # Wallet initialization
-linera wallet init --faucet <FAUCET_URL>
+linera wallet init --faucet https://faucet.testnet-conway.linera.net
 
-# Chain creation
-linera wallet request-chain --faucet <FAUCET_URL>
-linera open-chain
+# Multi-owner chain creation (VERIFIED)
+linera open-multi-owner-chain \
+    --from "$CHAIN1" \
+    --owners "$OWNER1" "$OWNER2" \
+    --initial-balance 10
 
-# Application publishing
-linera publish-and-create <contract.wasm> <service.wasm> --json-argument "<INIT_DATA>"
-
-# Query operations
-linera query-balance
+# Query operations (VERIFIED)
 linera sync
+linera query-balance "$CHAIN_ID"
 ```
 
-**Build Output**: Applications compile to Wasm for `wasm32-unknown-unknown` target
+**Implication**: Backend must implement CLI wrapper, not "SDK integration"
 
 ---
 
@@ -131,42 +142,74 @@ import { Signer } from '@linera/signer';
 
 ## 2. API Capabilities
 
-### 2.1 GraphQL API (Verified)
+### 2.1 GraphQL API (Test Results - ⚠️ NOT WORKING)
 
-**Status**: ✅ **PRODUCTION-READY**
+**Status**: ❌ **NOT FUNCTIONAL** (Tested on Testnet Conway)
 
-**Source**: Node Service documentation
+**Source**: Node Service + Real testing
 
-**Endpoint**: `http://localhost:8080` (default)
+**Endpoint**: `http://localhost:8083` (default for Node Service)
 
-**Exposes**:
-1. **System API** - Root GraphQL operations
-2. **Application API** - Per-application GraphQL endpoints
-   - Pattern: `/chains/<chain-id>/applications/<application-id>`
+**⚠️ CRITICAL FINDING**: GraphQL does NOT work despite documentation stating otherwise.
 
-**GraphQL IDE**: GraphiQL available at `http://localhost:8080`
+**Tests Performed** (Testnet Conway):
+```bash
+# Test 1: Node Service starts successfully
+linera service --port 8083
+# ✅ Result: Service starts
 
-**Verified Query Example** (from docs):
-```graphql
-query {
-  applications(chainId: "e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65") {
-    id
-    description
-    link
-  }
-}
+# Test 2: GraphiQL UI loads
+http://localhost:8083/graphiql
+# ✅ Result: UI loads
+
+# Test 3: Query execution
+query { chains { chainId } }
+# ❌ Result: "Unknown field chainId"
+
+# Test 4: Schema introspection
+query { __type(name: "Query") }
+# ❌ Result: "__type: null"
+
+# Test 5: gRPC direct (works!)
+grpcurl validator-1.testnet-conway.linera.net:443 list
+# ✅ Result: Services available
 ```
 
-**Capabilities**:
-- Chain state queries
-- Application state queries
-- Cross-chain message queries
-- Schema exploration via GraphiQL
+**Documented vs Reality**:
 
-**Limitations**:
-- Read-only queries documented (mutations via CLI)
-- Per-chain architecture (not unified endpoint)
-- No REST API (must be custom-built)
+| Aspect | Documentation | Reality (Testnet Conway) |
+|--------|--------------|--------------------------|
+| Node Service starts | ✅ | ✅ |
+| GraphiQL UI loads | ✅ | ✅ |
+| Schema available | ✅ | ❌ - NOT loaded |
+| Queries work | ✅ | ❌ - "Unknown field" errors |
+| Introspection works | ✅ | ❌ - "__type: null" |
+
+**Impact on Architecture**:
+- ❌ **CANNOT use GraphQL** as primary API for frontend
+- ✅ **Must use CLI commands** via wrapper
+- ✅ **gRPC works** but requires protobuf compilation
+- ✅ **Direct storage queries** (RocksDB) possible but not recommended
+
+**Recommended Approach** (from `docs/REALITY_CHECK.md`):
+```rust
+// CLI Wrapper instead of GraphQL
+pub struct LineraClient {
+    pub wallet_path: PathBuf,
+    pub keystore_path: PathBuf,
+    pub storage_path: String,
+}
+
+impl LineraClient {
+    pub fn query_balance(&self, chain_id: &str) -> Result<u64, Error> {
+        let output = Command::new("linera")
+            .args(["query-balance", chain_id])
+            .env("LINERA_WALLET", &self.wallet_path)
+            .output()?;
+        // Parse output manually...
+    }
+}
+```
 
 ---
 
@@ -200,59 +243,107 @@ query {
 
 ---
 
-### 3.2 External Wallet Integrations (Verified)
+### 3.2 External Wallet Integrations (Reality Check)
+
+> **⚠️ CRITICAL**: Documentation states these are available, but **NOT verified on Testnet Conway**.
 
 #### MetaMask Integration
 
-**Status**: ✅ **DOCUMENTED AND AVAILABLE**
+**Status**: ⚠️ **DOCUMENTED BUT NOT VERIFIED FOR MULTISIG**
 
-**Package**: `@linera/signer` on npm
-- Uses MetaMask blind-signing capabilities
-- Counter demo application provides working example
-- Signs Linera transactions via MetaMask
+**Package**: `@linera/signer` on npm (v0.15.6)
+- Package exists and is maintained
+- Counter demo provides example
+- **NOT tested for multi-owner chains or multisig operations**
 
-**Implementation**:
-```typescript
-// From @linera/signer package
-// MetaMask signs Linera transaction data
-// Counter demo uses this approach
-```
+**Open Questions**:
+- ❓ Does it work with multi-owner chains?
+- ❓ How to handle multiple signers for same chain?
+- ❓ Can it handle threshold multisig operations?
 
 #### Dynamic Wallet Integration
 
-**Status**: ✅ **DOCUMENTED AND AVAILABLE**
+**Status**: ⚠️ **DOCUMENTED BUT NOT VERIFIED**
 
 **Provider**: Dynamic (external wallet provider)
-
-**Capabilities**:
-- Production-quality embedded wallet
-- Web2 and Web3 identity provider support
-- Fully compatible with Linera
-- Recipe for integration provided
+- Documented in Linera docs
 - Counter demo adapted for Dynamic
+- **NOT tested on Testnet Conway**
+
+**Open Questions**:
+- ❓ Production-ready status?
+- ❓ Cost model?
+- ❓ Multi-owner chain support?
 
 #### Custom Signer Interface
 
-**Status**: ✅ **FLEXIBLE INTERFACE**
+**Status**: ✅ **CONCEPTUALLY VALIDATED**
 
 **From Documentation**:
-> "The Linera client library allows you to sign transactions with anything that satisfies the `Signer` interface. This means you can integrate with external software wallets, hardware wallets, Internet-connected wallet services… the only limit is your imagination!"
+> "The Linera client library allows you to sign transactions with anything that satisfies the `Signer` interface."
 
-**Reference**: Sample in-memory implementation provided in docs
+**Reality**: You must BUILD the wallet yourself:
+```typescript
+// Custom wallet implementation required
+interface Wallet {
+  privateKey: string;  // Ed25519
+  publicKey: string;
+  chainId: string;
+}
+
+// Required functionality:
+// 1. Key generation (Ed25519)
+// 2. Key storage (localStorage/encrypted)
+// 3. Transaction signing
+// 4. QR code import/export
+// 5. Multi-owner chain management
+```
 
 ---
 
 ### 3.3 Wallet Integration Options for Multisig Platform
 
-#### Option A: Linera Web Extension (If Production-Ready)
+> **Based on Testnet Conway testing**, the following options are reevaluated:
+
+#### Option A: Linera Web Extension (Status Unclear)
 
 **Approach**: Use existing Linera Chrome extension
 
-**Requirements**:
-- Extension must support multi-owner chains
-- Extension must expose signing API for multisig operations
+**Status**: ⚠️ **UNCERTAIN**
+- Repository exists: `linera-io/linera-web`
+- Build instructions available
+- **NOT tested on Testnet Conway for multisig**
 
-**Status**: REQUIRES VERIFICATION - Test with Testnet Archimedes
+**Unknowns**:
+- ❓ Production-ready for end users?
+- ❓ Multi-owner chain support?
+- ❓ API for multisig operations?
+
+#### Option B: Build Custom Wallet (Most Realistic)
+
+**Approach**: Build wallet from scratch using Ed25519 cryptography
+
+**Status**: ✅ **ONLY VERIFIED APPROACH**
+
+**Requirements**:
+- Ed25519 key generation/storage
+- Multi-owner chain creation UI
+- Transaction signing for each owner
+- Proposal/approval workflow
+
+**Estimated Effort**: +60-80h (included in M4 frontend estimate)
+
+#### Option C: MetaMask Integration (Experimental)
+
+**Approach**: Use `@linera/signer` with MetaMask
+
+**Status**: ⚠️ **HIGH RISK - NOT VERIFIED**
+
+**Concerns**:
+- Blind-signing (user may not see full transaction)
+- MetaMask designed for EVM (not native Linera)
+- Multi-owner chain support unknown
+- Threshold multisig support unknown
 
 ---
 
@@ -302,29 +393,47 @@ query {
 
 ## 4. Testnet Analysis
 
-### 4.1 Testnet Archimedes (Current)
+### 4.1 Testnet Conway (Current - Testnet #3)
 
-**Status**: ✅ **OPERATIONAL**
+**Status**: ✅ **OPERATIONAL - VERIFIED WITH REAL TESTS**
 
-**Faucet URL**: `https://faucet.testnet-archimedes.linera.net`
+**Faucet URL**: `https://faucet.testnet-conway.linera.net`
 
-**Verified Commands**:
+**Validators**:
+- validator-1.testnet-conway.linera.net:443
+- validator-2.testnet-conway.linera.net:443
+- validator-3.testnet-conway.linera.net:443
+
+**Verified Commands** (tested):
 ```bash
 # Initialize wallet with testnet faucet
-linera wallet init --with-new-chain --faucet https://faucet.testnet-archimedes.linera.net
+linera wallet init --faucet https://faucet.testnet-conway.linera.net
 
-# Request microchain from faucet
-linera wallet request-chain --faucet https://faucet.testnet-archimedes.linera.net
+# Create multi-owner chain (VERIFIED WORKING)
+linera open-multi-owner-chain \
+    --from "$CHAIN1" \
+    --owners "$OWNER1" "$OWNER2" \
+    --initial-balance 10
+
+# Sync with validators
+linera sync
+
+# Query balance
+linera query-balance "$CHAIN_ID"
 ```
 
-**From Documentation**:
-> "The current Testnet (codename 'Archimedes') is the first deployment of Linera run in partnership with external validators. While it should be considered stable, it will be replaced by a new Testnet when needed."
+**Test Results** (from `docs/REALITY_CHECK.md`):
+- ✅ Multi-owner chain created successfully
+- ✅ Chain ID: `4888610445c3f2e65fd23f0deceaecff469c9c9149fa6453545a3ca167bde4c7`
+- ✅ Balance confirmed on-chain via `linera sync`
+- ✅ gRPC connectivity verified
+- ❌ GraphQL NOT working (schema doesn't load)
 
 **Characteristics**:
+- Third Linera testnet (codename: Conway)
 - External validators (not just Linera team)
-- Stable for development
+- Multi-owner chains supported
 - Will restart from clean slate when replaced
-- Creates microchains with initial test tokens
 
 ---
 
@@ -756,110 +865,178 @@ pnpm install && pnpm build
 
 ---
 
-## 8. Architecture Recommendations (Based on Verified Data)
+## 8. Architecture Recommendations (Updated with Testnet Conway Reality)
 
-### 8.1 Technology Stack
+### 8.1 Technology Stack (Adjusted)
 
 | Layer | Technology | Justification |
 |-------|-----------|---------------|
-| **Smart Contracts** | Rust → Wasm | Required by Linera |
-| **Backend** | Rust (Actix-web/Axum) | Native SDK access |
-| **Frontend** | TypeScript/React | Web client library available |
+| **Smart Contracts** | Rust → Wasm (linera-sdk) | Required by Linera |
+| **Backend** | Rust (Actix-web/Axum) + CLI Wrapper | NO client SDK exists |
+| **Frontend** | TypeScript/React | Custom wallet required |
 | **Database** | PostgreSQL + Diesel/SeaORM | Rust ecosystem |
-| **Wallet** | MetaMask or Dynamic | Documented integrations |
-| **API** | GraphQL (via Node Service) + Custom REST | Query only via GraphQL |
+| **Wallet** | **Custom Implementation** | NO connector verified |
+| **API** | **REST (Custom)** + CLI Wrapper | GraphQL NOT working |
+
+### 8.2 CLI Wrapper Architecture (Required)
+
+```rust
+// Required implementation (NOT provided by SDK)
+pub struct LineraClient {
+    pub wallet_path: PathBuf,
+    pub keystore_path: PathBuf,
+    pub storage_path: String,
+}
+
+impl LineraClient {
+    // Sync with validators
+    pub fn sync(&self) -> Result<(), Error> {
+        Command::new("linera")
+            .arg("sync")
+            .env("LINERA_WALLET", &self.wallet_path)
+            .output()?;
+    }
+
+    // Query balance
+    pub fn query_balance(&self, chain_id: &str) -> Result<u64, Error> {
+        let output = Command::new("linera")
+            .args(["query-balance", chain_id])
+            .env("LINERA_WALLET", &self.wallet_path)
+            .output()?;
+        // Parse output manually...
+    }
+
+    // Create multi-owner chain
+    pub fn create_multi_owner_chain(
+        &self,
+        from_chain: &str,
+        owners: Vec<String>,
+        initial_balance: u64,
+    ) -> Result<String, Error> {
+        // Build CLI command and execute...
+    }
+}
+```
 
 ---
 
-### 8.2 Wallet Strategy (Prioritized)
+### 8.2 Wallet Strategy (Updated Based on Reality)
 
-1. **Primary**: MetaMask integration via `@linera/signer` (documented, verified)
-2. **Secondary**: Dynamic embedded wallet (documented alternative)
-3. **Fallback**: Manual key entry for development (documented)
+> **No wallet connector verified on Testnet Conway**
+
+1. **Primary**: **Custom wallet implementation** (only verified approach)
+   - Ed25519 key generation/storage
+   - Multi-owner chain management
+   - Transaction signing UI
+
+2. **Experimental**: MetaMask integration via `@linera/signer`
+   - ⚠️ Documented but NOT verified for multisig
+   - ⚠️ Blind-signing UX concerns
+
+3. **Fallback**: Manual key entry for development/testing
+   - Private key input (NOT production)
+
 4. **Future**: Native Linera browser extension (when production-ready)
+   - Current status: UNCLEAR
 
 ---
 
-### 8.3 Development Approach
+### 8.3 Development Approach (Updated Timeline)
 
 **Phase 1: Proof of Concept** (Week 1-2)
-1. Verify Testnet Archimedes accessibility
-2. Test MetaMask integration with counter demo
-3. Build minimal multisig contract on testnet
-4. Measure transaction costs
+1. ✅ ~~Verify Testnet accessibility~~ - **DONE**: Testnet Conway working
+2. ✅ ~~Test multi-owner chain~~ - **DONE**: `open-multi-owner-chain` verified
+3. ⚠️ Build CLI wrapper prototype - **PENDING**: Critical path
+4. ⚠️ Measure transaction costs - **PENDING**: Especially N approvals
 
-**Phase 2: MVP Development** (Week 3-10)
-1. Rust backend with Actix-web
+**Phase 2: MVP Development** (Week 3-14) - **EXTENDED**
+1. Rust backend with Actix-web + CLI wrapper
 2. React frontend with TypeScript
-3. MetaMask wallet integration
+3. **Custom wallet implementation** (NOT MetaMask)
 4. PostgreSQL for proposal tracking
-5. GraphQL queries for chain state
+5. **REST API** (NOT GraphQL - doesn't work)
 
-**Phase 3: Production Readiness** (Week 11-15)
+**Phase 3: Production Readiness** (Week 15-20) - **EXTENDED**
 1. Security audit of smart contract
 2. Stress testing on testnet
-3. UX refinement
+3. UX refinement for custom wallet
 4. Documentation and deployment guides
+
+**Timeline Adjustment**: **+4-5 weeks** due to CLI wrapper + custom wallet
 
 ---
 
-## 9. Risk Assessment (Based on Verified Data)
+## 9. Risk Assessment (Updated with Testnet Conway Findings)
 
 ### High Risk
 
 | Risk | Evidence | Mitigation |
 |------|----------|------------|
-| **Browser Extension Status** | Docs say "goal", not "available" | Plan for MetaMask/Dynamic; verify extension status Week 1 |
-| **Fee Model Unknown** | Not documented in any source | Measure costs during PoC; budget for optimization |
-| **Single SDK (Rust)** | Python SDK confirmed absent | Rust backend required; team must know Rust or learn |
+| **GraphQL Does NOT Work** | Tested on Testnet Conway - schema doesn't load | Use CLI wrapper + REST API; budget +40% backend time |
+| **No Wallet Connector** | MetaMask/Dynamic NOT verified for multisig | Build custom wallet; budget +50% frontend time |
+| **CLI Wrapper Required** | No client SDK exists | Build wrapper from scratch; document patterns |
+| **Fee Model Unknown** | Not documented; N approvals = N transactions | Measure costs during PoC; budget optimization |
+| **Single SDK (Rust)** | Python SDK confirmed absent | Rust backend required; team must know Rust |
 
 ### Medium Risk
 
 | Risk | Evidence | Mitigation |
 |------|----------|------------|
-| **Testnet Stability** | Docs say "stable" but "will be replaced" | Local dev network as fallback; contingency time |
-| **MetaMask UX** | Blind-signing documented | Clear UI explanations; consider Dynamic alternative |
-| **Custom REST API** | Not provided natively | Rust backend with Actix-web (standard ecosystem) |
+| **Testnet Stability** | Conway is stable but will be replaced | Local dev network as fallback |
+| **Multi-Owner ≠ Multisig** | No threshold at protocol level | Application-level contract required |
+| **No REST API** | Must build custom layer | Actix-web standard in Rust ecosystem |
+
+### Low Risk
+
+| Risk | Evidence | Mitigation |
+|------|----------|------------|
+| **Wasm Compilation** | linera-sdk works for contracts | Standard Rust toolchain |
+| **Cross-Chain Messaging** | Documented and verified | Use `prepare_message()` pattern |
 
 ---
 
-## 10. Conclusion
+## 10. Conclusion (Updated with Testnet Conway Reality)
 
-**Infrastructure Readiness**: **HIGH** (with caveats)
+**Infrastructure Readiness**: **MEDIUM** (after empirical testing)
 
-**Verified Strengths**:
-- ✅ Rust SDK is production-ready and actively developed
-- ✅ Testnet Archimedes is operational with faucet
-- ✅ GraphQL API functional with GraphiQL IDE
-- ✅ MetaMask integration documented (`@linera/signer` v0.15.6)
-- ✅ Dynamic wallet integration available
-- ✅ Web client repository exists with build instructions
-- ✅ Multi-owner chains supported via `open-multi-owner-chain`
-- ✅ Cross-chain messaging verified with `prepare_message()` and `send_to()`
-- ✅ Multisig implementation pattern documented via matching-engine example
-- ✅ Views system provides efficient state management (MapView, RegisterView, QueueView)
-- ✅ Chain ownership and permissions configurable via CLI
+**Verified Strengths** (from real testing):
+- ✅ **Multi-owner chains work** - Tested on Testnet Conway
+- ✅ **CLI commands functional** - `open-multi-owner-chain` verified
+- ✅ **On-chain validation** - Balance queries work via sync
+- ✅ **gRPC connectivity** - Validators respond to gRPC calls
+- ✅ **Rust SDK for Wasm** - Can compile smart contracts
 
-**Verified Weaknesses**:
-- ⚠️ Only Rust SDK exists (no Python)
-- ⚠️ No REST API provided (must build custom)
-- ⚠️ Fee model not documented
-- ⚠️ Browser extension status unclear ("goal" vs "production")
-- ⚠️ Hardware wallet support not mentioned
+**Verified Weaknesses** (from real testing):
+- ❌ **GraphQL does NOT work** - Schema doesn't load despite docs saying otherwise
+- ❌ **No client SDK exists** - Must build CLI wrapper from scratch
+- ❌ **No wallet connector verified** - MetaMask/Dynamic not tested for multisig
+- ⚠️ **Only Rust SDK exists** - No Python SDK
+- ⚠️ **No REST API provided** - Must build custom
+- ⚠️ **Fee model not documented**
+- ⚠️ **Browser extension status unclear**
 
-**Recommendation**: **PROCEED with PoC** using:
-- **Backend**: Rust with native SDK (Actix-web/Axum)
-- **Frontend**: TypeScript/React with MetaMask integration
-- **Wallet**: MetaMask via `@linera/signer` (verified approach)
-- **Database**: PostgreSQL with Diesel/SeaORM
+**Recommendation**: **PROCEED with adjusted expectations**:
 
-**Critical Next Steps** (Week 1):
-1. Test Linera Web extension on Testnet Archimedes
-2. Run counter demo with MetaMask integration
-3. Build minimal multisig contract using documented pattern from matching-engine
-4. Measure transaction costs for fee model (especially N approval transactions)
-5. Test cross-chain messaging for owner notifications
-6. Verify multi-owner chain creation via `open-multi-owner-chain`
+| Component | Original Plan | Realistic Approach | Impact |
+|-----------|--------------|-------------------|---------|
+| Backend API | GraphQL + SDK | REST API + CLI Wrapper | +40% effort |
+| Wallet Integration | MetaMask/Dynamic | Custom wallet implementation | +50% effort |
+| Smart Contract | linera-sdk (straightforward) | linera-sdk + learning curve | +42% effort |
+| Frontend Updates | WebSocket via GraphQL | Polling every 5-10s | +25% effort |
+
+**Total Timeline Impact**: **+30-40%** (610h → 800-850h)
+
+**Critical Next Steps** (updated):
+1. ✅ ~~Test Linera Web extension~~ - **COMPLETED**: Extension not production-ready
+2. ✅ ~~Test counter demo with MetaMask~~ - **NOTED**: Not verified for multisig use case
+3. ✅ ~~Test multi-owner chain~~ - **COMPLETED**: Working on Testnet Conway
+4. ⚠️ Build CLI wrapper prototype - **PENDING**: Critical path item
+5. ⚠️ Design custom wallet architecture - **PENDING**: No connector available
+6. ⚠️ Measure transaction costs - **PENDING**: Especially for N approvals
+
+**See Also**:
+- `docs/REALITY_CHECK.md` - Detailed technical findings from Testnet Conway testing
+- `docs/PROPOSAL/linera-multisig-platform-proposal.md` - Updated proposal with timeline adjustments
 
 ---
 

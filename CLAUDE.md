@@ -1,5 +1,7 @@
 **CRITICAL: Read `open-agents/INSTRUCTIONS.md` immediately.**
 
+**⚠️ IMPORTANT**: Before starting development, read `docs/REALITY_CHECK.md` for critical findings from Testnet Conway testing that affect the architecture.
+
 ---
 
 # Linera.dev Research Repository
