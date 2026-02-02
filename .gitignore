@@ -1,0 +1,42 @@
+# Open Agent System outputs (drafts and refined work)
+open-agents/output-drafts/
+open-agents/output-refined/
+
+# Keep final outputs
+!open-agents/output-final/
+
+# Agent tools (scripts)
+open-agents/tools/
+
+# Claude Code session files
+.claude-sneakpeek/
+.claude/
+
+# Gemini session files
+.gemini/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
