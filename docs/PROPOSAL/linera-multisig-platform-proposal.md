@@ -53,7 +53,77 @@
 - **Real-time**: Live updates leveraging Linera's sub-second finality and push notifications
 - **Secure**: Best practices for key management and transaction validation
 - **Cross-Chain Coordination**: Use Linera's messaging for owner notifications ### System Architecture ```mermaid
-graph TB subgraph "Frontend (React/Next.js)" UI[User Interface] Wallet[Wallet Connector<br/>or Manual Key Entry] Wizard[Wallet Creation Wizard] Proposal[Proposal Builder] Dashboard[Dashboard] Queue[Transaction Queue<br/>Pending Approvals] end subgraph "Backend (Python/FastAPI)" API[REST API] MultisigSvc[Multisig Service<br/>Contract Management] ProposalSvc[Proposal Service<br/>Lifecycle Management] BlockchainSvc[Blockchain Integration<br/>Linera SDK] MessageSvc[Message Service<br/>Cross-Chain Coordination] NotificationSvc[Notification Service<br/>Push Updates] end subgraph "Linera Network" Validators[Linera Validators<br/>Shared Security] UserChains[User Chains<br/>Owner Wallets] MultiChain[Multi-Owner Chain<br/>Multisig Wallet] Contract[Multisig Application<br/>Wasm Bytecode] Inboxes[Cross-Chain Inboxes<br/>Message Routing] end subgraph "Storage" Postgres[(PostgreSQL<br/>Wallets, Proposals<br/>Approvals, Metadata)] Redis[(Redis<br/>Cache, Rate Limits<br/>Message Queue)] end UI --> Wallet UI --> Wizard UI --> Proposal UI --> Dashboard UI --> Queue UI --> API Wizard --> API Proposal --> API Queue --> API API --> MultisigSvc API --> ProposalSvc API --> BlockchainSvc API --> MessageSvc API --> NotificationSvc MultisigSvc --> BlockchainSvc ProposalSvc --> Postgres MessageSvc --> Inboxes NotificationSvc --> Inboxes BlockchainSvc --> Validators BlockchainSvc --> UserChains BlockchainSvc --> MultiChain MultisigSvc --> Contract Validators --> UserChains Validators --> MultiChain UserChains --> Inboxes MultiChain --> Inboxes BlockchainSvc --> Redis API --> Redis style UI fill:#e1f5fe style Wallet fill:#e1f5fe style MultiChain fill:#c8e6c9 style Contract fill:#c8e6c9 style Inboxes fill:#fff9c4 style Validators fill:#fff9c4
+graph TB
+    subgraph "Frontend (React/Next.js)"
+        UI[User Interface]
+        Wallet[Wallet Connector<br/>or Manual Key Entry]
+        Wizard[Wallet Creation Wizard]
+        Proposal[Proposal Builder]
+        Dashboard[Dashboard]
+        Queue[Transaction Queue<br/>Pending Approvals]
+    end
+
+    subgraph "Backend (Python/FastAPI)"
+        API[REST API]
+        MultisigSvc[Multisig Service<br/>Contract Management]
+        ProposalSvc[Proposal Service<br/>Lifecycle Management]
+        BlockchainSvc[Blockchain Integration<br/>Linera SDK]
+        MessageSvc[Message Service<br/>Cross-Chain Coordination]
+        NotificationSvc[Notification Service<br/>Push Updates]
+    end
+
+    subgraph "Linera Network"
+        Validators[Linera Validators<br/>Shared Security]
+        UserChains[User Chains<br/>Owner Wallets]
+        MultiChain[Multi-Owner Chain<br/>Multisig Wallet]
+        Contract[Multisig Application<br/>Wasm Bytecode]
+        Inboxes[Cross-Chain Inboxes<br/>Message Routing]
+    end
+
+    subgraph "Storage"
+        Postgres[(PostgreSQL<br/>Wallets, Proposals<br/>Approvals, Metadata)]
+        Redis[(Redis<br/>Cache, Rate Limits<br/>Message Queue)]
+    end
+
+    UI --> Wallet
+    UI --> Wizard
+    UI --> Proposal
+    UI --> Dashboard
+    UI --> Queue
+    UI --> API
+    Wizard --> API
+    Proposal --> API
+    Queue --> API
+
+    API --> MultisigSvc
+    API --> ProposalSvc
+    API --> BlockchainSvc
+    API --> MessageSvc
+    API --> NotificationSvc
+
+    MultisigSvc --> BlockchainSvc
+    ProposalSvc --> Postgres
+    MessageSvc --> Inboxes
+    NotificationSvc --> Inboxes
+
+    BlockchainSvc --> Validators
+    BlockchainSvc --> UserChains
+    BlockchainSvc --> MultiChain
+    MultisigSvc --> Contract
+
+    Validators --> UserChains
+    Validators --> MultiChain
+    UserChains --> Inboxes
+    MultiChain --> Inboxes
+    BlockchainSvc --> Redis
+    API --> Redis
+
+    style UI fill:#e1f5fe
+    style Wallet fill:#e1f5fe
+    style MultiChain fill:#c8e6c9
+    style Contract fill:#c8e6c9
+    style Inboxes fill:#fff9c4
+    style Validators fill:#fff9c4
 ``` ### Linera Integration Approach **Important**: Linera's multisig approach differs from traditional chains: **Primary Method: Application-Level Multisig on Multi-Owner Chains**
 - Deploy multi-owner chain with N owners
 - Deploy custom Wasm multisig application
@@ -73,14 +143,81 @@ graph TB subgraph "Frontend (React/Next.js)" UI[User Interface] Wallet[Wallet Co
 - **Chain Ownership**: N owners with individual key pairs
 - **Authentication**: Block signer authentication propagates via messages
 - **Application-Level Authorization**: Custom logic in multisig contract ### Key Flow: Propose → Approve → Execute ```mermaid
-sequenceDiagram participant O1 as Owner 1 participant O2 as Owner 2 participant O3 as Owner 3 participant UI as Frontend participant API as Backend participant SC as Multisig Contract participant LC as Linera Chain O1->>UI: Create transaction proposal UI->>API: POST /propose (tx_data, signature) API->>SC: CreateProposal operation SC->>LC: Execute on multi-owner chain LC-->>SC: Proposal created (approvals: [O1]) SC->>LC: Send approval notification to O2, O3 API-->>UI: Proposal ID, status: pending Note over O2,O3: Cross-chain messages delivered to owner chains O2->>UI: View proposal, approve UI->>API: POST /approve (proposal_id, signature) API->>SC: ApproveProposal operation SC->>LC: Execute on multi-owner chain LC-->>SC: Approval recorded (approvals: [O1, O2]) SC->>LC: Send notification to O3 API-->>UI: Status updated O3->>UI: View proposal, approve UI->>API: POST /approve (proposal_id, signature) API->>SC: ApproveProposal operation SC->>LC: Execute on multi-owner chain LC-->>SC: Approval recorded (approvals: [O1, O2, O3]) SC->>SC: Check threshold: 3-of-3 met ✓ API-->>UI: Status: ready_to_execute O1->>UI: Execute transaction UI->>API: POST /execute (proposal_id, signature) API->>SC: ExecuteProposal operation SC->>LC: Execute inner transaction LC-->>SC: Transaction executed API-->>UI: Status: executed SC->>LC: Send completion notifications
+sequenceDiagram
+    participant O1 as Owner 1
+    participant O2 as Owner 2
+    participant O3 as Owner 3
+    participant UI as Frontend
+    participant API as Backend
+    participant SC as Multisig Contract
+    participant LC as Linera Chain
+
+    O1->>UI: Create transaction proposal
+    UI->>API: POST /propose (tx_data, signature)
+    API->>SC: CreateProposal operation
+    SC->>LC: Execute on multi-owner chain
+    LC-->>SC: Proposal created (approvals: [O1])
+    SC->>LC: Send approval notification to O2, O3
+    API-->>UI: Proposal ID, status: pending
+
+    Note over O2,O3: Cross-chain messages delivered to owner chains
+
+    O2->>UI: View proposal, approve
+    UI->>API: POST /approve (proposal_id, signature)
+    API->>SC: ApproveProposal operation
+    SC->>LC: Execute on multi-owner chain
+    LC-->>SC: Approval recorded (approvals: [O1, O2])
+    SC->>LC: Send notification to O3
+    API-->>UI: Status updated
+
+    O3->>UI: View proposal, approve
+    UI->>API: POST /approve (proposal_id, signature)
+    API->>SC: ApproveProposal operation
+    SC->>LC: Execute on multi-owner chain
+    LC-->>SC: Approval recorded (approvals: [O1, O2, O3])
+    SC->>SC: Check threshold: 3-of-3 met ✓
+    API-->>UI: Status: ready_to_execute
+
+    O1->>UI: Execute transaction
+    UI->>API: POST /execute (proposal_id, signature)
+    API->>SC: ExecuteProposal operation
+    SC->>LC: Execute inner transaction
+    LC-->>SC: Transaction executed
+    API-->>UI: Status: executed
+    SC->>LC: Send completion notifications
 ``` **Key Differences from Traditional Multisig**:
 - No signature aggregation at protocol level
 - Each approval is a separate on-chain operation
 - Application tracks approvals in state
 - Threshold verification in contract logic
 - Leverages Linera's cross-chain messaging for coordination --- ## 5) Milestones & Deliverables ### Timeline Overview ```mermaid
-gantt dateFormat YYYY-MM-DD title Linera Multisig Platform Delivery Timeline section Foundations M1 Project Setup (40h) :done, m1, 2026-02-03, 5d section Smart Contract M2 Multisig Contract (120h) :active, m2, 2026-02-10, 15d section Backend M3 Backend Core (150h) : m3, 2026-02-27, 19d section Frontend M4 Frontend Core (120h) :crit, m4, 2026-03-20, 15d section Integration M5 Integration & Testing (80h) : m5, 2026-04-06, 10d section Ops/Obs M6 Observability & Hardening (40h): m6, 2026-04-18, 5d section QA M7 QA & UAT (40h) : m7, 2026-04-25, 5d section Handoff M8 Handoff (20h) : m8, 2026-05-02, 3d
+gantt
+    dateFormat YYYY-MM-DD
+    title Linera Multisig Platform Delivery Timeline
+
+    section Foundations
+    M1 Project Setup (40h)           :done,    m1, 2026-02-03, 5d
+
+    section Smart Contract
+    M2 Multisig Contract (120h)      :active,  m2, 2026-02-10, 15d
+
+    section Backend
+    M3 Backend Core (150h)           :         m3, 2026-02-27, 19d
+
+    section Frontend
+    M4 Frontend Core (120h)          :crit,    m4, 2026-03-20, 15d
+
+    section Integration
+    M5 Integration & Testing (80h)   :         m5, 2026-04-06, 10d
+
+    section Ops/Obs
+    M6 Observability & Hardening (40h) :        m6, 2026-04-18, 5d
+
+    section QA
+    M7 QA & UAT (40h)                :         m7, 2026-04-25, 5d
+
+    section Handoff
+    M8 Handoff (20h)                 :         m8, 2026-05-02, 3d
 ``` *Note: Timeline assumes 8-hour workdays. Total: ~10-11 weeks.* ### Detailed Milestone Breakdown #### M1 Project Setup — 40h **Tasks**:
 - Requirements definition and refinement (8h)
 - Architecture design and documentation (8h)
@@ -181,10 +318,40 @@ gantt dateFormat YYYY-MM-DD title Linera Multisig Platform Delivery Timeline sec
 - Operations runbooks
 - Final demo and handoff --- **Total estimate: 610h** --- ## 6) Technical Implementation ### Smart Contract Interface (Rust Pseudo-code) ```rust
 // Multisig application state
-struct MultisigState { owners: Vec<Owner>, threshold: usize, pending_transactions: HashMap<TxId, PendingTx>, nonce: u64,
-} struct PendingTx { proposer: Owner, operations: Vec<Operation>, approvals: HashSet<Owner>, created_at: Timestamp, expires_at: Option<Timestamp>,
-} // Application operations
-enum Operation { Propose { operations: Vec<Operation>, nonce: u64, timeout: Option<Duration>, }, Approve { tx_id: TxId, }, Revoke { tx_id: TxId, }, Execute { tx_id: TxId, }, AddOwner { owner: Owner, threshold: Option<usize>, }, RemoveOwner { owner: Owner, threshold: Option<usize>, }, ChangeThreshold { threshold: usize, },
+struct MultisigState {
+    owners: Vec<Owner>,
+    threshold: usize,
+    pending_transactions: HashMap<TxId, PendingTx>,
+    nonce: u64,
+}
+
+struct PendingTx {
+    proposer: Owner,
+    operations: Vec<Operation>,
+    approvals: HashSet<Owner>,
+    created_at: Timestamp,
+    expires_at: Option<Timestamp>,
+}
+
+// Application operations
+enum Operation {
+    Propose {
+        operations: Vec<Operation>,
+        nonce: u64,
+        timeout: Option<Duration>,
+    },
+    Approve { tx_id: TxId },
+    Revoke { tx_id: TxId },
+    Execute { tx_id: TxId },
+    AddOwner {
+        owner: Owner,
+        threshold: Option<usize>,
+    },
+    RemoveOwner {
+        owner: Owner,
+        threshold: Option<usize>,
+    },
+    ChangeThreshold { threshold: usize },
 }
 ``` ### Database Schema ```sql
 -- Multisig wallets
