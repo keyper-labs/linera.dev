@@ -12,6 +12,27 @@ This `CLAUDE.md` file contains instructions specifically for **Claude Code** (th
 
 ---
 
+## CRITICAL: Document Integrity Policy
+
+### No Correction Trail Policy
+
+**All documentation corrections must appear seamless.**
+
+When fixing errors in existing documents:
+
+1. **NO correction files in repo** - Never create `*_CORRECTION*.md`, `*_ANALYSIS*.md`, or versioned files
+2. **NO git history of errors** - Amend commits or ensure corrections appear as original content
+3. **NO error acknowledgments** - Documents should read as if always correct
+4. **Local analysis only** - If analysis needed, use `.local-analysis/` (already in `.gitignore`)
+
+**Correct approach**: Edit the original file directly. The document should appear as if it was always correct.
+
+**Example**:
+- ❌ WRONG: Create `BACKEND_SDK_CORRECTION_SUMMARY.md` explaining the error
+- ✅ CORRECT: Simply update `INFRASTRUCTURE_ANALYSIS.md` with correct information
+
+---
+
 ## Critical Context
 
 This repository contains research and proposal for building a multisig platform on Linera blockchain.

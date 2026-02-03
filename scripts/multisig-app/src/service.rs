@@ -1,101 +1,203 @@
+// Copyright (c) 2025 PalmeraDAO
+// SPDX-License-Identifier: MIT
+
+#![cfg_attr(target_arch = "wasm32", no_main)]
+
+use std::sync::Arc;
+
+use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Request, Response, Result, Schema};
 use linera_sdk::{
-    base::Owner,
-    contract::Contract,
-    graphql::GraphQLMutationRoot,
-    service::Service,
-    views::MapView,
-    ApplicationCallResult, ServiceRuntime, KeyValueStore, Resources,
+    linera_base_types::WithServiceAbi,
+    views::View,
+    Service, ServiceRuntime,
 };
-use serde::{Deserialize, Serialize};
+use linera_multisig::{MultisigAbi, Owner, ProposalView};
 
-// Re-use contract types
-use crate::contract::{MultisigState, PendingTransaction};
+mod state;
+use state::{MultisigState, Proposal, ProposalType};
 
-/// Queries for the multisig service
-#[derive(Debug, Serialize, Deserialize, GraphQLMutationRoot)]
-pub enum Query {
-    /// Get the list of owners
-    Owners,
-    /// Get the current threshold
-    Threshold,
-    /// Get a pending transaction by ID
-    Transaction {
-        id: u64,
-    },
-    /// Get all pending transactions
-    PendingTransactions,
-    /// Check if an owner has approved a transaction
-    HasApproved {
-        transaction_id: u64,
-        owner: Owner,
-    },
+/// Multisig service implementation
+pub struct MultisigService {
+    state: Arc<MultisigState>,
 }
 
-/// Multisig service
-pub struct MultisigService {
-    runtime: ServiceRuntime<Self>,
-    state: MultisigState,
+linera_sdk::service!(MultisigService);
+
+impl WithServiceAbi for MultisigService {
+    type Abi = MultisigAbi;
 }
 
 impl Service for MultisigService {
-    type Runtime = ServiceRuntime<Self>;
-    type State = MultisigState;
+    type Parameters = ();
 
-    fn new(runtime: Self::Runtime) -> Self {
-        Self {
-            runtime,
-            state: MultisigState {
-                owners: Vec::new(),
-                threshold: 0,
-                pending_transactions: MapView::new(),
-                transaction_count: 0,
-            },
+    async fn new(runtime: ServiceRuntime<Self>) -> Self {
+        let state = MultisigState::load(runtime.root_view_storage_context())
+            .await
+            .expect("Failed to load state");
+        MultisigService {
+            state: Arc::new(state),
         }
     }
 
-    fn state_mut(&mut self) -> &mut Self::State {
-        &mut self.state
+    async fn handle_query(&self, request: Request) -> Response {
+        let schema = Schema::build(
+            QueryRoot,
+            EmptyMutation,
+            EmptySubscription,
+        )
+        .data(self.state.clone())
+        .finish();
+        schema.execute(request).await
+    }
+}
+
+/// Query root for GraphQL API
+pub struct QueryRoot;
+
+#[Object]
+impl QueryRoot {
+    /// Get the list of current owners
+    async fn owners(&self, ctx: &Context<'_>) -> Result<Vec<Owner>> {
+        let state = ctx.data::<Arc<MultisigState>>()?;
+        Ok(state.owners.get().clone())
     }
 
-    fn runtime(&self) -> &Self::Runtime {
-        &self.runtime
+    /// Get the current threshold
+    async fn threshold(&self, ctx: &Context<'_>) -> Result<u64> {
+        let state = ctx.data::<Arc<MultisigState>>()?;
+        Ok(*state.threshold.get())
     }
 
-    fn handle_query(&mut self, query: Query) -> ApplicationCallResult {
-        match query {
-            Query::Owners => {
-                let owners = self.state.owners.clone();
-                let json = serde_json::to_string(&owners)?;
-                self.runtime.result(json.as_bytes().to_vec())
-            }
-            Query::Threshold => {
-                let threshold = self.state.threshold;
-                let json = serde_json::to_string(&threshold)?;
-                self.runtime.result(json.as_bytes().to_vec())
-            }
-            Query::Transaction { id } => {
-                let key = format!("tx_{}", id).into_bytes();
-                let transaction = self.state.pending_transactions.get(&key)?;
-                let json = serde_json::to_string(&transaction)?;
-                self.runtime.result(json.as_bytes().to_vec())
-            }
-            Query::PendingTransactions => {
-                let mut transactions = Vec::new();
-                for key in self.state.pending_transactions.keys()? {
-                    if let Ok(tx) = self.state.pending_transactions.get(&key) {
-                        transactions.push(tx);
-                    }
-                }
-                let json = serde_json::to_string(&transactions)?;
-                self.runtime.result(json.as_bytes().to_vec())
-            }
-            Query::HasApproved { transaction_id, owner } => {
-                let key = format!("tx_{}", transaction_id).into_bytes();
-                let transaction = self.state.pending_transactions.get(&key)?;
-                let has_approved = transaction.map_or(false, |tx| tx.approvals.contains(&owner));
-                let json = serde_json::to_string(&has_approved)?;
-                self.runtime.result(json.as_bytes().to_vec())
+    /// Get the current nonce (next proposal ID)
+    async fn nonce(&self, ctx: &Context<'_>) -> Result<u64> {
+        let state = ctx.data::<Arc<MultisigState>>()?;
+        Ok(*state.nonce.get())
+    }
+
+    /// Get a proposal by ID
+    async fn proposal(&self, ctx: &Context<'_>, id: u64) -> Result<Option<ProposalView>> {
+        let state = ctx.data::<Arc<MultisigState>>()?;
+        
+        // Check pending proposals first
+        if let Some(proposal) = state.pending_proposals.get(&id).await? {
+            return Ok(Some(proposal_to_view(proposal)));
+        }
+        
+        // Then check executed proposals
+        if let Some(proposal) = state.executed_proposals.get(&id).await? {
+            return Ok(Some(proposal_to_view(proposal)));
+        }
+        
+        Ok(None)
+    }
+
+    /// Get all pending proposals
+    async fn pending_proposals(&self, ctx: &Context<'_>) -> Result<Vec<ProposalView>> {
+        let state = ctx.data::<Arc<MultisigState>>()?;
+        let mut proposals = Vec::new();
+        
+        // Iterate through all pending proposals
+        // MapView doesn't have iter(), so we get all indices and fetch each
+        let indices = state.pending_proposals.indices().await?;
+        for key in indices {
+            if let Some(proposal) = state.pending_proposals.get(&key).await? {
+                proposals.push(proposal_to_view(proposal));
             }
         }
+        
+        Ok(proposals)
+    }
+
+    /// Get all executed proposals
+    async fn executed_proposals(&self, ctx: &Context<'_>) -> Result<Vec<ProposalView>> {
+        let state = ctx.data::<Arc<MultisigState>>()?;
+        let mut proposals = Vec::new();
+        
+        // Iterate through all executed proposals
+        // MapView doesn't have iter(), so we get all indices and fetch each
+        let indices = state.executed_proposals.indices().await?;
+        for key in indices {
+            if let Some(proposal) = state.executed_proposals.get(&key).await? {
+                proposals.push(proposal_to_view(proposal));
+            }
+        }
+        
+        Ok(proposals)
+    }
+
+    /// Check if an owner has confirmed a proposal
+    async fn has_confirmed(
+        &self,
+        ctx: &Context<'_>,
+        owner: Owner,
+        proposal_id: u64,
+    ) -> Result<bool> {
+        let state = ctx.data::<Arc<MultisigState>>()?;
+        let confirmed_proposals = state.confirmations.get(&owner).await?.unwrap_or_default();
+        Ok(confirmed_proposals.contains(&proposal_id))
+    }
+
+    /// Get the number of confirmations for a proposal
+    async fn confirmation_count(&self, ctx: &Context<'_>, proposal_id: u64) -> Result<u64> {
+        let state = ctx.data::<Arc<MultisigState>>()?;
+        
+        if let Some(proposal) = state.pending_proposals.get(&proposal_id).await? {
+            Ok(proposal.confirmation_count)
+        } else if let Some(proposal) = state.executed_proposals.get(&proposal_id).await? {
+            Ok(proposal.confirmation_count)
+        } else {
+            Ok(0)
+        }
+    }
+
+    /// Get proposals where an owner has confirmed
+    async fn proposals_confirmed_by(
+        &self,
+        ctx: &Context<'_>,
+        owner: Owner,
+    ) -> Result<Vec<ProposalView>> {
+        let state = ctx.data::<Arc<MultisigState>>()?;
+        let confirmed_ids = state.confirmations.get(&owner).await?.unwrap_or_default();
+        
+        let mut proposals = Vec::new();
+        for id in confirmed_ids {
+            if let Some(proposal) = state.pending_proposals.get(&id).await? {
+                proposals.push(proposal_to_view(proposal));
+            } else if let Some(proposal) = state.executed_proposals.get(&id).await? {
+                proposals.push(proposal_to_view(proposal));
+            }
+        }
+        
+        Ok(proposals)
+    }
+}
+
+/// Convert internal Proposal to ProposalView for GraphQL
+fn proposal_to_view(proposal: Proposal) -> ProposalView {
+    let proposal_type_str = match &proposal.proposal_type {
+        ProposalType::Transfer { to, value, .. } => {
+            format!("Transfer {{ to: {:?}, value: {} }}", to, value)
+        }
+        ProposalType::AddOwner { owner } => {
+            format!("AddOwner {{ owner: {:?} }}", owner)
+        }
+        ProposalType::RemoveOwner { owner } => {
+            format!("RemoveOwner {{ owner: {:?} }}", owner)
+        }
+        ProposalType::ReplaceOwner { old_owner, new_owner } => {
+            format!("ReplaceOwner {{ old_owner: {:?}, new_owner: {:?} }}", old_owner, new_owner)
+        }
+        ProposalType::ChangeThreshold { threshold } => {
+            format!("ChangeThreshold {{ threshold: {} }}", threshold)
+        }
+    };
+
+    ProposalView {
+        id: proposal.id,
+        proposal_type: proposal_type_str,
+        proposer: proposal.proposer,
+        confirmation_count: proposal.confirmation_count,
+        executed: proposal.executed,
+        created_at: proposal.created_at,
     }
 }

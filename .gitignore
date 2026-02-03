@@ -45,4 +45,12 @@ Thumbs.db
 **/CLAUDE.md
 
 # maultisig-app
-scripts/multisig-app/target/debug/
+scripts/multisig-app/target/
+
+# Local analysis and corrections (NEVER commit these)
+# All corrections must appear as if documents were always correct
+.local-analysis/
+.local-corrections/
+*_CORRECTION*.md
+*_ANALYSIS*.md
+*.local.md

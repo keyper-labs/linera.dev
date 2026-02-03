@@ -104,10 +104,66 @@ linera-multisig-platform-proposal.md (FINAL)
 - Bug fixes **M5 Documentation & Handoff — 20-40h**
 - API documentation
 - User guides
-- Deployment guides --- ## Diagram Requirements ### 1. System Architecture Diagram ```mermaid
-graph TB subgraph "Frontend (React/Next.js)" UI[User Interface] Wallet[Wallet Connector] Dashboard[Dashboard] Proposal[Proposal Builder] end subgraph "Backend (Python/Node)" API[REST API] Multisig[Multisig Service] WalletSvc[Wallet Service] Blockchain[Blockchain Integration] end subgraph "Linera Network" RPC[Linera RPC] Chain[Microchains] end subgraph "Storage" DB[(Database)] Cache[(Cache)] end [Show all connections]
-``` ### 2. Multisig Flow Diagram ```mermaid
-sequenceDiagram participant Owner1 participant Owner2 participant Owner3 participant UI participant API participant Linera [Show Propose → Approve → Execute flow]
+- Deployment guides --- ## Diagram Requirements ### 1. System Architecture Diagram
+```mermaid
+graph TB
+    subgraph "Frontend (React/Next.js)"
+        UI[User Interface]
+        Wallet[Wallet Connector]
+        Dashboard[Dashboard]
+        Proposal[Proposal Builder]
+    end
+
+    subgraph "Backend (Python/Node)"
+        API[REST API]
+        Multisig[Multisig Service]
+        WalletSvc[Wallet Service]
+        Blockchain[Blockchain Integration]
+    end
+
+    subgraph "Linera Network"
+        RPC[Linera RPC]
+        Chain[Microchains]
+    end
+
+    subgraph "Storage"
+        DB[(Database)]
+        Cache[(Cache)]
+    end
+
+    UI --> API
+    API --> Multisig
+    API --> WalletSvc
+    Multisig --> Blockchain
+    Blockchain --> RPC
+    API --> DB
+    API --> Cache
+```
+
+### 2. Multisig Flow Diagram
+```mermaid
+sequenceDiagram
+    participant Owner1
+    participant Owner2
+    participant Owner3
+    participant UI
+    participant API
+    participant Linera
+
+    Owner1->>UI: Create proposal
+    UI->>API: Submit proposal
+    API->>Linera: Store on chain
+
+    Owner2->>UI: Approve
+    UI->>API: Submit approval
+    API->>Linera: Record approval
+
+    Owner3->>UI: Approve
+    UI->>API: Submit approval
+    API->>Linera: Record approval
+
+    Note over API,Linera: Threshold met
+    API->>Linera: Execute transaction
 ``` --- ## Quality Checklist Before completing, verify:
 - [ ] All research from other agents incorporated
 - [ ] Architecture diagram created and clear

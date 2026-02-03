@@ -1,84 +1,165 @@
-#![cfg_attr(target_arch = "wasm32", no_main)]
+// Copyright (c) 2025 PalmeraDAO
+// SPDX-License-Identifier: MIT
 
-use linera_sdk::{
-    Contract, ContractRuntime,
-    linera_base_types::{AccountOwner, Amount, ChainId},
-};
-use linera_views::{RootView, View, ViewStorageContext};
+/*! ABI for the Linera Multisig Application */
+
+use async_graphql::{Request, Response};
+use linera_sdk::linera_base_types::{AccountOwner, ContractAbi, ServiceAbi};
 use serde::{Deserialize, Serialize};
 
-/// Multisig application state
-#[derive(RootView)]
-pub struct MultisigState {
-    /// List of owners who can approve transactions
-    pub owners: Vec<AccountOwner>,
-    /// Number of approvals required to execute a transaction
-    pub threshold: usize,
-    /// Counter for generating unique proposal IDs
-    pub next_proposal_id: u64,
-}
+// Type alias for convenience
+pub type Owner = AccountOwner;
 
-/// Multisig operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Operation {
-    /// Initialize the multisig with owners and threshold
-    Init {
-        owners: Vec<AccountOwner>,
-        threshold: usize,
+/// ABI marker type for the multisig application
+pub struct MultisigAbi;
+
+/// Multisig operations - All operations now go through proposal flow
+#[derive(Debug, Deserialize, Serialize)]
+pub enum MultisigOperation {
+    /// Submit a new proposal (transfer, add owner, remove owner, etc.)
+    SubmitProposal {
+        /// Type of proposal
+        proposal_type: ProposalType,
     },
-    /// Propose a new transaction
-    Propose {
-        target: ChainId,
-        amount: Amount,
+
+    /// Confirm a pending proposal
+    ConfirmProposal {
+        /// Proposal ID
+        proposal_id: u64,
+    },
+
+    /// Execute a confirmed proposal
+    ExecuteProposal {
+        /// Proposal ID
+        proposal_id: u64,
+    },
+
+    /// Revoke a confirmation
+    RevokeConfirmation {
+        /// Proposal ID
+        proposal_id: u64,
     },
 }
 
-/// Multisig contract
-pub struct MultisigContract {
-    runtime: ContractRuntime<Self>,
+/// Type of proposal that can be submitted
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub enum ProposalType {
+    /// Transfer funds to an address
+    Transfer {
+        /// Destination address
+        to: AccountOwner,
+        /// Amount/value to send
+        value: u64,
+        /// Transaction data (calldata, function selector, etc.)
+        data: Vec<u8>,
+    },
+
+    /// Add a new owner
+    AddOwner {
+        /// New owner address
+        owner: AccountOwner,
+    },
+
+    /// Remove an owner
+    RemoveOwner {
+        /// Owner address to remove
+        owner: AccountOwner,
+    },
+
+    /// Replace an owner
+    ReplaceOwner {
+        /// Old owner to replace
+        old_owner: AccountOwner,
+        /// New owner address
+        new_owner: AccountOwner,
+    },
+
+    /// Change threshold
+    ChangeThreshold {
+        /// New threshold value
+        threshold: u64,
+    },
 }
 
-impl Contract for MultisigContract {
-    type Message = ();
-    type Parameters = ();
-    type InstantiationArgument = Vec<AccountOwner>;
-    type EventValue = ();
-    type Response = ();
-
-    async fn load(runtime: ContractRuntime<Self>) -> Self {
-        Self { runtime }
-    }
-
-    async fn instantiate(&mut self, owners: Vec<AccountOwner>) {
-        self.runtime.initialize_state(MultisigState {
-            owners,
-            threshold: owners.len(),
-            next_proposal_id: 0,
-        });
-    }
-
-    async fn execute_operation(&mut self, operation: Operation) {
-        match operation {
-            Operation::Init { owners, threshold } => {
-                self.runtime.initialize_state(MultisigState {
-                    owners,
-                    threshold,
-                    next_proposal_id: 0,
-                });
-            }
-            Operation::Propose { target, amount } => {
-                let caller = self.runtime.authenticated_signer().unwrap();
-                // Simple proposal logic - in real multisig this would be more complex
-                // For now, just log the proposal
-                log::info!("Proposal from {:?} to send {:?} to {:?}", caller, amount, target);
-            }
-        }
-    }
-
-    async fn execute_message(&mut self, _message: ()) {}
-
-    async fn store(self) {}
+impl ContractAbi for MultisigAbi {
+    type Operation = MultisigOperation;
+    type Response = MultisigResponse;
 }
 
-// Required export for Wasm
-linera_sdk::contract!(MultisigContract);
+impl ServiceAbi for MultisigAbi {
+    type Query = Request;
+    type QueryResponse = Response;
+}
+
+/// Response types for multisig operations
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum MultisigResponse {
+    /// Proposal submitted successfully
+    ProposalSubmitted {
+        /// ID of the submitted proposal
+        proposal_id: u64,
+    },
+    /// Proposal confirmed
+    ProposalConfirmed {
+        /// ID of the confirmed proposal
+        proposal_id: u64,
+        /// Current number of confirmations
+        confirmations: u64,
+    },
+    /// Proposal executed
+    ProposalExecuted {
+        /// ID of the executed proposal
+        proposal_id: u64,
+    },
+    /// Confirmation revoked
+    ConfirmationRevoked {
+        /// ID of the proposal
+        proposal_id: u64,
+    },
+    /// Owner added (after proposal execution)
+    OwnerAdded {
+        /// Address of the added owner
+        owner: AccountOwner,
+    },
+    /// Owner removed (after proposal execution)
+    OwnerRemoved {
+        /// Address of the removed owner
+        owner: AccountOwner,
+    },
+    /// Threshold changed (after proposal execution)
+    ThresholdChanged {
+        /// New threshold value
+        new_threshold: u64,
+    },
+    /// Owner replaced (after proposal execution)
+    OwnerReplaced {
+        /// Address of the replaced owner
+        old_owner: AccountOwner,
+        /// Address of the new owner
+        new_owner: AccountOwner,
+    },
+    /// Funds transferred (after proposal execution)
+    FundsTransferred {
+        /// Destination address
+        to: AccountOwner,
+        /// Amount transferred
+        value: u64,
+    },
+}
+
+/// Proposal view for GraphQL queries
+#[derive(Debug, Clone, async_graphql::SimpleObject, serde::Serialize, serde::Deserialize)]
+pub struct ProposalView {
+    /// Proposal ID
+    pub id: u64,
+    /// Type of proposal (as string representation)
+    pub proposal_type: String,
+    /// Owner who created the proposal
+    pub proposer: Owner,
+    /// Number of confirmations
+    pub confirmation_count: u64,
+    /// Whether executed
+    pub executed: bool,
+    /// Creation timestamp
+    pub created_at: u64,
+}

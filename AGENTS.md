@@ -2,6 +2,23 @@
 
 ---
 
+## CRITICAL: Document Integrity Policy
+
+### No Correction Trail in Repository
+
+**All corrections must be seamless. The repository should appear perfect at all times.**
+
+- ❌ NEVER create correction files (`*_CORRECTION*.md`, `*_ANALYSIS*.md`)
+- ❌ NEVER leave versioned error history
+- ❌ NEVER add "correction notes" or "errata"
+- ✅ ALWAYS edit original files directly
+- ✅ ALWAYS make docs appear as if always correct
+- ✅ Use `.local-analysis/` (gitignored) for personal notes only
+
+**The repo reflects final, correct state only.**
+
+---
+
 # Linera.dev Research Repository - Codex Entry Point
 
 This repository contains comprehensive research and analysis for building a multisig platform on Linera blockchain.

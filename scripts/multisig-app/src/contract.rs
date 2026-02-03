@@ -1,261 +1,475 @@
+// Copyright (c) 2025 PalmeraDAO
+// SPDX-License-Identifier: MIT
+
+#![cfg_attr(target_arch = "wasm32", no_main)]
+
+mod state;
+
 use linera_sdk::{
-    base::{Amount, Owner},
-    contract::Contract,
-    views::MapView,
-    ApplicationCallResult, ContractRuntime, KeyValueStore, Resources,
+    linera_base_types::{AccountOwner, Amount, WithContractAbi},
+    views::{RootView, View},
+    Contract, ContractRuntime,
 };
-use serde::{Deserialize, Serialize};
+use log::{info, warn};
 
-/// Multisig application state
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MultisigState {
-    /// List of owners who can approve transactions
-    pub owners: Vec<Owner>,
-    /// Number of approvals required to execute a transaction
-    pub threshold: usize,
-    /// Pending transactions awaiting approval
-    pub pending_transactions: MapView<Vec<u8>, PendingTransaction>,
-    /// Transaction counter for generating unique IDs
-    pub transaction_count: u64,
-}
+use linera_multisig::{MultisigAbi, MultisigOperation, MultisigResponse, ProposalType};
 
-/// A pending transaction in the multisig
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PendingTransaction {
-    /// Unique transaction ID
-    pub id: u64,
-    /// Owner who proposed this transaction
-    pub proposer: Owner,
-    /// Target chain for this transaction
-    pub target_chain: Vec<u8>,
-    /// Amount to transfer
-    pub amount: Amount,
-    /// Recipient address
-    pub recipient: Vec<u8>,
-    /// Owners who have approved this transaction
-    pub approvals: Vec<Owner>,
-    /// Whether this transaction has been executed
-    pub executed: bool,
-}
+use self::state::{MultisigState, Proposal};
 
-/// Operations that can be performed on the multisig
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Operation {
-    /// Initialize the multisig with owners and threshold
-    Init {
-        owners: Vec<Owner>,
-        threshold: usize,
-    },
-    /// Propose a new transaction
-    ProposeTransaction {
-        target_chain: Vec<u8>,
-        amount: Amount,
-        recipient: Vec<u8>,
-    },
-    /// Approve a pending transaction
-    Approve {
-        transaction_id: u64,
-    },
-    /// Execute a transaction that has reached threshold
-    Execute {
-        transaction_id: u64,
-    },
-    /// Add a new owner
-    AddOwner {
-        owner: Owner,
-    },
-    /// Remove an owner
-    RemoveOwner {
-        owner: Owner,
-    },
-    /// Change the threshold
-    ChangeThreshold {
-        threshold: usize,
-    },
-}
-
-/// Multisig contract
+/// Multisig contract implementation
 pub struct MultisigContract {
-    runtime: ContractRuntime<Self>,
     state: MultisigState,
+    runtime: ContractRuntime<Self>,
+}
+
+// Required macro export for Wasm compilation
+linera_sdk::contract!(MultisigContract);
+
+impl WithContractAbi for MultisigContract {
+    type Abi = MultisigAbi;
 }
 
 impl Contract for MultisigContract {
-    type Runtime = ContractRuntime<Self>;
-    type State = MultisigState;
+    type Message = ();
+    type InstantiationArgument = InstantiationArgs;
+    type Parameters = ();
+    type EventValue = ();
 
-    fn new(runtime: Self::Runtime) -> Self {
-        Self {
-            runtime,
-            state: MultisigState {
-                owners: Vec::new(),
-                threshold: 0,
-                pending_transactions: MapView::new(),
-                transaction_count: 0,
-            },
+    async fn load(runtime: ContractRuntime<Self>) -> Self {
+        let state = MultisigState::load(runtime.root_view_storage_context())
+            .await
+            .expect("Failed to load state");
+        MultisigContract { state, runtime }
+    }
+
+    async fn instantiate(&mut self, args: InstantiationArgs) {
+        // Validate that the application parameters were configured correctly.
+        self.runtime.application_parameters();
+
+        // Initialize owners
+        self.state.owners.set(args.owners.clone());
+
+        // Validate and initialize threshold
+        if args.threshold == 0 {
+            panic!("Threshold must be greater than 0");
         }
+        if args.threshold as usize > args.owners.len() {
+            panic!("Threshold cannot exceed number of owners");
+        }
+        self.state.threshold.set(args.threshold);
+
+        // Initialize nonce to 0
+        self.state.nonce.set(0);
+
+        info!(
+            "Multisig instantiated with {} owners and threshold {}",
+            args.owners.len(),
+            args.threshold
+        );
     }
 
-    fn state_mut(&mut self) -> &mut Self::State {
-        &mut self.state
-    }
+    async fn execute_operation(&mut self, operation: MultisigOperation) -> MultisigResponse {
+        let caller = self
+            .runtime
+            .authenticated_signer()
+            .expect("Operation must be authenticated");
 
-    fn runtime(&self) -> &Self::Runtime {
-        &self.runtime
-    }
-
-    fn execute_operation(&mut self, operation: Operation) -> ApplicationCallResult {
         match operation {
-            Operation::Init { owners, threshold } => {
-                self.validate_initialization()?;
-                self.state.owners = owners;
-                self.state.threshold = threshold;
-                log::info!("Multisig initialized with {} owners, threshold {}", owners.len(), threshold);
-                Ok(Resources::default())
+            MultisigOperation::SubmitProposal { proposal_type } => {
+                self.submit_proposal(caller, proposal_type).await
             }
-            Operation::ProposeTransaction { target_chain, amount, recipient } => {
-                let proposer = self.runtime.authenticated_signer()?;
-                self.validate_owner(&proposer)?;
 
-                let id = self.state.transaction_count;
-                self.state.transaction_count += 1;
-
-                let transaction = PendingTransaction {
-                    id,
-                    proposer: proposer.clone(),
-                    target_chain,
-                    amount,
-                    recipient,
-                    approvals: vec![proposer],
-                    executed: false,
-                };
-
-                let key = self.transaction_key(id);
-                self.state.pending_transactions.insert(&key, &transaction)?;
-
-                log::info!("Transaction {} proposed by {:?}", id, proposer);
-                Ok(Resources::default())
+            MultisigOperation::ConfirmProposal { proposal_id } => {
+                self.confirm_proposal(caller, proposal_id).await
             }
-            Operation::Approve { transaction_id } => {
-                let approver = self.runtime.authenticated_signer()?;
-                self.validate_owner(&approver)?;
 
-                let key = self.transaction_key(transaction_id);
-                let mut transaction = self.state.pending_transactions.get(&key)?
-                    .ok_or("Transaction not found")?;
-
-                // Check if already approved
-                if transaction.approvals.contains(&approver) {
-                    log::warn!("Transaction {} already approved by {:?}", transaction_id, approver);
-                    return Ok(Resources::default());
-                }
-
-                // Check if already executed
-                if transaction.executed {
-                    return Err("Transaction already executed".into());
-                }
-
-                transaction.approvals.push(approver.clone());
-                self.state.pending_transactions.insert(&key, &transaction)?;
-
-                log::info!("Transaction {} approved by {:?} (approvals: {}/{})",
-                    transaction_id, approver, transaction.approvals.len(), self.state.threshold);
-
-                Ok(Resources::default())
+            MultisigOperation::ExecuteProposal { proposal_id } => {
+                self.execute_proposal(caller, proposal_id).await
             }
-            Operation::Execute { transaction_id } => {
-                let executor = self.runtime.authenticated_signer()?;
-                self.validate_owner(&executor)?;
 
-                let key = self.transaction_key(transaction_id);
-                let transaction = self.state.pending_transactions.get(&key)?
-                    .ok_or("Transaction not found")?;
-
-                // Check threshold
-                if transaction.approvals.len() < self.state.threshold {
-                    return Err(format!("Insufficient approvals: {}/{}",
-                        transaction.approvals.len(), self.state.threshold).into());
-                }
-
-                // Check if already executed
-                if transaction.executed {
-                    return Err("Transaction already executed".into());
-                }
-
-                // Execute the transaction
-                // Note: In a real implementation, this would send a cross-chain message
-                // to transfer funds. For now, we just mark it as executed.
-
-                let mut executed_tx = transaction.clone();
-                executed_tx.executed = true;
-                self.state.pending_transactions.insert(&key, &executed_tx)?;
-
-                log::info!("Transaction {} executed by {:?}", transaction_id, executor);
-                Ok(Resources::default())
-            }
-            Operation::AddOwner { owner } => {
-                let proposer = self.runtime.authenticated_signer()?;
-
-                // Only existing owners can add new owners
-                self.validate_owner(&proposer)?;
-
-                if self.state.owners.contains(&owner) {
-                    return Err("Owner already exists".into());
-                }
-
-                self.state.owners.push(owner.clone());
-                log::info!("Owner {:?} added by {:?}", owner, proposer);
-                Ok(Resources::default())
-            }
-            Operation::RemoveOwner { owner } => {
-                let proposer = self.runtime.authenticated_signer()?;
-
-                // Only existing owners can remove owners
-                self.validate_owner(&proposer)?;
-
-                if let Some(pos) = self.state.owners.iter().position(|o| o == &owner) {
-                    self.state.owners.remove(pos);
-                    log::info!("Owner {:?} removed by {:?}", owner, proposer);
-                } else {
-                    return Err("Owner not found".into());
-                }
-
-                Ok(Resources::default())
-            }
-            Operation::ChangeThreshold { threshold } => {
-                let proposer = self.runtime.authenticated_signer()?;
-
-                // Only existing owners can change threshold
-                self.validate_owner(&proposer)?;
-
-                if threshold == 0 || threshold > self.state.owners.len() {
-                    return Err("Invalid threshold".into());
-                }
-
-                self.state.threshold = threshold;
-                log::info!("Threshold changed to {} by {:?}", threshold, proposer);
-                Ok(Resources::default())
+            MultisigOperation::RevokeConfirmation { proposal_id } => {
+                self.revoke_confirmation(caller, proposal_id).await
             }
         }
+    }
+
+    async fn execute_message(&mut self, _message: ()) {
+        panic!("Multisig application doesn't support cross-chain messages yet");
+    }
+
+    async fn store(mut self) {
+        self.state
+            .save()
+            .await
+            .expect("Failed to save state");
     }
 }
 
 impl MultisigContract {
-    fn validate_initialization(&self) -> Result<(), String> {
-        if !self.state.owners.is_empty() {
-            return Err("Already initialized".into());
-        }
-        Ok(())
+    /// Submit a new proposal (transfer, governance, etc.)
+    async fn submit_proposal(
+        &mut self,
+        caller: AccountOwner,
+        proposal_type: ProposalType,
+    ) -> MultisigResponse {
+        // Verify caller is an owner
+        self.ensure_is_owner(&caller);
+
+        // Validate proposal
+        self.validate_proposal(&proposal_type).await;
+
+        // Get current nonce and increment
+        let proposal_id = *self.state.nonce.get();
+        self.state.nonce.set(proposal_id + 1);
+
+        // Get current timestamp
+        let created_at = self.runtime.system_time().micros();
+
+        // Create proposal
+        let proposal = Proposal {
+            id: proposal_id,
+            proposal_type,
+            proposer: caller,
+            confirmation_count: 0,
+            executed: false,
+            created_at,
+        };
+
+        // Store proposal
+        self.state
+            .pending_proposals
+            .insert(&proposal_id, proposal)
+            .expect("Failed to store proposal");
+
+        // Auto-confirm from submitter
+        self.confirm_proposal_internal(caller, proposal_id).await;
+
+        info!(
+            "Proposal {} submitted by {:?}",
+            proposal_id, caller
+        );
+
+        MultisigResponse::ProposalSubmitted { proposal_id }
     }
 
-    fn validate_owner(&self, owner: &Owner) -> Result<(), String> {
-        if !self.state.owners.contains(owner) {
-            return Err(format!("Owner {:?} not authorized", owner).into());
+    /// Validate a proposal before submission
+    async fn validate_proposal(&self, proposal_type: &ProposalType) {
+        match proposal_type {
+            ProposalType::Transfer { value, .. } => {
+                if *value == 0 {
+                    panic!("Transfer amount must be greater than 0");
+                }
+            }
+            ProposalType::AddOwner { owner } => {
+                let owners = self.state.owners.get();
+                if owners.contains(owner) {
+                    panic!("Owner already exists");
+                }
+            }
+            ProposalType::RemoveOwner { owner } => {
+                let owners = self.state.owners.get();
+                if !owners.contains(owner) {
+                    panic!("Owner does not exist");
+                }
+                let threshold = *self.state.threshold.get();
+                // Ensure we don't go below threshold after removal
+                if owners.len() - 1 < threshold as usize {
+                    panic!("Cannot remove owner: would make threshold impossible to reach");
+                }
+            }
+            ProposalType::ReplaceOwner { old_owner, new_owner } => {
+                let owners = self.state.owners.get();
+                if !owners.contains(old_owner) {
+                    panic!("Old owner does not exist");
+                }
+                if owners.contains(new_owner) {
+                    panic!("New owner already exists");
+                }
+            }
+            ProposalType::ChangeThreshold { threshold } => {
+                if *threshold == 0 {
+                    panic!("Threshold cannot be zero");
+                }
+                let owners = self.state.owners.get();
+                if *threshold as usize > owners.len() {
+                    panic!("Threshold cannot exceed number of owners");
+                }
+            }
         }
-        Ok(())
     }
 
-    fn transaction_key(&self, id: u64) -> Vec<u8> {
-        format!("tx_{}", id).into_bytes()
+    /// Confirm a pending proposal
+    async fn confirm_proposal(&mut self, caller: AccountOwner, proposal_id: u64) -> MultisigResponse {
+        self.ensure_is_owner(&caller);
+
+        let confirmations = self.confirm_proposal_internal(caller, proposal_id).await;
+
+        MultisigResponse::ProposalConfirmed {
+            proposal_id,
+            confirmations,
+        }
     }
+
+    /// Internal confirmation logic
+    async fn confirm_proposal_internal(&mut self, caller: AccountOwner, proposal_id: u64) -> u64 {
+        let mut proposal = self
+            .state
+            .pending_proposals
+            .get(&proposal_id)
+            .await
+            .expect("Failed to get proposal")
+            .unwrap_or_else(|| panic!("Proposal {} not found", proposal_id));
+
+        if proposal.executed {
+            panic!("Proposal already executed");
+        }
+
+        // Get existing confirmations for this owner
+        let mut confirmed_proposals = self.state.confirmations.get(&caller).await.unwrap().unwrap_or_default();
+
+        // Check if already confirmed
+        if confirmed_proposals.contains(&proposal_id) {
+            warn!("Owner {:?} already confirmed proposal {}", caller, proposal_id);
+            return proposal.confirmation_count;
+        }
+
+        // Add confirmation
+        confirmed_proposals.push(proposal_id);
+        self.state.confirmations.insert(&caller, confirmed_proposals)
+            .expect("Failed to store confirmations");
+
+        // Update confirmation count
+        proposal.confirmation_count += 1;
+        let confirmation_count = proposal.confirmation_count;
+        self.state
+            .pending_proposals
+            .insert(&proposal_id, proposal)
+            .expect("Failed to store proposal");
+
+        info!(
+            "Proposal {} confirmed by {:?} (total: {})",
+            proposal_id, caller, confirmation_count
+        );
+
+        confirmation_count
+    }
+
+    /// Execute a confirmed proposal
+    async fn execute_proposal(&mut self, caller: AccountOwner, proposal_id: u64) -> MultisigResponse {
+        self.ensure_is_owner(&caller);
+
+        let proposal = self
+            .state
+            .pending_proposals
+            .get(&proposal_id)
+            .await
+            .expect("Failed to get proposal")
+            .unwrap_or_else(|| panic!("Proposal {} not found", proposal_id));
+
+        if proposal.executed {
+            panic!("Proposal already executed");
+        }
+
+        let threshold = *self.state.threshold.get();
+
+        if proposal.confirmation_count < threshold {
+            panic!(
+                "Insufficient confirmations: {} < {} (required)",
+                proposal.confirmation_count, threshold
+            );
+        }
+
+        // Execute based on proposal type
+        let response = match &proposal.proposal_type {
+            ProposalType::Transfer { to, value, .. } => {
+                self.execute_transfer(caller, *to, *value).await
+            }
+            ProposalType::AddOwner { owner } => {
+                self.execute_add_owner(*owner).await
+            }
+            ProposalType::RemoveOwner { owner } => {
+                self.execute_remove_owner(*owner).await
+            }
+            ProposalType::ReplaceOwner { old_owner, new_owner } => {
+                self.execute_replace_owner(*old_owner, *new_owner).await
+            }
+            ProposalType::ChangeThreshold { threshold } => {
+                self.execute_change_threshold(*threshold).await
+            }
+        };
+
+        // Mark as executed and move to executed proposals
+        let mut executed_proposal = proposal.clone();
+        executed_proposal.executed = true;
+        self.state
+            .executed_proposals
+            .insert(&proposal_id, executed_proposal)
+            .expect("Failed to store executed proposal");
+        
+        // Remove from pending
+        self.state.pending_proposals.remove(&proposal_id)
+            .expect("Failed to remove pending proposal");
+
+        info!(
+            "Proposal {} executed by {:?}",
+            proposal_id, caller
+        );
+
+        response
+    }
+
+    /// Execute a transfer
+    async fn execute_transfer(&mut self, source: AccountOwner, to: AccountOwner, value: u64) -> MultisigResponse {
+        // Convert u64 to Amount (from_tokens expects u128)
+        let amount = Amount::from_tokens(value.into());
+        
+        // Execute the actual transfer from contract to destination
+        let chain_id = self.runtime.chain_id();
+        let destination = linera_sdk::linera_base_types::Account::new(chain_id, to);
+        self.runtime.transfer(source, destination, amount);
+        
+        info!("Transferred {} tokens to {:?}", value, to);
+        
+        MultisigResponse::FundsTransferred { to, value }
+    }
+
+    /// Execute add owner
+    async fn execute_add_owner(&mut self, owner: AccountOwner) -> MultisigResponse {
+        let mut owners = self.state.owners.get().clone();
+        
+        if owners.contains(&owner) {
+            panic!("Owner already exists");
+        }
+        
+        owners.push(owner);
+        self.state.owners.set(owners);
+        
+        info!("Owner {:?} added", owner);
+        
+        MultisigResponse::OwnerAdded { owner }
+    }
+
+    /// Execute remove owner
+    async fn execute_remove_owner(&mut self, owner: AccountOwner) -> MultisigResponse {
+        let mut owners = self.state.owners.get().clone();
+        
+        if let Some(pos) = owners.iter().position(|o| o == &owner) {
+            owners.remove(pos);
+            
+            // Ensure we don't go below threshold
+            let threshold = *self.state.threshold.get();
+            if owners.len() < threshold as usize {
+                panic!("Cannot remove owner: would go below threshold");
+            }
+            
+            self.state.owners.set(owners);
+            
+            info!("Owner {:?} removed", owner);
+            
+            MultisigResponse::OwnerRemoved { owner }
+        } else {
+            panic!("Owner not found");
+        }
+    }
+
+    /// Execute replace owner
+    async fn execute_replace_owner(
+        &mut self,
+        old_owner: AccountOwner,
+        new_owner: AccountOwner,
+    ) -> MultisigResponse {
+        let mut owners = self.state.owners.get().clone();
+        
+        if let Some(pos) = owners.iter().position(|o| o == &old_owner) {
+            if owners.contains(&new_owner) {
+                panic!("New owner already exists");
+            }
+            
+            owners[pos] = new_owner;
+            self.state.owners.set(owners);
+            
+            info!("Owner {:?} replaced with {:?}", old_owner, new_owner);
+            
+            MultisigResponse::OwnerReplaced { old_owner, new_owner }
+        } else {
+            panic!("Old owner not found");
+        }
+    }
+
+    /// Execute change threshold
+    async fn execute_change_threshold(&mut self, threshold: u64) -> MultisigResponse {
+        let owners = self.state.owners.get();
+        
+        if threshold == 0 {
+            panic!("Threshold cannot be zero");
+        }
+        
+        if threshold as usize > owners.len() {
+            panic!("Threshold cannot exceed number of owners");
+        }
+        
+        self.state.threshold.set(threshold);
+        
+        info!("Threshold changed to {}", threshold);
+        
+        MultisigResponse::ThresholdChanged { new_threshold: threshold }
+    }
+
+    /// Revoke a confirmation
+    async fn revoke_confirmation(&mut self, caller: AccountOwner, proposal_id: u64) -> MultisigResponse {
+        self.ensure_is_owner(&caller);
+
+        let mut proposal = self
+            .state
+            .pending_proposals
+            .get(&proposal_id)
+            .await
+            .expect("Failed to get proposal")
+            .unwrap_or_else(|| panic!("Proposal {} not found", proposal_id));
+
+        if proposal.executed {
+            panic!("Cannot revoke confirmation for executed proposal");
+        }
+
+        let mut confirmed_proposals = self.state.confirmations.get(&caller).await.unwrap().unwrap_or_default();
+
+        if let Some(pos) = confirmed_proposals.iter().position(|&id| id == proposal_id) {
+            confirmed_proposals.remove(pos);
+            self.state.confirmations.insert(&caller, confirmed_proposals)
+                .expect("Failed to store confirmations");
+
+            proposal.confirmation_count = proposal.confirmation_count.saturating_sub(1);
+            self.state
+                .pending_proposals
+                .insert(&proposal_id, proposal)
+                .expect("Failed to store proposal");
+
+            info!(
+                "Confirmation revoked by {:?} for proposal {}",
+                caller, proposal_id
+            );
+
+            MultisigResponse::ConfirmationRevoked { proposal_id }
+        } else {
+            warn!("Owner {:?} has not confirmed proposal {}", caller, proposal_id);
+            MultisigResponse::ConfirmationRevoked { proposal_id }
+        }
+    }
+
+    /// Ensure the caller is an owner
+    fn ensure_is_owner(&self, caller: &AccountOwner) {
+        let owners = self.state.owners.get();
+        if !owners.contains(caller) {
+            panic!("Caller {:?} is not an owner", caller);
+        }
+    }
+}
+
+/// Instantiation arguments for the multisig
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct InstantiationArgs {
+    /// Initial owners
+    pub owners: Vec<AccountOwner>,
+    /// Number of confirmations required
+    pub threshold: u64,
 }

@@ -72,10 +72,34 @@ research-implementation-guide.md
 research-sdk-multisig-api.md
 ``` --- ## Key Questions to Answer ### Critical Questions 1. **Multisig Existence**: Does Linera have ANY multisig capability? 2. **Implementation Type**: Is it native, contract-based, or wallet-level? 3. **Threshold Support**: What m-of-n schemes are possible? 4. **Signature Scheme**: What cryptography is used? (Ed25519, secp256k1, etc.) 5. **API Availability**: Do SDKs expose multisig functionality? 6. **Wallet Support**: Can existing wallets handle multisig? 7. **User Experience**: What would multisig UX look like? 8. **Security**: What are the security considerations? ### Secondary Questions 9. **Fees**: What are the costs of multisig operations? 10. **Limits**: Are there limits on owners or threshold? 11. **Flexibility**: Can thresholds be changed? Can owners be added/removed? 12. **Recovery**: Is there social recovery or backup functionality? --- ## Diagrams to Create ### Multisig Flow (if supported)
 ```mermaid
-sequenceDiagram Owner1->>Wallet: Create multisig (m-of-n) Wallet->>Linera: Register account Owner1->>Wallet: Propose transaction Owner2->>Wallet: Approve Owner3->>Wallet: Approve Wallet->>Linera: Execute (threshold met)
-``` ### Account Structure
+sequenceDiagram
+    participant Owner1
+    participant Owner2
+    participant Owner3
+    participant Wallet
+    participant Linera
+
+    Owner1->>Wallet: Create multisig (m-of-n)
+    Wallet->>Linera: Register account
+    Owner1->>Wallet: Propose transaction
+    Owner2->>Wallet: Approve
+    Owner3->>Wallet: Approve
+    Wallet->>Linera: Execute (threshold met)
+```
+
+### Account Structure
 ```mermaid
-graph TB [Visualize account structure and ownership]
+graph TB
+    MultisigAccount[Multisig Account]
+    Owner1[Owner 1]
+    Owner2[Owner 2]
+    Owner3[Owner 3]
+    Threshold[Threshold: 2-of-3]
+
+    MultisigAccount --> Owner1
+    MultisigAccount --> Owner2
+    MultisigAccount --> Owner3
+    MultisigAccount --> Threshold
 ``` --- ## Comparison Framework Use this framework for comparing multisig implementations: | Aspect | Hathor | Supra | Linera | Notes |
 |--------|--------|-------|--------|-------|
 | **Type** | P2SH (UTXO) | Native module | [?] | [Details] |

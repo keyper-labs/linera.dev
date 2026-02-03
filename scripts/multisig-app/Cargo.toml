@@ -2,6 +2,7 @@
 name = "linera-multisig"
 version = "0.1.0"
 edition = "2021"
+authors = ["PalmeraDAO <contact@palmeradao.com>"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -11,6 +12,17 @@ linera-sdk = { version = "0.15.11" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 log = "0.4"
+async-graphql = "7.0"
 
 [dev-dependencies]
-linera-sdk = { version = "0.15.11" }
+linera-sdk = { version = "0.15.11", features = ["test"] }
+futures = "0.3"
+tokio = { version = "1", features = ["rt", "sync"] }
+
+[[bin]]
+name = "multisig_contract"
+path = "src/contract.rs"
+
+[[bin]]
+name = "multisig_service"
+path = "src/service.rs"

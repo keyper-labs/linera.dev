@@ -31,7 +31,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 PROJECT_DIR="${PROJECT_DIR:-$(pwd)/multisig-app}"
-LINERA_SDK_VERSION="${LINERA_SDK_VERSION:-0.15.8}"
+LINERA_SDK_VERSION="${LINERA_SDK_VERSION:-0.15.11}"
 RUST_TOOLCHAIN="${RUST_TOOLCHAIN:-stable}"
 
 # Helper functions

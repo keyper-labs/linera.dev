@@ -18,7 +18,7 @@
 | **Multi-Owner Chains** | ✅ VERIFIED | Tested on Testnet Conway |
 | **Basic Multisig** | ✅ POSSIBLE | Application-level implementation required |
 | **Rust SDK** | ✅ EXISTS | linera-sdk for Wasm compilation ONLY |
-| **Backend SDK** | ❌ DOES NOT EXIST | No official backend SDK |
+| **Backend SDK** | ✅ EXISTS | `linera-client` crate provides Rust client library |
 | **Python SDK** | ❌ DOES NOT EXIST | Rust-only ecosystem |
 | **REST API** | ❌ NOT PROVIDED | Must build custom REST layer |
 | **GraphQL API** | ⚠️ NOT FUNCTIONAL | Schema doesn't load in Node Service |
@@ -27,8 +27,8 @@
 
 **Critical Reality Check**:
 
-1. **Backend Must Be Rust**: No official backend SDK exists for any language
-2. **CLI Wrapper Required**: Direct Linera integration needed via gRPC or compiled client
+1. **Backend Must Be Rust**: `linera-client` crate provides official Rust SDK
+2. **SDK Integration Available**: Use `linera-client`/`linera-core` crates for direct integration
 3. **No Native Multisig**: All threshold logic must be implemented in custom Wasm application
 4. **Early Stage Ecosystem**: Limited documentation, examples, and tooling
 5. **Each Approval = One Transaction**: N approvals required for m-of-n multisig
@@ -95,45 +95,59 @@ let tx_hash = client.submit_operation(chain_id, op).await?;
 
 ### 1.2 Backend SDK Availability
 
-**Status**: ❌ DOES NOT EXIST
+**Status**: ✅ EXISTS (Rust Only)
 
-**Finding**: No official backend SDK exists for:
-- Rust
-- Node.js/TypeScript
-- Python
-- Go
-- Any other language
+**Finding**: Official backend SDK available via `linera-client` crate:
+- ✅ **Rust**: `linera-client` + `linera-core` crates
+- ❌ **Node.js/TypeScript**: Not available for backend
+- ❌ **Python**: Not available
+- ❌ **Go**: Not available
 
 **What You Get**:
-- `linera` CLI tool (for development)
+- `linera-client` crate: ClientContext, wallet management, chain operations
+- `linera-core` crate: Core Client with chain queries and operations
 - gRPC protocol definitions
-- Source code to compile Linera client into your application
+- Full type-safe Rust API
 
-**What You Don't Get**:
-- Ready-to-use client library
-- Query methods
-- Transaction submission utilities
-- Wallet management
-- Documentation for backend integration
+**Crate Details**:
+| Crate | Version | Purpose |
+|-------|---------|---------|
+| `linera-client` | 0.15.11 | ClientContext, wallet, chain management |
+| `linera-core` | 0.15.11 | Core Client, ChainClient, operations |
+| `linera-sdk` | 0.15.11 | Application development (Wasm) |
 
 **Real-World Integration**:
 ```rust
-// Required: Build custom Linera client
-use linera_client::LineraClient;
-use linera_rpc::RpcClient;
+// Using linera-client crate
+use linera_client::ClientContext;
+use linera_core::client::Client;
 
-// Create gRPC client manually
-let rpc_client = RpcClient::new("validator.testnet-conway.linera.net:443")?;
-let client = LineraClient::new(rpc_client);
+// Initialize context with wallet
+let context = ClientContext::new(storage, options).await?;
 
-// Query balance (example implementation)
-let balance = client.query_balance(chain_id).await?;
+// Get chain client for specific chain
+let mut chain_client = context.make_chain_client(chain_id)?;
 
-// Submit operation (example implementation)
-let result = client.submit_operation(chain_id, operation, signers).await?;
+// Query balance
+let balance = chain_client.query_balance().await?;
+
+// Execute operations
+let certificate = chain_client.execute_operations(operations, blobs).await?;
+
+// Check ownership
+let ownership = context.ownership(Some(chain_id)).await?;
 ```
 
-**Impact**: Backend development requires +40% effort vs. platforms with official SDKs
+**Key Methods Available**:
+- `chain_client.query_balance()` - Query chain balance
+- `chain_client.execute_operations()` - Submit operations
+- `chain_client.transfer()` - Transfer tokens
+- `chain_client.query_application()` - Query application state
+- `context.ownership()` - Get chain ownership info
+- `context.change_ownership()` - Modify chain owners
+- `context.publish_module()` - Deploy Wasm modules
+
+**Impact**: Backend development ~15% more effort vs. mature SDKs (mainly due to documentation gaps)
 
 ---
 
@@ -221,17 +235,26 @@ const chainId = await client.createMultiOwnerChain({
 
 ---
 
-### 2.3 No Backend SDK
+### 2.3 Backend SDK Availability
 
-**Current State**: No official backend SDK for any language
+**Current State**: Official Rust SDK exists via `linera-client` crate
+
+**Availability**:
+- ✅ **Rust**: `linera-client` + `linera-core` crates provide full client functionality
+- ❌ **Other languages**: No official SDK for Node.js, Python, Go
+
+**What the SDK Provides**:
+- `ClientContext`: Wallet management and chain operations
+- `ChainClient`: Direct blockchain queries and transactions
+- `query_balance()`: Chain balance queries
+- `execute_operations()`: Transaction submission
+- `query_application()`: Application state queries
+- `ownership()` / `change_ownership()`: Multi-owner chain management
 
 **Impact**:
-- Backend must integrate with Linera via gRPC or compiled client
-- Significant development overhead
-- Limited documentation and examples
-- Higher risk of integration issues
-
-**Implication**: Backend development requires +40% effort
+- Backend must be written in Rust
+- Type-safe integration with Linera protocol
+- ~15% more effort vs mature SDKs (due to documentation gaps)
 
 ---
 
@@ -622,7 +645,7 @@ linera query-balance "$CHAIN_ID"
 | Capability | Supra | Linera |
 |------------|-------|--------|
 | **Native Multisig** | ✅ Yes (`0x1::multisig_account`) | ❌ No (application-level only) |
-| **Backend SDK** | ✅ TypeScript SDK | ❌ None (Rust only) |
+| **Backend SDK** | ✅ TypeScript SDK | ✅ Rust (`linera-client`) |
 | **Frontend SDK** | ✅ TypeScript SDK | ✅ @linera/client |
 | **REST API** | ✅ RPC v3 | ❌ Must build custom |
 | **GraphQL API** | ❌ No | ⚠️ Not functional |
@@ -679,7 +702,7 @@ linera query-balance "$CHAIN_ID"
 **Key Insight**: Linera requires +65% effort due to:
 - Custom multisig contract development (200h vs 0h)
 - Rust backend requirement
-- CLI wrapper/gRPC integration
+- Rust backend requirement (SDK exists but docs limited)
 - Limited documentation and examples
 
 ---
@@ -690,7 +713,7 @@ linera query-balance "$CHAIN_ID"
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| **No Backend SDK** | +40% backend effort | Use Rust, build gRPC client |
+| **Backend SDK** | +15% backend effort (docs limited) | Use `linera-client` crate |
 | **No Native Multisig** | +200h contract dev | Budget accordingly, start simple |
 | **Limited Documentation** | Trial-and-error | PoC phase, community support |
 | **Fee Model Unknown** | Budgeting issues | Measure costs during PoC |

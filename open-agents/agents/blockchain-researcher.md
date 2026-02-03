@@ -218,19 +218,61 @@ Use Mermaid diagrams where applicable:
 ### Microchain Architecture
 ```mermaid
 graph TB
-    [Visualize how microchains work]
+    subgraph "Validator Network"
+        V1[Validator 1]
+        V2[Validator 2]
+        V3[Validator 3]
+        V4[Validator 4]
+    end
+
+    subgraph "User Chains"
+        UC1[User Chain 1]
+        UC2[User Chain 2]
+        UC3[User Chain 3]
+    end
+
+    subgraph "Application Chain"
+        App[Multisig Application]
+    end
+
+    V1 --> UC1
+    V2 --> UC2
+    V3 --> UC3
+    V4 --> App
+
+    UC1 -.->|Cross-chain messages| UC2
+    UC2 -.->|Cross-chain messages| UC3
+    UC1 -.->|Cross-chain messages| App
 ```
 
 ### Consensus Flow
 ```mermaid
 sequenceDiagram
-    [Visualize consensus process]
+    participant User
+    participant UserChain
+    participant Validator
+    participant Network
+
+    User->>UserChain: Submit transaction
+    UserChain->>Validator: Propose block
+    Validator->>Network: Broadcast to validators
+    Network-->>Validator: Collect votes
+    Validator-->>UserChain: Confirm finality
+    UserChain-->>User: Transaction confirmed
 ```
 
 ### Transaction Lifecycle
 ```mermaid
 flowchart TD
-    [Visualize transaction from creation to confirmation]
+    A[User Signs Transaction] --> B[Submit to User Chain]
+    B --> C[Include in Block]
+    C --> D[Validator Consensus]
+    D --> E{Threshold Reached?}
+    E -->|No| F[Continue Voting]
+    E -->|Yes| G[Block Finalized]
+    G --> H[Cross-Chain Messages]
+    H --> I[Target Chain Processes]
+    I --> J[Transaction Complete]
 ```
 
 ---
