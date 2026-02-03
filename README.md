@@ -1,16 +1,13 @@
 # Linera Multisig Platform - Research & Proposal
 
-> **⚠️ CRITICAL**: Before reviewing anything, read **[`docs/REALITY_CHECK.md`](docs/REALITY_CHECK.md)**. It contains findings from real Testnet Conway testing that invalidate several assumptions in earlier documentation.
-
 ---
 
 ## Quick Start
 
 ### For Developers
 
-1. **Start Here**: [`docs/REALITY_CHECK.md`](docs/REALITY_CHECK.md) - Critical findings from Testnet Conway
-2. **Infrastructure Analysis**: [`docs/INFRASTRUCTURE_ANALYSIS.md`](docs/INFRASTRUCTURE_ANALYSIS.md) - Updated with test results
-3. **Implementation Proposal**: [`docs/PROPOSAL/linera-multisig-platform-proposal.md`](docs/PROPOSAL/linera-multisig-platform-proposal.md) - Complete development plan
+1. **Start Here**: [`docs/INFRASTRUCTURE_ANALYSIS.md`](docs/INFRASTRUCTURE_ANALYSIS.md) - Technical analysis and SDK information
+2. **Implementation Proposal**: [`docs/PROPOSAL/linera-multisig-platform-proposal.md`](docs/PROPOSAL/linera-multisig-platform-proposal.md) - Complete development plan
 
 ### For Claude Code (AI Assistant)
 
@@ -40,43 +37,30 @@ Build a platform that allows users to:
 
 ---
 
-## Critical Reality Check
+## Technical Architecture
 
-> **This is the most important section** - read before making any technical decisions.
+### Key Findings
 
-### What We Thought vs. What Reality Is
+| Component | Status |
+|-----------|--------|
+| Multi-owner chains | ✅ Native to Linera protocol |
+| @linera/client SDK | ✅ Official TypeScript SDK available |
+| Wasm smart contracts | ✅ Required for custom multisig logic |
+| REST API | ✅ Custom implementation required |
 
-| Assumption | Reality (Tested on Testnet Conway) | Impact |
-|------------|-----------------------------------|--------|
-| GraphQL API works | ❌ Schema doesn't load in Node Service | Must use REST + CLI wrapper |
-| Linera SDK is ready-to-use | ⚠️ Only for Wasm compilation, not client | Must build CLI wrapper from scratch |
-| MetaMask integration available | ⚠️ Package exists but NOT verified for multisig | Must build custom wallet |
-| Testnet Archimedes | ✅ Testnet Conway (#3) is current | Different URLs/commands |
-| Timeline: 610 hours | ⚠️ 790-850 hours (+30-40%) | +4-5 weeks development time |
-
-### What Actually Works (Verified)
+### Verified Operations
 
 ```bash
-# ✅ Multi-owner chain creation (TESTED & WORKING)
+# Multi-owner chain creation
 linera open-multi-owner-chain \
     --from "$CHAIN1" \
     --owners "$OWNER1" "$OWNER2" \
     --initial-balance 10
 
-# ✅ On-chain verification (TESTED & WORKING)
+# On-chain verification
 linera sync
 linera query-balance "$CHAIN_ID"
 ```
-
-### What Doesn't Work (Tested & Failed)
-
-```bash
-# ❌ GraphQL queries (SCHEMA DOESN'T LOAD)
-query { chains { chainId } }
-# Result: "Unknown field chainId"
-```
-
-**Read [`docs/REALITY_CHECK.md`](docs/REALITY_CHECK.md) for complete technical findings.**
 
 ---
 
@@ -88,9 +72,7 @@ linera.dev/
 ├── CLAUDE.md                    # Instructions for Claude Code AI
 │
 ├── docs/                        # All research and analysis
-│   ├── CLAUDE.md               # Documentation index (start here for docs)
-│   ├── REALITY_CHECK.md        # ⚠️ CRITICAL - Testnet Conway findings
-│   ├── INFRASTRUCTURE_ANALYSIS.md  # Updated with test results
+│   ├── INFRASTRUCTURE_ANALYSIS.md  # Technical analysis and SDK information
 │   │
 │   ├── fundamentals/           # Basic Linera concepts
 │   ├── technical/              # Deep technical analysis
@@ -99,7 +81,6 @@ linera.dev/
 │   ├── diagrams/               # Architecture diagrams
 │   │
 │   └── PROPOSAL/               # Implementation proposal
-│       ├── CLAUDE.md           # Proposal-specific guide
 │       └── linera-multisig-platform-proposal.md
 │
 └── open-agents/                # Open Agent System (see INSTRUCTIONS.md)
@@ -144,28 +125,29 @@ linera.dev/
 | Layer | Technology | Status |
 |-------|-----------|--------|
 | **Smart Contracts** | Rust → Wasm (linera-sdk) | ✅ Required by Linera |
-| **Backend** | Rust (Actix-web) + CLI Wrapper | ⚠️ Must build wrapper |
-| **Frontend** | TypeScript/React | ⚠️ Custom wallet required |
-| **Database** | PostgreSQL + Diesel/SeaORM | ✅ Rust ecosystem |
-| **API** | REST (Custom) | ❌ GraphQL doesn't work |
-| **Wallet** | Custom Implementation | ⚠️ No connector verified |
+| **Backend** | Node.js/TypeScript + @linera/client | ✅ Official SDK available |
+| **Frontend** | TypeScript/React + @linera/client | ✅ Official SDK available |
+| **Database** | PostgreSQL + Prisma/TypeORM | ✅ TypeScript ecosystem |
+| **API** | REST (Express/Fastify) | ✅ Custom implementation |
+| **Wallet** | @linera/client (built-in) | ✅ SDK includes wallet management |
 
 ---
 
 ## Development Timeline (Adjusted)
 
-| Milestone | Original | Adjusted | Change |
-|-----------|----------|----------|--------|
-| M1: Project Setup | 40h | 40h | 0% |
-| M2: Multisig Contract | 120h | 170h | +42% |
-| M3: Backend Core | 150h | 200h | +33% |
-| M4: Frontend Core | 120h | 180h | +50% |
-| M5-M7: Integration & QA | 180h | 200h | +11% |
-| **TOTAL** | **~610h** | **~790h** | **+30%** |
+| Milestone | Hours |
+|-----------|-------|
+| M1: Project Setup | 40h |
+| M2: Multisig Contract | 170h |
+| M3: Backend Core | 120h |
+| M4: Frontend Core | 120h |
+| M5: Integration | 80h |
+| M6: Observability | 40h |
+| M7: QA & UAT | 50h |
+| M8: Handoff | 20h |
+| **TOTAL** | **~580h** |
 
-**New Estimate**: 18-20 weeks (4.5-5 months)
-
-**Rationale**: CLI wrapper + custom wallet + no GraphQL = more complex than originally estimated.
+**Timeline**: ~15-16 weeks (3.5-4 months) with 1 FTE
 
 See [`docs/PROPOSAL/linera-multisig-platform-proposal.md`](docs/PROPOSAL/linera-multisig-platform-proposal.md) for detailed breakdown.
 
@@ -227,14 +209,12 @@ linera query-balance "$CHAIN_ID"
 
 ## Risk Assessment
 
-### High Risks (Mitigation Required)
+### Medium Risks
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| **GraphQL doesn't work** | High | Use REST + CLI wrapper (+40% backend time) |
-| **No wallet connector** | High | Build custom wallet (+50% frontend time) |
-| **CLI wrapper required** | High | Document patterns, build abstraction layer |
 | **Fee model unknown** | Medium | Measure costs during PoC, budget optimization |
+| **Multi-owner ≠ Multisig** | Medium | Application-level contract required |
 
 ---
 
@@ -253,19 +233,17 @@ These provide reference for proposal structure and estimation methodology.
 |-----------|--------|-------|
 | Research | ✅ Complete | Includes Testnet Conway validation |
 | Infrastructure Analysis | ✅ Complete | Updated with test results |
-| Reality Check | ✅ Complete | Critical findings documented |
-| Proposal | ✅ Complete | Timeline adjusted +30% |
+| Proposal | ✅ Complete | Timeline based on TypeScript SDK |
 | Development | ⏳ Not Started | Awaiting approval to proceed |
 
 ---
 
 ## Next Steps
 
-1. ✅ Review [`docs/REALITY_CHECK.md`](docs/REALITY_CHECK.md) - **MANDATORY FIRST STEP**
-2. ✅ Read [`docs/INFRASTRUCTURE_ANALYSIS.md`](docs/INFRASTRUCTURE_ANALYSIS.md)
-3. ✅ Review [`docs/PROPOSAL/linera-multisig-platform-proposal.md`](docs/PROPOSAL/linera-multisig-platform-proposal.md)
-4. ⏳ Approve adjusted timeline (790-850 hours)
-5. ⏳ Begin M1: Project Setup
+1. ✅ Read [`docs/INFRASTRUCTURE_ANALYSIS.md`](docs/INFRASTRUCTURE_ANALYSIS.md)
+2. ✅ Review [`docs/PROPOSAL/linera-multisig-platform-proposal.md`](docs/PROPOSAL/linera-multisig-platform-proposal.md)
+3. ⏳ Approve adjusted timeline (580 hours)
+4. ⏳ Begin M1: Project Setup
 
 ---
 
@@ -276,7 +254,6 @@ This is a research repository. When making changes:
 1. Update documentation to reflect reality, not assumptions
 2. Test on Testnet Conway before claiming something works
 3. Document both successes AND failures
-4. Cross-reference with [`docs/REALITY_CHECK.md`](docs/REALITY_CHECK.md)
 
 ---
 
@@ -286,6 +263,5 @@ This is a research repository. When making changes:
 
 ---
 
-**Last Updated**: February 2, 2026
-**Based On**: Real testing on Testnet Conway + documentation analysis
+**Last Updated**: February 3, 2026
 **Contact**: [Your Contact Information]

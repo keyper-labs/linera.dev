@@ -5,7 +5,7 @@
 > **Analysis Type**: Deep-dive verification based on scraped real-world data + **empirical testing**
 > **Testnet Status**: Conway (testnet #3, operational as of Feb 2026)
 
-> **⚠️ IMPORTANT**: This document has been updated based on **real testing on Testnet Conway**. See `docs/REALITY_CHECK.md` for detailed technical findings.
+> **⚠️ IMPORTANT**: This document has been updated based on **real testing on Testnet Conway**.
 
 ---
 
@@ -207,7 +207,7 @@ grpcurl validator-1.testnet-conway.linera.net:443 list
 - ✅ **gRPC works** but requires protobuf compilation
 - ✅ **Direct storage queries** (RocksDB) possible but not recommended
 
-**Recommended Approach** (from `docs/REALITY_CHECK.md`):
+**Recommended Approach**:
 ```rust
 // CLI Wrapper instead of GraphQL
 pub struct LineraClient {
@@ -438,7 +438,7 @@ linera sync
 linera query-balance "$CHAIN_ID"
 ```
 
-**Test Results** (from `docs/REALITY_CHECK.md`):
+**Test Results**:
 - ✅ Multi-owner chain created successfully
 - ✅ Chain ID: `4888610445c3f2e65fd23f0deceaecff469c9c9149fa6453545a3ca167bde4c7`
 - ✅ Balance confirmed on-chain via `linera sync`
@@ -1093,7 +1093,6 @@ impl LineraClient {
 5. ⚠️ Measure transaction costs (especially for N approvals)
 
 **See Also**:
-- `docs/REALITY_CHECK.md` - Detailed technical findings from Testnet Conway testing
 - `docs/PROPOSAL/linera-multisig-platform-proposal.md` - Updated proposal with timeline adjustments
 
 ---

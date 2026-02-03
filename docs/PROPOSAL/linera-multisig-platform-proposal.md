@@ -17,13 +17,13 @@
 ## 2) In-Scope
 
 ### Frontend (React/Next.js)
-- Web application standalone (no wallet connector disponible actualmente)
+- Web application standalone (no wallet connector currently available)
 - **Custom wallet implementation**: Ed25519 key generation, storage, y signing
 - Multisig wallet creation wizard (2-of-3, 3-of-5, custom thresholds)
 - Proposal builder with visual transaction interface
 - Owner management (add/remove signatories)
 - Transaction queue (pending approvals, executed, expired)
-- Polling-based updates (5-10s intervals) hasta que Linera soporte WebSocket nativo
+- Polling-based updates (5-10s intervals) until Linera supports native WebSocket
 - Responsive design for desktop and mobile
 - Error states and user-friendly notifications
 
@@ -65,22 +65,22 @@
 
 ## 3) Technical Constraints & Reality Check
 
-**Importante**: Basado en pruebas reales en Testnet Conway (Feb 2025), las siguientes limitaciones técnicas han sido identificadas y la arquitectura propuesta ha sido ajustada para reflejar la realidad actual de Linera.
+**Important**: Based on real tests on Testnet Conway (Feb 2025), the following technical limitations have been identified and the proposed architecture has been adjusted to reflect the current reality of Linera.
 
 ### 3.1) GraphQL Limitations
 
-**Estado Actual**: NO FUNCIONAL
+**Current Status**: NO FUNCIONAL
 - GraphiQL UI carga correctamente en Node Service
 - Schema GraphQL no está disponible o accesible
 - Queries fallan con errores: "Unknown field", "data: null"
 - Introspección no funciona: `__type` devuelve null
 
-**Impacto**:
+**Impact**:
 - ❌ No se puede usar GraphQL como API principal
-- ✅ Solución: REST API + CLI wrapper
+- ✅ Solution: REST API + CLI wrapper
 - ⚠️ Posible implementación futura cuando Linera lo soporte
 
-**Pruebas realizadas**:
+**Tests performed**:
 ```bash
 # Test 1: Query básica
 query { chains { chainId } }
@@ -92,20 +92,20 @@ query { __type(name: "Query") }
 
 # Test 3: gRPC directo
 grpcurl validator-1.testnet-conway.linera.net:443 list
-# Resultado: ✅ Funciona (servicios disponibles)
+# Result: ✅ Works (services available)
 ```
 
 ### 3.2) Linera SDK Availability
 
-**Estado Actual**: BÁSICO, NO listo para usar
+**Current Status**: BÁSICO, NO listo para usar
 - `linera-sdk` crate existe para Rust
 - Es para construir aplicaciones Wasm, NO un client SDK
 - NO hay funciones "ready-to-use" para backend
 - Documentación enfocada en desarrollo de aplicaciones, no consumo
 
-**Impacto**:
+**Impact**:
 - ❌ NO hay "LineraClient" o similar
-- ✅ Solución: CLI wrapper usando `std::process::Command`
+- ✅ Solution: CLI wrapper usando `std::process::Command`
 - ⚠️ Requiere +40 horas para desarrollo vs. SDK "plug-and-play"
 
 **Arquitectura realista**:
@@ -132,14 +132,14 @@ impl LineraClient {
 
 ### 3.3) Wallet Connector Availability
 
-**Estado Actual**: NO DISPONIBLE
+**Current Status**: NO DISPONIBLE
 - NO existe wallet connector para navegadores
 - NO existe extensión de browser
 - NO existe estándar de wallet para Linera
 
-**Impacto**:
+**Impact**:
 - ❌ NO se puede integrar wallet connector
-- ✅ Solución: Wallet custom construida desde cero
+- ✅ Solution: Wallet custom construida desde cero
 - ⚠️ Requiere implementar: Ed25519 keys, storage, signing, QR codes
 
 **Componentes necesarios**:
@@ -159,7 +159,7 @@ impl LineraClient {
 | **Creación** | CLI: `open-multi-owner-chain` | Desarrollo Wasm + deploy |
 | **Threshold** | NO tiene (1-of-N) | Configurable m-of-N |
 | **Time-locks** | NO soportado | Configurable |
-| **Confirmado** | ✅ Funciona en Testnet Conway | ⚠️ Por validar |
+| **Confirmed** | ✅ Works on Testnet Conway | ⚠️ To be validated |
 | **Complejidad** | Baja | Alta |
 
 **Recomendación**:
