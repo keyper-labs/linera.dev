@@ -1,219 +1,59 @@
-# Linera Multisig Platform Proposal (TypeScript Full-Stack + @linera/client SDK)
+# Project Proposal — Linera Multisig Platform (Frontend + Backend)
 
-**Document scope**: Objectives, architecture, milestones, deliverables, risks, and dependencies for a production-ready multisig platform on Linera blockchain.
+**Document Scope**: Objectives, architecture, milestones, deliverables, risks, and dependencies
 
----
+**Status**: Self-contained proposal reflecting latest learnings:
+- Testnet Conway validation
+- Rust backend requirement
+- @linera/client frontend-only SDK
+- Multi-owner chains
+- Application-level threshold multisig
+
+**Note**: No code delivery in this document.
 
 ## 1) Objectives
-- Build on Linera's **multi-owner chain** infrastructure with **application-level threshold logic**
-- Provide simple proposal/review/execute workflow for non-technical users
-- Support Linera native tokens and fungible applications
-- Enable multi-multisig wallet management from single interface
-- Real-time transaction status monitoring leveraging Linera's sub-second finality
-- **Web wallet connector** integration (if available) or standalone web application
 
----
+- Deliver a production-ready multisig platform on Linera with an excellent UX and browser-based wallet.
+- Use Linera's multi-owner chain infrastructure with application-level threshold logic via custom Wasm multisig contract.
+- Provide simple proposal/review/execute workflow for non-technical users.
+- Support Linera native tokens and fungible applications.
+- Enable multi-multisig wallet management from single interface.
+- Real-time transaction status monitoring via polling (5-10s intervals) leveraging Linera's sub-second finality.
+- Self-custody with Ed25519 key management via @linera/client SDK.
 
 ## 2) In-Scope
 
-### Frontend (React/Next.js)
-- Web application standalone (no wallet connector currently available)
-- **Custom wallet implementation**: Ed25519 key generation, storage, y signing
-- Multisig wallet creation wizard (2-of-3, 3-of-5, custom thresholds)
-- Proposal builder with visual transaction interface
-- Owner management (add/remove signatories)
-- Transaction queue (pending approvals, executed, expired)
-- Polling-based updates (5-10s intervals) until Linera supports native WebSocket
-- Responsive design for desktop and mobile
-- Error states and user-friendly notifications
+- **Frontend (Next.js/React)**: @linera/client SDK integration (Ed25519 key generation/storage), wallet creation wizard, multi-owner chain creation, proposal builder, transaction queue (pending/approvals/executed), owner management, polling-based updates (5-10s), responsive design, error/loading states.
+- **Backend (Rust)**: Actix-web/Axum REST API, direct Linera integration via gRPC or compiled Linera client library, PostgreSQL (wallets/proposals/approvals/metadata), Redis (cache/rate limits), multisig Wasm contract management, proposal lifecycle service, cross-chain message coordination, polling service.
+- **Smart Contract (Rust → Wasm)**: Custom multisig application using linera-sdk, m-of-n threshold logic, proposal/approval/execute operations, owner management, timeout handling.
+- **Blockchain Integration**: Multi-owner chain creation (@linera/client), Wasm multisig application deployment, operation submission via SDK/gRPC, state queries, cross-chain messaging for owner notifications.
+- **Security**: Ed25519 signature verification, nonce/replay protection, application-level access control (owner verification), rate limiting, CORS protection, structured logging.
+- **Observability**: Prometheus metrics, Grafana dashboards, structured logging, health checks.
+- **CI/CD**: GitHub Actions (lint, unit/integration, security scans, build), test suites.
 
-### Backend (Node.js/TypeScript)
-- REST API for multisig operations using Express or Fastify
-- PostgreSQL database (proposals, approvals, wallet metadata)
-- Redis for caching and rate limiting
-- **@linera/client SDK**: Official TypeScript SDK for Linera integration (validated in M0)
-- **Multisig application management**: Deploy and interact with custom multisig Wasm application
-- Proposal lifecycle management
-- Polling-based updates (GraphQL not consistently available)
-- Cross-chain message coordination
+## 3) Out-of-Scope
 
-### Core Features
-- **Multi-Owner Chain Creation**: Deploy chains with N owners for multisig wallets
-- **Multisig Smart Contract**: Custom Wasm application implementing m-of-n threshold logic
-- **Proposal System**: Create, review, sign, and execute multisig transactions
-- **Token Support**: Linera native tokens and fungible applications
-- **Threshold Management**: Configurable signature requirements
-- **Cross-Chain Coordination**: Use Linera's messaging for owner notifications
-- **History Tracking**: Complete audit trail of all multisig activities
+- EVM support (experimental/planned for Q2'25, not production-ready).
+- Hardware wallet integration (future phase).
+- Mobile native apps (responsive web only).
+- MetaMask-style wallet connector (no official Linera connector exists).
+- Advanced DeFi features (liquidity, trading, derivatives).
+- Custody/KYC/AML flows.
+- Formal security audits (prepare for later).
+- Global chain indexing (only index transactions for our multisig wallets).
+- GraphQL API (tested on Testnet Conway - schema doesn't load).
 
-### Security
-- Ed25519 signature verification (Linera's signature scheme)
-- Nonce/replay protection
-- Application-level access control (verify owner membership)
-- Rate limiting on all endpoints
-- Secure key handling (keys never stored on server)
-- CORS protection
-- Threshold verification before execution
-
-### DevOps & Monitoring
-- GitHub Actions CI/CD pipeline
-- Unit and integration tests
-- Health check endpoints
-- Basic monitoring setup (metrics, logging)
-
----
-
-## 3) Technical Constraints & Reality Check
-
-**Important**: Based on real tests on Testnet Conway (Feb 2025), the following technical limitations have been identified and the proposed architecture has been adjusted to reflect the current reality of Linera.
-
-### 3.1) GraphQL Limitations
-
-**Current Status**: NO FUNCIONAL
-- GraphiQL UI carga correctamente en Node Service
-- Schema GraphQL no está disponible o accesible
-- Queries fallan con errores: "Unknown field", "data: null"
-- Introspección no funciona: `__type` devuelve null
-
-**Impact**:
-- ❌ No se puede usar GraphQL como API principal
-- ✅ Solution: REST API + CLI wrapper
-- ⚠️ Posible implementación futura cuando Linera lo soporte
-
-**Tests performed**:
-```bash
-# Test 1: Query básica
-query { chains { chainId } }
-# Resultado: "Unknown field chainId"
-
-# Test 2: Introspección
-query { __type(name: "Query") }
-# Resultado: "__type: null"
-
-# Test 3: gRPC directo
-grpcurl validator-1.testnet-conway.linera.net:443 list
-# Result: ✅ Works (services available)
-```
-
-### 3.2) Linera SDK Availability
-
-**Current Status**: BÁSICO, NO listo para usar
-- `linera-sdk` crate existe para Rust
-- Es para construir aplicaciones Wasm, NO un client SDK
-- NO hay funciones "ready-to-use" para backend
-- Documentación enfocada en desarrollo de aplicaciones, no consumo
-
-**Impact**:
-- ❌ NO hay "LineraClient" o similar
-- ✅ Solution: CLI wrapper usando `std::process::Command`
-- ⚠️ Requiere +40 horas para desarrollo vs. SDK "plug-and-play"
-
-**Arquitectura realista**:
-```rust
-// Lo que NO existe:
-let client = LineraClient::new("testnet-conway");
-let balance = client.query_balance(chain_id).await?;
-
-// La realidad:
-pub struct LineraClient {
-    pub wallet_path: PathBuf,
-}
-
-impl LineraClient {
-    pub fn query_balance(&self, chain_id: &str) -> Result<u64, Error> {
-        let output = Command::new("linera")
-            .args(["query-balance", chain_id])
-            .env("LINERA_WALLET", &self.wallet_path)
-            .output()?;
-        // Parsear output manualmente...
-    }
-}
-```
-
-### 3.3) Wallet Connector Availability
-
-**Current Status**: NO DISPONIBLE
-- NO existe wallet connector para navegadores
-- NO existe extensión de browser
-- NO existe estándar de wallet para Linera
-
-**Impact**:
-- ❌ NO se puede integrar wallet connector
-- ✅ Solution: Wallet custom construida desde cero
-- ⚠️ Requiere implementar: Ed25519 keys, storage, signing, QR codes
-
-**Componentes necesarios**:
-- Ed25519 key generation
-- Secure key storage (encriptado en localStorage)
-- Transaction signing
-- QR code import/export
-- Chain management (multi-owner chains)
-
-### 3.4) Multi-Owner Chain vs Threshold Multisig
-
-**Diferencia clave**:
-
-| Aspecto | Multi-Owner Chain | Multisig Application |
-|---------|-------------------|----------------------|
-| **Nivel** | Protocolo (nativo) | Application (Wasm) |
-| **Creación** | CLI: `open-multi-owner-chain` | Desarrollo Wasm + deploy |
-| **Threshold** | NO tiene (1-of-N) | Configurable m-of-N |
-| **Time-locks** | NO soportado | Configurable |
-| **Confirmed** | ✅ Works on Testnet Conway | ⚠️ To be validated |
-| **Complejidad** | Baja | Alta |
-
-**Recomendación**:
-1. MVP: Multi-owner chains (protocolo) - rápido de implementar
-2. Fase 2: Aplicación Wasm con threshold - desarrollo adicional
-
-### 3.5) Timeline Adjustments
-
-Basado en el descubrimiento de @linera/client SDK oficial, los estimados han sido ajustados:
-
-| Milestone | Original | Rust CLI Approach | TypeScript SDK | Diferencia Final |
-|-----------|----------|------------------|-----------------|------------------|
-| M1: Project Setup | 40h | 40h | 40h | 0% |
-| M2: Multisig Contract | 120h | 170h | 170h | +42% (linera-sdk) |
-| M3: Backend Core | 150h | 210h | **120h** | **-20%** (SDK oficial) |
-| M4: Frontend | 120h | 180h | **120h** | **0%** (SDK wallet) |
-| M5: Integration | 80h | 100h | 80h | 0% |
-| M6: Observability | 40h | 40h | 40h | 0% |
-| M7: QA & UAT | 40h | 60h | 50h | +25% |
-| M8: Handoff | 20h | 20h | 20h | 0% |
-| **TOTAL** | **~610h** | **~800h** | **~580h** | **-5%** (vs original) |
-
-**Nuevo timeline**: ~15-16 semanas (3.5-4 meses) con TypeScript SDK vs. 10-11 semanas original.
-
-**Justificación de cambios**:
-- TypeScript SDK elimina necesidad de CLI wrapper: -90h en backend
-- SDK wallet simplifica frontend: -60h en frontend
-- Compartir tipos TypeScript entre frontend/backend: -10h
-
----
-
-## 4) Out-of-Scope
-- EVM support (planned for Q2'25, not available)
-- Hardware wallet integration (future phase)
-- Mobile native apps (responsive web only)
-- Advanced DeFi features (liquidity, trading, derivatives)
-- Custody/KYC/AML flows
-- Formal security audits (prepare for later)
-- Mobile push notifications (web notifications only)
-- Social recovery or timelock features (Phase 2)
-
----
-
-## 5) Architecture
+## 4) Architecture
 
 ### Architecture Goals
 
-- **Linera-Native**: Use unique microchain architecture
-- **Self-Custody**: Users control their private keys
-- **Application-Level Multisig**: Smart contract with m-of-n threshold logic
-- **Near Real-Time**: Polling-based updates (5-10s intervals) with Linera's sub-second finality
-- **Secure**: Ed25519 key management and transaction validation best practices
-- **Cross-Chain Coordination**: Use Linera's messaging for owner notifications
-- **SDK-Based Backend**: TypeScript backend using @linera/client SDK
+- **Linera-Native**: Use unique microchain architecture and multi-owner chains.
+- **Self-Custody**: Users maintain full control of Ed25519 private keys via @linera/client.
+- **Application-Level Multisig**: Smart contract with m-of-n threshold logic (no native protocol threshold).
+- **Multi-Multisig Support**: Manage multiple multisig wallets from single interface.
+- **Near Real-Time**: Polling-based updates (5-10s) with sub-second finality.
+- **Security First**: Ed25519 key management, signature verification, threshold enforcement.
+- **Cross-Chain Coordination**: Use Linera's messaging for owner notifications.
 
 ### System Architecture
 
@@ -228,17 +68,17 @@ graph TB
         Queue[Transaction Queue<br/>Pending Approvals]
     end
 
-    subgraph "Backend (Node.js/TypeScript)"
-        API[REST API - Express/Fastify]
+    subgraph "Backend (Rust)"
+        API[REST API<br/>Actix-web/Axum]
         MultisigSvc[Multisig Service<br/>Contract Management]
         ProposalSvc[Proposal Service<br/>Lifecycle Management]
-        LineraSDK[@linera/client SDK<br/>Native Integration]
+        LineraClient[Linera Integration<br/>gRPC/Direct Client]
         MessageSvc[Message Service<br/>Cross-Chain Coordination]
         PollingSvc[Polling Service<br/>5-10s Intervals]
     end
 
     subgraph "Linera Network"
-        Validators[Linera Validators<br/>Shared Security]
+        Validators[Linera Validators<br/>Testnet Conway]
         UserChains[User Chains<br/>Owner Wallets]
         MultiChain[Multi-Owner Chain<br/>Multisig Wallet]
         Contract[Multisig Application<br/>Wasm Bytecode]
@@ -262,102 +102,57 @@ graph TB
 
     API --> MultisigSvc
     API --> ProposalSvc
-    API --> LineraSDK
+    API --> LineraClient
     API --> MessageSvc
     API --> PollingSvc
 
-    MultisigSvc --> LineraSDK
+    MultisigSvc --> LineraClient
     ProposalSvc --> Postgres
     MessageSvc --> Inboxes
     PollingSvc --> Inboxes
 
-    LineraSDK --> Validators
-    LineraSDK --> UserChains
-    LineraSDK --> MultiChain
+    LineraClient --> Validators
+    LineraClient --> UserChains
+    LineraClient --> MultiChain
     MultisigSvc --> Contract
 
     Validators --> UserChains
     Validators --> MultiChain
     UserChains --> Inboxes
     MultiChain --> Inboxes
-    LineraSDK --> Redis
+    LineraClient --> Redis
     API --> Redis
 
     style UI fill:#e1f5fe
     style Wallet fill:#e1f5fe
-    style LineraSDK fill:#c8e6c9
+    style LineraClient fill:#c8e6c9
     style MultiChain fill:#c8e6c9
     style Contract fill:#c8e6c9
     style Inboxes fill:#fff9c4
     style Validators fill:#fff9c4
 ```
 
-**Architecture Notes**:
-- **@linera/client SDK**: Official TypeScript SDK for Linera integration
-- **Wallet Management**: Built-in wallet functionality via @linera/client
-- **Polling Service**: Updates via 5-10s polling (GraphQL/WebSocket not consistently available)
-- **REST API**: Custom REST layer using Express or Fastify
-- **Type Safety**: Shared TypeScript types between frontend and backend
-
 ### Linera Integration Approach
 
-**Important**: Linera's multisig approach differs from traditional chains. This architecture uses the official TypeScript SDK.
+**Key Architecture Decisions**:
+- **Smart Contracts**: Rust (linera-sdk) compiled to Wasm for application-level multisig logic.
+- **Backend**: Rust service using Actix-web or Axum with direct Linera integration (gRPC or compiled client library).
+- **Frontend**: TypeScript/React with @linera/client SDK (frontend-only, NOT a backend SDK).
+- **Wallet**: Custom wallet implementation using @linera/client for Ed25519 key management.
 
-**Primary Method: Application-Level Multisig on Multi-Owner Chains**
-- Deploy multi-owner chain with N owners (via `@linera/client`)
-- Deploy custom Wasm multisig application (compiled with `linera-sdk` in Rust)
-- Application implements m-of-n threshold logic
-- Owners propose transactions via operations
-- Other owners approve via application operations
-- Execution occurs when threshold met
+**Multi-Owner Chain vs Application Multisig**:
+- **Multi-Owner Chain**: Protocol-level feature allowing N owners to control a chain (verified working on Testnet Conway).
+- **Application Multisig**: Custom Wasm contract implementing m-of-n threshold logic (required for true multisig).
+- **Combined Approach**: Deploy multi-owner chain, then deploy multisig Wasm application on it.
 
-**Key Integration Points**:
-1. **Multi-Owner Chain Creation**: Use `@linera/client` SDK methods
-2. **Smart Contract Deployment**: Deploy multisig Wasm bytecode via SDK
-3. **Operation Submission**: Submit operations through SDK
-4. **Cross-Chain Messaging**: Use SDK's message passing for notifications
-5. **State Queries**: Query application state via SDK methods
-
-**Backend SDK Integration**:
-```typescript
-import * as linera from '@linera/client';
-
-// Create client instance
-const client = await linera.createClient({
-  network: 'testnet-conway'
-});
-
-// Query chain state
-const balance = await client.queryBalance(chainId);
-
-// Submit operation
-const result = await client.submitOperation({
-  chainId,
-  operation: multisigOperation,
-  signers: [owner1, owner2]
-});
-```
-
-**Wallet Integration**:
-- **@linera/client**: Official SDK with built-in wallet management
-- **Ed25519 Key Management**: SDK handles key generation and storage
-- **Transaction Signing**: Sign operations via SDK before submission
-- **Cross-Platform**: Works in browser and Node.js environments
+**Source of Truth**: On-chain Wasm application holds owners, threshold, pending proposals. Off-chain PostgreSQL is UX cache (proposals, approvals, metadata) — never stores private keys.
 
 **Cryptographic Scheme**:
-- **Signature Scheme**: Ed25519 (Linera's standard, handled by SDK)
-- **Chain Ownership**: N owners with individual key pairs
-- **Authentication**: SDK manages signer authentication
-- **Application-Level Authorization**: Custom logic in multisig contract
+- **Signature Scheme**: Ed25519 (Linera's standard).
+- **Chain Ownership**: N owners with individual Ed25519 key pairs.
+- **Application-Level Authorization**: Custom threshold logic in multisig contract.
 
-**Technology Stack**:
-- **Smart Contract**: Rust → Wasm (linera-sdk)
-- **Backend**: Node.js/TypeScript + @linera/client SDK
-- **Frontend**: React/Next.js + @linera/client SDK
-- **Database**: PostgreSQL + Prisma/TypeORM
-- **Cache**: Redis for polling state
-
-### Key Flow: Propose → Approve → Execute
+## 5) Key Flow: Propose → Approve → Execute
 
 ```mermaid
 sequenceDiagram
@@ -366,11 +161,13 @@ sequenceDiagram
     participant O3 as Owner 3
     participant UI as Frontend
     participant API as Backend
+    participant DB as Postgres
     participant SC as Multisig Contract
     participant LC as Linera Chain
 
     O1->>UI: Create transaction proposal
-    UI->>API: POST /propose (tx_data, signature)
+    UI->>API: POST /proposals (tx_data, signature)
+    API->>DB: Store proposal (status: pending)
     API->>SC: CreateProposal operation
     SC->>LC: Execute on multi-owner chain
     LC-->>SC: Proposal created (approvals: [O1])
@@ -380,7 +177,8 @@ sequenceDiagram
     Note over O2,O3: Cross-chain messages delivered to owner chains
 
     O2->>UI: View proposal, approve
-    UI->>API: POST /approve (proposal_id, signature)
+    UI->>API: POST /proposals/:id/approve (signature)
+    API->>DB: Verify & accumulate signature
     API->>SC: ApproveProposal operation
     SC->>LC: Execute on multi-owner chain
     LC-->>SC: Approval recorded (approvals: [O1, O2])
@@ -388,7 +186,8 @@ sequenceDiagram
     API-->>UI: Status updated
 
     O3->>UI: View proposal, approve
-    UI->>API: POST /approve (proposal_id, signature)
+    UI->>API: POST /proposals/:id/approve (signature)
+    API->>DB: Verify & accumulate
     API->>SC: ApproveProposal operation
     SC->>LC: Execute on multi-owner chain
     LC-->>SC: Approval recorded (approvals: [O1, O2, O3])
@@ -396,10 +195,11 @@ sequenceDiagram
     API-->>UI: Status: ready_to_execute
 
     O1->>UI: Execute transaction
-    UI->>API: POST /execute (proposal_id, signature)
+    UI->>API: POST /proposals/:id/execute
     API->>SC: ExecuteProposal operation
     SC->>LC: Execute inner transaction
     LC-->>SC: Transaction executed
+    API->>DB: Mark proposal as executed
     API-->>UI: Status: executed
     SC->>LC: Send completion notifications
 ```
@@ -411,287 +211,150 @@ sequenceDiagram
 - Threshold verification in contract logic
 - Uses Linera's cross-chain messaging for coordination
 
----
+## 6) Milestones & Deliverables (hours, no costs)
 
-## 5) SDK Validation & Milestones
+- **M1 Project Setup — 50h**: Requirements definition, architecture design, development environment setup (Rust toolchain, Node.js), Linera testnet access (Testnet Conway), CI/CD pipeline, database schema design, API contract definition.
+- **M2 Multisig Contract — 200h**: Contract state design (owners, threshold, pending txs), Propose operation (validation, creation), Approve operation (tracking, verification), Execute operation (threshold check, inner tx execution), Owner management (add/remove, change threshold), Edge cases (revoke, replace, timeout), Unit tests, Integration tests with Linera SDK, Contract documentation.
+- **M3 Backend Core — 180h**: API framework setup (Actix-web/Axum), Linera client integration (gRPC/compiled client), Multisig service (contract deployment, interaction), Proposal service (CRUD, lifecycle), Message service (cross-chain notifications), Database layer (SQLx models, migrations), Polling service (5-10s intervals), Caching & rate limiting (Redis), Authentication (Ed25519 verification), Unit tests.
+- **M4 Frontend Core — 120h**: Project setup (Next.js, TypeScript), @linera/client integration (wallet, keys), Wallet creation wizard, Proposal builder (visual interface), Transaction queue (pending/approvals/executed), Polling-based updates (5-10s), Dashboard, Error handling, Unit tests.
+- **M5 Integration & Testing — 60h**: End-to-end integration (Frontend → Backend → Blockchain), Cross-chain messaging testing, Multi-owner testing (simulate N owners), Edge case testing (failures, timeouts), Performance testing, Bug fixes.
+- **M6 Observability & Hardening — 40h**: Metrics (Prometheus, Grafana dashboards), Logging (structured logging), Health checks, Rate limiting tuning, Security hardening (input validation, CORS, headers).
+- **M7 QA & UAT — 60h**: Test scenarios (multi-owner, timeout, failures), Regression testing, User acceptance testing, Bug fixes.
+- **M8 Handoff — 20h**: Documentation (API docs, deployment guides), Demos, Runbooks (operations, DR, rollback), Final handoff.
 
-### M0: SDK Validation POC — 40h (REQUIRED BEFORE M3)
+Total estimate: **730h** (costing handled separately).
 
-> **CRITICAL**: This milestone validates that @linera/client SDK works in Node.js backend environment before committing to TypeScript architecture. If validation fails, fallback to Rust CLI wrapper architecture (850h timeline).
-
-**Purpose**: Validate @linera/client SDK capabilities in Node.js
-
-**Tasks**:
-
-| Task | Hours | Description |
-|------|-------|-------------|
-| SDK Installation & Setup | 4h | Install @linera/client, setup Node.js environment |
-| Client Initialization Test | 8h | Verify `createClient()` works with testnet-conway |
-| Query Operations Test | 8h | Test `queryBalance()` and chain state queries |
-| Multi-Owner Chain Creation | 12h | Verify SDK can create multi-owner chains |
-| Operation Submission Test | 8h | Test submitting operations via SDK |
-| Error Handling & Edge Cases | 6h | Test error scenarios, network failures |
-| Documentation & Report | 4h | Document findings, recommend proceed/fallback |
-
-**Success Criteria** (ALL must pass):
-- ✅ Client initializes successfully with testnet-conway
-- ✅ Can query balance from multi-owner chain
-- ✅ Can create multi-owner chain via SDK
-- ✅ Can submit operations to chain
-- ✅ Error handling works correctly
-
-**Fallback Plan** (if validation fails):
-- Backend: Revert to Rust CLI wrapper architecture
-- Timeline: 730h (original Rust CLI estimate)
-- M3 Backend: 200h (increase +80h for CLI wrapper)
-- M4 Frontend: 140h (custom wallet + SDK hybrid)
-
-**Deliverables**:
-- Validation test suite
-- SDK compatibility report
-- Go/No-Go recommendation with fallback plan
-
----
-
-## 6) Milestones & Deliverables
-
-### Timeline Overview
+### Timeline Visualization
 
 ```mermaid
 gantt
-    dateFormat YYYY-MM-DD
-    title Linera Multisig Platform Delivery Timeline (TypeScript SDK + POC)
-
-    section Validation
-    M0 SDK Validation POC (40h)       :crit,    m0, 2026-02-03, 5d
+    dateFormat  YYYY-MM-DD
+    title Linera Multisig Platform Delivery Timeline
 
     section Foundations
-    M1 Project Setup (40h)           :done,    m1, 2026-02-10, 5d
+    M1 Project Setup (50h)            :done,    m1, 2026-02-03, 6d
 
     section Smart Contract
-    M2 Multisig Contract (170h)      :active,  m2, 2026-02-17, 21d
+    M2 Multisig Contract (200h)       :active,  m2, 2026-02-10, 25d
 
     section Backend
-    M3 Backend Core (140h)           :         m3, 2026-03-12, 18d
+    M3 Backend Core (180h)            :         m3, 2026-03-09, 23d
 
     section Frontend
-    M4 Frontend Core (140h)          :crit,    m4, 2026-03-30, 18d
+    M4 Frontend Core (120h)           :crit,    m4, 2026-04-03, 15d
 
     section Integration
-    M5 Integration & Testing (80h)    :         m5, 2026-04-19, 10d
+    M5 Integration & Testing (60h)    :         m5, 2026-04-20, 8d
 
     section Ops/Obs
     M6 Observability & Hardening (40h) :        m6, 2026-04-30, 5d
 
     section QA
-    M7 QA & UAT (50h)                :         m7, 2026-05-07, 6d
+    M7 QA & UAT (60h)                 :         m7, 2026-05-07, 8d
 
     section Handoff
-    M8 Handoff (20h)                 :         m8, 2026-05-13, 3d
+    M8 Handoff (20h)                  :         m8, 2026-05-17, 3d
 ```
 
-*Note: Timeline assumes 8-hour workdays. Total: ~18 weeks (720h) including SDK validation POC.*
+**Timeline Notes**:
+- Assumes 8-hour workdays
+- Total: ~19 weeks (730h)
+- Estimates based on current understanding; actual hours may vary as dependencies are confirmed
 
-> **Contingency**: If M0 validation fails, architecture reverts to Rust CLI wrapper (850h total, ~21-23 weeks).
+### Detailed Estimation Summary
 
-### Detailed Milestone Breakdown
+#### M2 Multisig Contract — 200h Breakdown
 
-#### M1 Project Setup — 40h
+**Scope**:
+- Contract state design
+- Operations (propose, approve, execute)
+- Owner management
+- Edge cases
+- Testing
 
-**Tasks**:
-- Requirements definition and refinement (8h)
-- Architecture design and documentation (8h)
-- Development environment setup (4h)
-- Linera testnet access and configuration (8h)
-- CI/CD pipeline setup (GitHub Actions) (4h)
-- Database schema design (4h)
-- API contract definition (4h)
+| Component | Hours | Details |
+|-----------|-------|---------|
+| **Contract State Design** | 24h | Define structures for owners, threshold, pending txs, approvals |
+| **Propose Operation** | 20h | Implement transaction proposal with validation |
+| **Approve Operation** | 16h | Implement approval tracking and verification |
+| **Execute Operation** | 28h | Implement threshold check and inner tx execution |
+| **Owner Management** | 16h | Add/remove owners, change threshold |
+| **Edge Cases** | 20h | Revoke, replace, timeout, cancellation |
+| **Unit Tests** | 24h | Test coverage for all operations |
+| **Integration Tests** | 16h | Test with Linera SDK and testnet |
+| **Documentation** | 6h | Contract API documentation |
+| **Wasm Compilation** | 10h | Build and deploy Wasm bytecode |
+| **Cross-Chain Messages** | 20h | Implement notification messaging |
 
-**Deliverables**:
-- Requirements document
-- System architecture diagrams
-- Development environments configured
-- CI/CD pipeline operational
-- Database schema finalized
-- API endpoints documented
-
----
-
-#### M2 Multisig Smart Contract — 170h
-
-**Tasks**:
-
-| Task | Hours | Description |
-|------|-------|-------------|
-| Contract State Design | 24h | Define structures for owners, threshold, pending txs, approvals |
-| Propose Operation | 20h | Implement transaction proposal with validation |
-| Approve Operation | 16h | Implement approval tracking and verification |
-| Execute Operation | 28h | Implement threshold check and inner tx execution |
-| Owner Management | 16h | Add/remove owners, change threshold |
-| Edge Cases | 20h | Revoke, replace, timeout, cancellation |
-| Unit Tests | 24h | Test coverage for all operations |
-| Integration Tests | 16h | Test with Linera SDK and testnet |
-| Documentation | 6h | Contract API documentation |
-
-**Deliverables**:
-- Multisig Wasm application bytecode
-- Unit test suite covering all operations
-- Integration tests with Linera testnet
-- Contract documentation and API
-- Security review checklist
-
-**Complexity**: High - custom application-level multisig logic
+**Key Risk Factors**:
+- linera-sdk learning curve for Wasm compilation
+- Application-level threshold logic complexity
+- Cross-chain message delivery reliability
+- On-chain state management efficiency
 
 ---
 
-#### M3 Backend Core — 140h
+#### M3 Backend Core — 180h Breakdown
 
-**Tasks**:
+**Scope**:
+- REST API
+- Linera integration
+- Services
+- Database
+- Polling
+- Caching
 
-| Task | Hours | Description |
-|------|-------|-------------|
-| API Framework Setup | 8h | Express/Fastify project structure, middleware |
-| @linera/client Integration | 24h | SDK setup, configuration, client initialization |
-| Multisig Service | 20h | Contract deployment, interaction via SDK |
-| Proposal Service | 16h | CRUD operations, lifecycle management |
-| Message Service | 12h | Cross-chain notification handling |
-| Database Layer | 20h | Prisma/TypeORM models, migrations |
-| Polling Service | 12h | 5-10s interval polling for state updates |
-| Caching & Rate Limiting | 8h | Redis integration |
-| Authentication | 12h | Ed25519 signature verification via SDK |
-| Unit Tests | 8h | Service-level tests |
+| Component | Hours | Details |
+|-----------|-------|---------|
+| **API Framework Setup** | 12h | Actix-web/Axum project structure, middleware |
+| **Linera Client Integration** | 32h | gRPC client or compiled Linera client library |
+| **Multisig Service** | 24h | Contract deployment, interaction with Linera |
+| **Proposal Service** | 20h | CRUD operations, lifecycle management |
+| **Message Service** | 16h | Cross-chain notification handling |
+| **Database Layer** | 28h | SQLx models, migrations, queries |
+| **Polling Service** | 16h | 5-10s interval polling for state updates |
+| **Caching & Rate Limiting** | 12h | Redis integration |
+| **Authentication** | 12h | Ed25519 signature verification |
+| **Unit Tests** | 8h | Service-level tests |
 
-**Deliverables**:
-- REST API with all endpoints
-- @linera/client SDK integration
-- PostgreSQL database with migrations
-- Redis caching and rate limiting
-- Test suite covering all scenarios
-
-**Complexity**: Medium - Official SDK simplifies integration significantly
-
----
-
-#### M4 Frontend Core — 140h
-
-**Tasks**:
-
-| Task | Hours | Description |
-|------|-------|-------------|
-| Project Setup | 8h | Next.js, TypeScript, state management |
-| @linera/client Integration | 24h | SDK wallet integration, key management |
-| Wallet Creation Wizard | 16h | Multi-step form, threshold selection |
-| Proposal Builder | 16h | Visual transaction builder |
-| Transaction Queue | 16h | Pending, ready, executed tabs |
-| Polling-Based Updates | 16h | 5-10s interval polling (no WebSocket) |
-| Dashboard | 12h | Wallet overview, activity feed |
-| Error Handling | 8h | User-friendly error messages |
-| Unit Tests | 4h | Component and service tests |
-
-**Deliverables**:
-- Responsive web application
-- @linera/client wallet integration
-- Multisig creation wizard
-- Proposal builder interface
-- Transaction queue with polling updates
-- Test suite covering all scenarios
-
-**Complexity**: Medium - SDK reduces wallet implementation complexity significantly
+**Key Risk Factors**:
+- gRPC protocol complexity
+- Linera protocol understanding requirements
+- Cross-chain message handling
+- Polling efficiency optimization
 
 ---
 
-#### M5 Integration & Testing — 80h
+#### M4 Frontend Core — 120h Breakdown
 
-**Tasks**:
+**Scope**:
+- React/Next.js app
+- @linera/client integration
+- Wallet UI
+- Proposal flow
 
-| Task | Hours | Description |
-|------|-------|-------------|
-| End-to-End Integration | 20h | Frontend → Backend → Blockchain |
-| Cross-Chain Messaging | 12h | Owner notification flow |
-| Multi-Owner Testing | 16h | Simulate multiple owners |
-| Edge Case Testing | 12h | Failure scenarios, timeouts |
-| Performance Testing | 8h | Load testing, latency checks |
-| Bug Fixes | 12h | Address integration issues
+| Component | Hours | Details |
+|-----------|-------|---------|
+| **Project Setup** | 8h | Next.js, TypeScript, state management |
+| **@linera/client Integration** | 24h | SDK wallet integration, key management |
+| **Wallet Creation Wizard** | 16h | Multi-step form, threshold selection |
+| **Proposal Builder** | 16h | Visual transaction builder |
+| **Transaction Queue** | 16h | Pending, ready, executed tabs |
+| **Polling-Based Updates** | 16h | 5-10s interval polling implementation |
+| **Dashboard** | 12h | Wallet overview, activity feed |
+| **Error Handling** | 8h | User-friendly error messages |
+| **Unit Tests** | 4h | Component and service tests |
 
-**Deliverables**:
-- Fully integrated platform
-- End-to-end test scenarios
-- Performance benchmarks
-- Bug fixes and refinements
-
-**Complexity**: High - multi-owner coordination testing
-
----
-
-#### M6 Observability & Hardening — 40h
-
-**Tasks**:
-
-| Task | Hours | Description |
-|------|-------|-------------|
-| Metrics | 12h | Prometheus metrics, Grafana dashboards |
-| Logging | 8h | Structured logging, Loki integration |
-| Health Checks | 6h | API health, blockchain connectivity |
-| Rate Limiting Tuning | 6h | Optimize rate limits |
-| Security Hardening | 8h | Input validation, CORS, headers
-
-**Deliverables**:
-- Monitoring dashboards
-- Structured logging
-- Health check endpoints
-- Security hardening applied
+**Key Risk Factors**:
+- @linera/client SDK evolution (potential breaking changes)
+- Ed25519 key management in browser
+- Multi-owner chain creation via SDK
+- Polling vs. WebSocket limitations
+- Complex async state management (off-chain + on-chain)
 
 ---
 
-#### M7 QA & UAT — 50h
-
-**Tasks**:
-
-| Task | Hours | Description |
-|------|-------|-------------|
-| Test Scenarios | 16h | Multi-owner, timeout, failures |
-| Regression Testing | 8h | Ensure no regressions |
-| User Acceptance Testing | 12h | Real-world usage scenarios |
-| Bug Fixes | 4h | Address QA findings
-
-**Deliverables**:
-- Test report with results
-- UAT sign-off
-- Bug fixes applied
-
----
-
-#### M8 Handoff — 20h
-
-**Tasks**:
-
-| Task | Hours | Description |
-|------|-------|-------------|
-| Documentation | 8h | API docs, deployment guides |
-| Demos | 4h | Stakeholder demonstrations |
-| Runbooks | 4h | Operations, DR, rollback |
-| Final Handoff | 4h | Knowledge transfer
-
-**Deliverables**:
-- API documentation
-- Deployment guides
-- Operations runbooks
-- Final demo and handoff
-
----
-
-**Total estimate: 720h (~18 weeks with 1 FTE or ~10-12 weeks with 2 FTEs)**
-
-> **Note**: This estimate includes 40h SDK validation POC and all milestone allocations:
-> - M0: SDK Validation POC (40h)
-> - M1-M8: Core development (680h)
-> - Total vs original: +18% (from 610h to 720h)
->
-> **If M0 validation fails**: Revert to Rust CLI wrapper architecture (850h total, ~21-23 weeks)
-
----
-
-## 6) Technical Implementation
+## 7) Technical Implementation
 
 ### Smart Contract Interface (Rust Pseudo-code)
 
@@ -742,7 +405,7 @@ CREATE TABLE wallets (
     id UUID PRIMARY KEY,
     chain_id VARCHAR(255) UNIQUE NOT NULL,
     application_id VARCHAR(255) NOT NULL,
-    owners JSONB NOT NULL, -- Array of owner addresses
+    owners JSONB NOT NULL,
     threshold INTEGER NOT NULL,
     nonce BIGINT DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW(),
@@ -756,16 +419,16 @@ CREATE TABLE proposals (
     proposal_id VARCHAR(255) NOT NULL,
     proposer VARCHAR(255) NOT NULL,
     operations JSONB NOT NULL,
-    approvals JSONB DEFAULT '[]', -- Array of owner addresses
+    approvals JSONB DEFAULT '[]',
     threshold_met BOOLEAN DEFAULT FALSE,
-    status VARCHAR(50) DEFAULT 'pending', -- pending, ready, executed, expired, revoked
+    status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT NOW(),
     expires_at TIMESTAMP,
     executed_at TIMESTAMP,
     UNIQUE(wallet_id, proposal_id)
 );
 
--- Approvals (for faster queries)
+-- Approvals
 CREATE TABLE approvals (
     id UUID PRIMARY KEY,
     proposal_id UUID REFERENCES proposals(id),
@@ -805,41 +468,25 @@ POST   /api/v1/proposals/:proposal_id/approve     - Approve proposal
 POST   /api/v1/proposals/:proposal_id/revoke      - Revoke proposal
 POST   /api/v1/proposals/:proposal_id/execute     - Execute proposal
 
-# WebSocket
-WS     /api/v1/ws                             - Real-time updates
-
 # Health
 GET    /health                               - Health check
 GET    /metrics                              - Prometheus metrics
 ```
 
----
-
-## 7) Testing Strategy
+## 8) Testing Strategy
 
 ### Testing Levels
 
-**Unit Tests**:
-- Smart contract operations (propose, approve, execute)
-- Backend service logic
-- Frontend components
-- Signature verification
-
-**Integration Tests**:
-- Backend + Linera testnet
-- Frontend + Backend API
-- Cross-chain messaging
-- Database operations
-
-**End-to-End Tests**:
-- Complete multisig workflows
-- Multi-owner scenarios
-- Edge cases (timeout, revoke, failure)
+- **Backend REST surface**: Actix-web/Axum endpoints for wallets, proposals, approvals, execution; health/metrics endpoints for CI smoke.
+- **Smart Contract Operations**: Unit tests for propose, approve, execute, owner management operations using linera-sdk testing framework.
+- **Integration Tests**: Backend + Linera testnet (Testnet Conway), cross-chain messaging, multi-owner coordination.
+- **End-to-End Tests**: Complete multisig workflows (create wallet → propose → approve → execute), multi-owner scenarios, edge cases (timeout, revoke, failure).
+- **Make/CI targets**: Standard targets to run unit and integration tests (smoke, full platform flow, unit).
 
 ### Test Scenarios
 
 **Happy Path**:
-1. Create 2-of-3 multisig wallet
+1. Create 2-of-3 multisig wallet (multi-owner chain + Wasm app)
 2. Owner 1 proposes transfer
 3. Owner 2 approves
 4. Owner 3 approves
@@ -859,65 +506,35 @@ GET    /metrics                              - Prometheus metrics
 2. Invalid signature
 3. Insufficient balance
 4. Contract execution failure
+5. Cross-chain message delivery failure
 
 ---
 
-## 8) Risks & Mitigations
+## 9) Risks & Mitigations
 
 | Risk | Mitigation | Priority |
 |------|------------|----------|
-| **@linera/client SDK validation failure** - SDK may not work in Node.js | **M0 POC milestone validates SDK before committing to TypeScript architecture. If validation fails, fallback to Rust CLI wrapper (850h total, +130h buffer)** | **Critical** |
-| **No native multisig** - Must implement custom contract | Thorough testing, external audit, start with simple m-of-n | **High** |
-| **Wallet integration** - May not have connector | Plan for manual key entry, QR code fallback | **High** |
-| **SDK immaturity** - Limited documentation/examples | Budget for research, Linera community support | **Medium** |
-| **Testnet stability** - May be unstable | Budget for debugging, contingency time | **Medium** |
-| **Cross-chain complexity** - Message delivery failures | Error handling, retry logic, monitoring | **Medium** |
-| **Smart contract bugs** - Security vulnerabilities | External audit, bug bounty, formal verification if possible | **High** |
-| **Gas costs** - Multiple operations expensive | Optimize operations, batch approvals | **Low** |
-| **User experience** - Complex multisig flow | Clear UI, explicit guidance, tooltips | **Medium** |
-
-### Fallback Plan: Rust CLI Wrapper Architecture
-
-If M0 SDK validation fails, the architecture reverts to:
-
-**Backend**: Rust (Actix-web) with CLI wrapper
-```rust
-// Linera CLI wrapper implementation
-pub struct LineraClient {
-    pub wallet_path: PathBuf,
-}
-
-impl LineraClient {
-    pub fn query_balance(&self, chain_id: &str) -> Result<u64, Error> {
-        let output = Command::new("linera")
-            .args(["query-balance", chain_id])
-            .env("LINERA_WALLET", &self.wallet_path)
-            .output()?;
-        // Parse output...
-    }
-}
-```
-
-**Timeline Impact**:
-- M3 Backend: 140h → 200h (+60h for CLI wrapper)
-- M4 Frontend: 140h → 180h (+40h for custom wallet)
-- **Total**: 720h → 850h (+130h or +18%)
-- **Duration**: ~16-17 weeks → ~21-23 weeks
+| **GraphQL not functional** - Tested on Testnet Conway, schema doesn't load | Use CLI wrapper or gRPC instead; build REST API in Rust | **High** |
+| **No official backend SDK** - @linera/client is frontend-only | Build Rust backend with direct Linera integration (gRPC/compiled client); budget +20% backend time | **High** |
+| **No wallet connector** - No MetaMask-style connector for Linera | Build custom wallet using @linera/client SDK (Ed25519 key management); budget +40h frontend | **High** |
+| **Application-level multisig complexity** - Custom Wasm contract required | Thorough testing, external audit, start with simple m-of-n; comprehensive unit tests | **High** |
+| **Cross-chain message delivery** - Asynchronous messaging can fail | Error handling, retry logic, monitoring, timeout handling | **Medium** |
+| **SDK immaturity** - Limited documentation/examples | Budget for research, Linera community support, study examples (matching-engine) | **Medium** |
+| **Testnet stability** - Testnet Conway may be unstable | Budget for debugging, contingency time, local dev network as fallback | **Medium** |
+| **Smart contract bugs** - Security vulnerabilities | External audit, bug bounty, comprehensive testing, formal verification if possible | **High** |
+| **Fee model unknown** - Not documented; N approvals = N transactions | Measure costs during PoC; optimize operations; budget for gas costs | **Medium** |
+| **Polling vs. WebSocket** - No native WebSocket support | Implement 5-10s polling; budget for optimization; monitor API costs | **Low** |
 
 ---
 
-## 9) Dependencies
+## 10) Dependencies
 
 ### External Dependencies
 
 **Blockchain**:
-- Linera testnet access and stability
-- Linera Rust SDK maturity
-- Documentation completeness
-
-**Wallet**:
-- Linera web wallet (if exists) OR manual key entry
-- Browser compatibility
+- Linera Testnet Conway access and stability (validator-1.testnet-conway.linera.net:443)
+- Linera Rust SDK (linera-sdk for Wasm compilation)
+- Faucet availability (https://faucet.testnet-conway.linera.net)
 
 **Infrastructure**:
 - PostgreSQL database
@@ -928,8 +545,8 @@ impl LineraClient {
 
 **Required**:
 - Senior Rust developer (smart contract Wasm compilation with linera-sdk)
-- Backend developer (Node.js/TypeScript + @linera/client SDK)
-- Frontend developer (React/Next.js + @linera/client SDK)
+- Backend Rust developer (Actix-web/Axum, gRPC, Linera protocol)
+- Frontend developer (React/Next.js, @linera/client SDK)
 - DevOps engineer
 
 **Preferred**:
@@ -938,17 +555,18 @@ impl LineraClient {
 
 ---
 
-## 10) Next Steps
+## 11) Next Steps
 
 **Immediate Actions** (Week 1):
 
-1. **Verify Linera Testnet Access**: Ensure testnet is stable and accessible
-2. **Research SDK Documentation**: Review Linera Rust SDK
-3. **Explore Wallet Options**: Check if Linera wallet exists, evaluate alternatives
-4. **Proof of Concept**: Build minimal multisig contract on testnet
-5. **Refine Hour Estimates**: After PoC, adjust estimates based on findings
-6. **Assemble Team**: Hire/assign developers for each role
-7. **Security Planning**: Identify auditors, plan for review
+1. **Confirm scope and milestone plan** (hours, not costs)
+2. **Verify Linera Testnet Conway access** - Ensure testnet is stable and accessible
+3. **Research linera-sdk documentation** - Review Wasm compilation patterns
+4. **Explore @linera/client SDK** - Review wallet management capabilities
+5. **Proof of Concept** - Build minimal multisig contract on testnet
+6. **Refine Hour Estimates** - After PoC, adjust estimates based on findings
+7. **Assemble Team** - Hire/assign developers for each role
+8. **Security Planning** - Identify auditors, plan for review
 
 **Decision Points**:
 - After PoC (Week 2): Confirm feasibility or pivot approach
@@ -957,35 +575,32 @@ impl LineraClient {
 
 ---
 
-## Conclusion
+## 12) Conclusion
 
-**Feasibility**: **FEASIBLE** with TypeScript full-stack architecture
+**Feasibility**: **FEASIBLE** with Rust backend + TypeScript frontend architecture
 
 **Key Considerations**:
-- No native multisig - must implement smart contract
-- Higher complexity than Hathor/Supra
-- Rust required for smart contract Wasm compilation only
-- TypeScript backend with @linera/client SDK (validated via M0 POC)
-- Uses Linera's multi-owner chains
+- No native multisig at protocol level - must implement application-level Wasm contract
+- Higher complexity than Hathor/Supra (custom contract required)
+- **Rust required** for smart contracts (linera-sdk → Wasm)
+- **Rust backend required** (no official backend SDK exists)
+- **TypeScript frontend** with @linera/client (frontend-only library)
+- Uses Linera's multi-owner chains (verified working on Testnet Conway)
 - Cross-chain messaging enables coordination
 - Sub-second finality with polling-based updates (5-10s)
-- Built-in wallet management via @linera/client
+- EVM support: Experimental/Planned for Q2'25
 
-**Recommendation**: **PROCEED** with M0 SDK Validation POC to verify @linera/client functionality in Node.js environment.
+**Recommendation**: PROCEED with Rust backend + TypeScript frontend architecture
 
-If validation succeeds:
-- TypeScript full-stack with official SDK
-- Timeline: 720h (~18 weeks with 1 FTE)
+**Architecture**:
+- Frontend: TypeScript/React + @linera/client
+- Backend: Rust + Actix-web + Direct Linera integration
+- Smart Contracts: Rust (linera-sdk) → Wasm
 
-If validation fails:
-- Fallback to Rust CLI wrapper architecture
-- Timeline: 850h (~21-23 weeks with 1 FTE)
+**Total Effort**: 730 hours (~19 weeks with 1 FTE or ~11-12 weeks with 2 FTEs)
 
-**Total Effort**: 720 hours including M0 POC (~18 weeks with 1 FTE or ~10-12 weeks with 2 FTEs)
-> +18% from original 610h estimate (includes M0 SDK validation and milestone buffers)
+**Note**: +20% from original 610h estimate due to Rust backend requirement
 
 ---
 
 **Produced by Palmera DAO Team**
-**Date**: February 2, 2026
-**Updated**: February 3, 2026 - Architecture changed to TypeScript backend with @linera/client SDK, added M0 SDK Validation POC (40h), adjusted timeline to 720h with fallback plan, applied AI pattern removal

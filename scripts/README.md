@@ -58,10 +58,41 @@ make rust-test   # SDK multisig application tests
 - **Chain ownership semantics** (all owners can propose blocks independently)
 - **Simple and advanced multi-owner chain configurations**
 
+### Conway Testnet Validation ✅
+
+**Status**: Successfully validated on February 2, 2026
+
+Multi-owner chain creation has been **validated on Conway testnet** with the following results:
+
+| Chain | Chain ID | Balance | Status |
+|-------|----------|---------|--------|
+| **Multi-Owner** | `4888610445c3f2e65fd23f0deceaecff469c9c9149fa6453545a3ca167bde4c7` | **10 tokens** | ✅ Active |
+| **Source** | `3c357e77e0be145519909833fa384724e5750a443aa29500d9dd226a541eb3dc` | **89.9999689 tokens** | ✅ Active |
+
+**Documentation**:
+- [`../docs/research/CONWAY_TESTNET_VALIDATION.md`](../docs/research/CONWAY_TESTNET_VALIDATION.md) - Complete test results
+- [`../docs/research/CLI_COMMANDS_REFERENCE.md`](../docs/research/CLI_COMMANDS_REFERENCE.md) - CLI command reference
+
 ### Running CLI Tests
 
+#### Option 1: Automated Script (Conway Testnet)
+
 ```bash
-# Run all CLI tests
+# Run automated multi-owner chain creation on Conway testnet
+cd scripts/multisig
+./create_multisig.sh
+
+# This script:
+# - Initializes wallet from faucet
+# - Creates multi-owner chain with 2 owners
+# - Validates on-chain state
+# - Provides validation commands
+```
+
+#### Option 2: Local Devnet Tests
+
+```bash
+# Run all CLI tests on local devnet
 make cli-test
 
 # Or directly
@@ -360,10 +391,22 @@ To add new tests or modify existing ones:
 
 ## References
 
+### Official Documentation
 - [Linera Documentation](https://linera.dev/developers/core_concepts/index.html)
 - [Linera SDK](https://docs.rs/linera-sdk/latest/linera_sdk/)
 - [Linera GitHub](https://github.com/linera-io/linera-protocol)
-- Project Research: `/Users/alfredolopez/Documents/GitHub/PalmeraDAO/linera.dev/docs/`
+
+### Project Documentation
+- Project Research: [`../docs/`](../docs/)
+- **Conway Testnet Validation**: [`../docs/research/CONWAY_TESTNET_VALIDATION.md`](../docs/research/CONWAY_TESTNET_VALIDATION.md)
+- **CLI Commands Reference**: [`../docs/research/CLI_COMMANDS_REFERENCE.md`](../docs/research/CLI_COMMANDS_REFERENCE.md)
+- Infrastructure Analysis: [`../docs/INFRASTRUCTURE_ANALYSIS.md`](../docs/INFRASTRUCTURE_ANALYSIS.md)
+- Platform Proposal: [`../docs/PROPOSAL/linera-multisig-platform-proposal.md`](../docs/PROPOSAL/linera-multisig-platform-proposal.md)
+
+### Test Scripts
+- **Conway Multi-Owner Creation**: [`scripts/multisig/create_multisig.sh`](./multisig/create_multisig.sh)
+- **Local CLI Tests**: [`scripts/multisig-test-cli.sh`](./multisig-test-cli.sh)
+- **SDK Tests**: [`scripts/multisig-test-rust.sh`](./multisig-test-rust.sh)
 
 ## License
 
