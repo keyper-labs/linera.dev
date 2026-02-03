@@ -50,12 +50,14 @@
 **Purpose**: Build Wasm applications (smart contracts)
 
 **Capabilities**:
+
 - ✅ Define application state (Views, operations, messages)
 - ✅ Implement contract logic
 - ✅ Handle cross-chain messages
 - ✅ Compile to Wasm for Linera VM
 
 **Limitations**:
+
 - ❌ NOT a client SDK
 - ❌ NO query methods
 - ❌ NO wallet management
@@ -98,12 +100,14 @@ let tx_hash = client.submit_operation(chain_id, op).await?;
 **Status**: ✅ EXISTS (Rust Only)
 
 **Finding**: Official backend SDK available via `linera-client` crate:
+
 - ✅ **Rust**: `linera-client` + `linera-core` crates
 - ❌ **Node.js/TypeScript**: Not available for backend
 - ❌ **Python**: Not available
 - ❌ **Go**: Not available
 
 **What You Get**:
+
 - `linera-client` crate: ClientContext, wallet management, chain operations
 - `linera-core` crate: Core Client with chain queries and operations
 - gRPC protocol definitions
@@ -139,6 +143,7 @@ let ownership = context.ownership(Some(chain_id)).await?;
 ```
 
 **Key Methods Available**:
+
 - `chain_client.query_balance()` - Query chain balance
 - `chain_client.execute_operations()` - Submit operations
 - `chain_client.transfer()` - Transfer tokens
@@ -158,12 +163,14 @@ let ownership = context.ownership(Some(chain_id)).await?;
 **Package**: [@linera/client](https://www.npmjs.com/package/@linera/client)
 
 **Capabilities**:
+
 - ✅ Ed25519 key generation and storage
 - ✅ Chain queries and operations
 - ✅ Transaction signing
 - ✅ Browser-based wallet management
 
 **Limitations**:
+
 - ❌ Frontend-only (compiled to Wasm for browser)
 - ❌ Cannot be used in Node.js backend
 - ❌ Limited documentation
@@ -196,12 +203,14 @@ const chainId = await client.createMultiOwnerChain({
 **Current State**: Linera provides multi-owner chains, NOT threshold multisig
 
 **Multi-Owner Chain** (Protocol-level):
+
 - N owners can independently propose blocks
 - 1-of-N signature requirement
 - No threshold configuration
 - No timelock support
 
 **Application-Level Multisig** (Required):
+
 - Custom Wasm application
 - m-of-n threshold logic
 - All approvals tracked in application state
@@ -216,6 +225,7 @@ const chainId = await client.createMultiOwnerChain({
 **Current State**: No provided REST or GraphQL APIs
 
 **GraphQL Status** (Testnet Conway):
+
 - Node Service starts successfully
 - GraphiQL UI loads
 - Schema does NOT load
@@ -223,10 +233,12 @@ const chainId = await client.createMultiOwnerChain({
 - Introspection returns null
 
 **REST Status**:
+
 - Not provided by Linera
 - Must build custom REST layer
 
 **Workarounds**:
+
 1. Build REST API in backend (Actix-web/Axum)
 2. Use gRPC directly (complex, requires protobuf)
 3. CLI wrapper (simple but limited)
@@ -240,10 +252,12 @@ const chainId = await client.createMultiOwnerChain({
 **Current State**: Official Rust SDK exists via `linera-client` crate
 
 **Availability**:
+
 - ✅ **Rust**: `linera-client` + `linera-core` crates provide full client functionality
 - ❌ **Other languages**: No official SDK for Node.js, Python, Go
 
 **What the SDK Provides**:
+
 - `ClientContext`: Wallet management and chain operations
 - `ChainClient`: Direct blockchain queries and transactions
 - `query_balance()`: Chain balance queries
@@ -252,6 +266,7 @@ const chainId = await client.createMultiOwnerChain({
 - `ownership()` / `change_ownership()`: Multi-owner chain management
 
 **Impact**:
+
 - Backend must be written in Rust
 - Type-safe integration with Linera protocol
 - ~15% more effort vs mature SDKs (due to documentation gaps)
@@ -263,6 +278,7 @@ const chainId = await client.createMultiOwnerChain({
 **Current State**: Early-stage documentation
 
 **Gaps**:
+
 - Limited examples for backend integration
 - No best practices guide
 - Limited error handling documentation
@@ -278,6 +294,7 @@ const chainId = await client.createMultiOwnerChain({
 **Current State**: Fee model not documented
 
 **Impact**:
+
 - Cannot estimate gas costs accurately
 - Unknown cost per approval/execution
 - Budgeting difficulty
@@ -291,6 +308,7 @@ const chainId = await client.createMultiOwnerChain({
 **Current State**: EVM support planned for Q2'25, not production-ready
 
 **Impact**:
+
 - Cannot rely on EVM tooling
 - Limited to native Linera development
 - No Solidity support
@@ -302,6 +320,7 @@ const chainId = await client.createMultiOwnerChain({
 ### 3.1 Required: Rust Backend
 
 **Why Rust?**:
+
 1. No official backend SDK exists for any language
 2. Linera source code is in Rust
 3. Can compile Linera client directly into application
@@ -322,11 +341,13 @@ Linera Integration: gRPC or compiled Linera client
 **Approach**: Use gRPC to communicate with Linera validators
 
 **Pros**:
+
 - Direct protocol access
 - Real-time updates
 - Efficient binary protocol
 
 **Cons**:
+
 - Complex implementation
 - Requires protobuf compilation
 - Limited documentation
@@ -345,11 +366,13 @@ let balance = client.query_balance(chain_id).await?;
 **Approach**: Compile Linera client library into application
 
 **Pros**:
+
 - Same codebase as Linera CLI
 - Tested and proven
 - Easier to debug
 
 **Cons**:
+
 - Larger binary size
 - Dependency management
 - Version coupling
@@ -359,11 +382,13 @@ let balance = client.query_balance(chain_id).await?;
 **Approach**: Wrapper around `linera` CLI commands
 
 **Pros**:
+
 - Simplest implementation
 - Uses tested CLI
 - Faster development
 
 **Cons**:
+
 - Process spawning overhead
 - Parsing text output
 - Limited functionality
@@ -445,6 +470,7 @@ impl LineraClient {
 ### 4.2 @linera/client Capabilities
 
 **What It Provides**:
+
 - Ed25519 key generation and storage
 - Wallet management (create, import, export)
 - Chain queries (balance, state)
@@ -453,6 +479,7 @@ impl LineraClient {
 - Cross-chain messaging
 
 **What It Doesn't Provide**:
+
 - Backend functionality (Node.js incompatible)
 - Multisig-specific operations
 - Proposal management UI
@@ -607,6 +634,7 @@ for owner in owners {
 ```
 
 **Limitations**:
+
 - Asynchronous delivery
 - No guaranteed delivery order
 - Must handle failures
@@ -700,6 +728,7 @@ linera query-balance "$CHAIN_ID"
 | **TOTAL** | **406h** | **670h** | **+65%** |
 
 **Key Insight**: Linera requires +65% effort due to:
+
 - Custom multisig contract development (200h vs 0h)
 - Rust backend requirement
 - Rust backend requirement (SDK exists but docs limited)
@@ -749,6 +778,7 @@ linera query-balance "$CHAIN_ID"
 **Use**: Rust Backend + TypeScript Frontend
 
 **Stack**:
+
 - Frontend: React/Next.js + @linera/client
 - Backend: Rust + Actix-web + gRPC/CLI wrapper
 - Smart Contracts: Rust (linera-sdk) → Wasm
@@ -760,12 +790,14 @@ linera query-balance "$CHAIN_ID"
 ### 8.2 Development Approach
 
 **Phase 1: Proof of Concept (2 weeks)**
+
 1. Verify Rust backend integration
 2. Test multi-owner chain creation
 3. Build minimal multisig contract
 4. Measure transaction costs
 
 **Phase 2: MVP Development (14 weeks)**
+
 1. Rust backend with gRPC/CLI wrapper
 2. Custom multisig Wasm application
 3. React frontend with @linera/client
@@ -773,6 +805,7 @@ linera query-balance "$CHAIN_ID"
 5. REST API with comprehensive endpoints
 
 **Phase 3: Production Readiness (3 weeks)**
+
 1. Security audit of smart contract
 2. Stress testing on testnet
 3. UX refinement
@@ -785,6 +818,7 @@ linera query-balance "$CHAIN_ID"
 **Total**: ~670h (~17 weeks with 1 FTE or ~10 weeks with 2 FTEs)
 
 **Breakdown**:
+
 - M1: Project Setup - 50h
 - M2: Multisig Contract - 200h
 - M3: Backend Core - 180h
@@ -802,6 +836,7 @@ linera query-balance "$CHAIN_ID"
 **Feasibility**: **FEASIBLE** with significant constraints
 
 **Key Considerations**:
+
 - ✅ Multi-owner chains work (tested on Testnet Conway)
 - ✅ Rust SDK for Wasm compilation
 - ✅ @linera/client for frontend
@@ -811,6 +846,7 @@ linera query-balance "$CHAIN_ID"
 - ⚠️ Very early stage ecosystem
 
 **Recommendation**: **PROCEED** with clear understanding of:
+
 1. Rust backend requirement
 2. Custom multisig contract development
 3. Limited documentation and examples
@@ -818,6 +854,7 @@ linera query-balance "$CHAIN_ID"
 5. +65% effort estimate
 
 **Next Steps**:
+
 1. Validate Rust backend integration (PoC)
 2. Measure transaction costs on testnet
 3. Assess team Rust expertise
@@ -860,6 +897,7 @@ curl -X POST http://localhost:8083/graphql \
 ```
 
 **Results**:
+
 - ✅ Multi-owner chain creation works
 - ✅ Balance queries work
 - ❌ GraphQL does NOT work
@@ -870,12 +908,14 @@ curl -X POST http://localhost:8083/graphql \
 ## Appendix B: Data Sources
 
 **Primary Sources**:
+
 1. Official Documentation: https://linera.dev
 2. GitHub Repository: https://github.com/linera-io/linera-protocol
 3. npm Package: https://www.npmjs.com/package/@linera/client
 4. Testnet Conway: https://faucet.testnet-conway.linera.net
 
 **Analysis Method**:
+
 - Deep scraping of official documentation
 - Verification against GitHub codebase
 - Empirical testing on Testnet Conway
