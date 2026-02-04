@@ -44,7 +44,10 @@ Thumbs.db
 # Duplicate CLAUDE.md files (use root CLAUDE.md only)
 **/CLAUDE.md
 
-# maultisig-app
+# Rust build artifacts
+target/
+
+# multisig-app
 scripts/multisig-app/target/
 
 # Local analysis and corrections (NEVER commit these)
