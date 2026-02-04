@@ -2,7 +2,7 @@
 // Solo una operación principal: ExecuteWithThresholdSignature
 
 use serde::{Deserialize, Serialize};
-use linera_views::types::Owner;
+use linera_sdk::linera_base_types::AccountOwner;
 
 /// Operación principal del contrato
 /// En lugar de Proposal + Approvals, usamos threshold signatures
@@ -12,7 +12,7 @@ pub enum MultisigOperation {
     /// La firma threshold se genera off-chain cuando m owners firman
     ExecuteWithThresholdSignature {
         /// Destinatario de la transferencia
-        to: Owner,
+        to: AccountOwner,
         /// Monto a transferir
         amount: u64,
         /// Nonce para evitar replay attacks
@@ -28,7 +28,7 @@ pub enum MultisigOperation {
     /// Opcional: permite cambiar owners/threshold
     ChangeConfig {
         /// Nuevos owners
-        new_owners: Vec<Owner>,
+        new_owners: Vec<AccountOwner>,
         /// Nuevo threshold
         new_threshold: u64,
         /// Nueva clave pública agregada
@@ -55,7 +55,7 @@ pub struct ThresholdMessage {
 
 impl ThresholdMessage {
     /// Crear mensaje para transferencia
-    pub fn transfer(nonce: u64, to: &Owner, amount: u64) -> Self {
+    pub fn transfer(nonce: u64, to: &AccountOwner, amount: u64) -> Self {
         Self {
             nonce,
             operation_type: "transfer".to_string(),
@@ -64,7 +64,7 @@ impl ThresholdMessage {
     }
 
     /// Crear mensaje para cambio de configuración
-    pub fn config_change(nonce: u64, owners: &[Owner], threshold: u64) -> Self {
+    pub fn config_change(nonce: u64, owners: &[&AccountOwner], threshold: u64) -> Self {
         let owners_str = owners.iter()
             .map(|o| o.to_string())
             .collect::<Vec<_>>()

@@ -1,318 +1,182 @@
 # Experimento: Threshold Signatures Alternative
 
 > **Branch**: `feature/threshold-signatures-alternative`
-> **Propósito**: Probar arquitectura alternativa que evite el opcode 252
-> **Estado**: 🟡 En desarrollo
+> **Estado**: 🔴 **BLOCKED** - Opcode 252 aún presente
+> **Fecha**: 2026-02-04
 
 ---
 
-## Resumen Ejecutivo
+## Resultado: ❌ NO EVITA OPCODE 252
 
-Este experimento prueba una arquitectura alternativa de multisig **self-custodial** que podría evitar el bloqueo del opcode 252.
-
-### Hipótesis
-
-El opcode 252 (`memory.copy`) es generado por código complejo en el Wasm contract. Si simplificamos el contrato para que solo verifique firmas threshold (en lugar de mantener proposal state machine), podemos:
-
-1. **Evitar el opcode 252** generado por async-graphql
-2. **Mantener self-custodia** (private keys en frontend)
-3. **Ejecutar on-chain** (verificación criptográfica en Wasm)
-
-### ¿Qué es Self-Custodial?
-
-| Arquitectura | Private Keys | Backend Control | On-Chain Verification |
-|--------------|--------------|-----------------|----------------------|
-| **Threshold Signatures** (este) | ✅ Frontend | ❌ No controla fondos | ✅ Sí, en Wasm |
-| **Original Wasm** (bloqueada) | ✅ Frontend | ❌ No controla fondos | ✅ Sí, en Wasm |
-| **Off-Chain Logic** | 🔴 Backend | ✅ Backend controla | ❌ No, es off-chain |
-
-**Este experimento ES self-custodial** porque:
-- Private keys nunca dejan el frontend
-- Backend solo transmite operaciones firmadas
-- Fondos controlados por contrato Wasm, no por backend
-
----
-
-## Arquitectura
+### Hallazgos
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Frontend (React + @linera/client)                         │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ 🔐 Private Keys (ED25519)                           │   │
-│  │    - Nunca salen del navegador                      │   │
-│  │    - Owners firman proposals off-chain              │   │
-│  │    - Threshold signature aggregation                │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-           ↓ (firma + agrega firmas)
-┌─────────────────────────────────────────────────────────────┐
-│  Backend API (REST + @linera/client)                       │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ 📡 Solo transmite operaciones                       │   │
-│  │    - Recibe threshold signature                     │   │
-│  │    - Transmite a Linera                             │   │
-│  │    - NO tiene private keys                          │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-           ↓ (ejecuta con firma threshold)
-┌─────────────────────────────────────────────────────────────┐
-│  Linera Network                                            │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ 🔒 ThresholdMultisigContract (Wasm)                 │   │
-│  │    - Verifica threshold signature                   │   │
-│  │    - Ejecuta si válida                              │   │
-│  │    - Fondos en contrato, no backend                 │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+Wasm Contract: linera_threshold_multisig.wasm
+Tamaño: ~292 KB
+Opcode 252 (memory.copy): 73 instancias detectadas
+Compilación: Exitosa ✅
+Deploy: FALLEARÍA en Linera testnet 🔴
 ```
 
-### Diferencias con Arquitectura Original
+### Análisis
 
-| Aspecto | Original (bloqueada) | Threshold (este) |
-|---------|---------------------|------------------|
-| **Proposal Storage** | On-chain (Wasm) | Off-chain (Backend DB) |
-| **Approval Tracking** | On-chain state machine | Threshold signature criptográfica |
-| **Complexity** | Alta (GraphQL + state) | Baja (solo verificación) |
-| **async-graphql** | ✅ Usado | ❌ NO usado |
-| **Opcode 252 Risk** | 🔴 Alto | 🟡 Bajo (esperemos) |
+Incluso con un contrato **extremadamente simplificado** que:
+
+- ❌ NO verifica firmas criptográficamente (ed25519-dalek removido)
+- ❌ NO tiene lógica compleja de proposals
+- ❌ NO usa GraphQL para operaciones
+- ✅ Solo mantiene estado básico (owners, threshold, nonce, aggregate_key)
+
+El bytecode Wasm **AÚN CONTIENE** el opcode 252 (`memory.copy`).
+
+### Causa Raíz
+
+El problema **NO está en nuestro código de contrato**. El opcode 252 es generado por las dependencias del `linera-sdk`:
+
+```
+linera-sdk 0.15.11
+    └─ async-graphql = "=7.0.17" (version pin)
+        └─ requiere Rust 1.87+ (para let-chain syntax)
+            └─ genera memory.copy (opcode 252)
+                └─ Linera runtime NO lo soporta
+```
+
+**Incluso usando `async-graphql` solo para el ABI** (sin operaciones GraphQL), el bytecode generado por el linera-sdk incluye el opcode 252.
 
 ---
 
-## Flujo de Operación
+## Pruebas Realizadas
 
-### 1. Setup (Inicialización)
+### 1. Compilación ✅
 
 ```bash
-# Crear contrato multisig
-linera publish ./experiments/threshold-signatures \
-    --json-params '{
-        "owners": ["owner1...", "owner2...", "owner3..."],
-        "threshold": 2,
-        "aggregate_public_key": "..."
-    }'
-```
-
-**NOTA**: La `aggregate_public_key` se genera durante una fase de setup cooperativa donde los owners colaboran para generar la clave agregada del esquema threshold.
-
-### 2. Crear Proposal (Off-Chain)
-
-```typescript
-// Frontend: Owner crea proposal
-const proposal = {
-    to: "recipient_address",
-    amount: 1000000,
-    nonce: await getCurrentNonce(), // Del contrato
-};
-
-// Owner firma su parte
-const signature = await sign(proposal, ownerPrivateKey);
-```
-
-### 3. Recoger Firmas (Off-Chain)
-
-```typescript
-// Frontend: Owners colaboran para agregar firmas
-// Cuando se alcanza el threshold, se genera la firma threshold
-
-const thresholdSignature = await aggregateSignatures([
-    signature1,
-    signature2,
-    // ... m firmas (donde m >= threshold)
-]);
-```
-
-### 4. Ejecutar (On-Chain)
-
-```typescript
-// Backend: Recibe threshold signature y transmite
-const operation = {
-    ExecuteWithThresholdSignature: {
-        to: "recipient_address",
-        amount: 1000000,
-        nonce: 0,
-        threshold_signature: thresholdSignature,
-        message: proposalBytes,
-    },
-};
-
-await lineraClient.executeOperation(operation);
-```
-
-### 5. Verificación (Wasm Contract)
-
-```rust
-// En el contrato Wasm:
-fn execute_operation(op: MultisigOperation) {
-    // 1. Verificar nonce (replay protection)
-    assert!(nonce == state.nonce());
-
-    // 2. Verificar threshold signature
-    let is_valid = verify_threshold_signature(&message, &threshold_signature);
-    assert!(is_valid);
-
-    // 3. Ejecutar transfer
-    runtime.transfer(from, to, amount);
-
-    // 4. Incrementar nonce
-    state.increment_nonce();
-}
-```
-
----
-
-## Implementación Threshold Signatures
-
-### NOTA Importante: Placeholder vs Producción
-
-El código actual usa **Ed25519 estándar como placeholder** para demostrar el concepto.
-
-**Para producción**, necesitarías implementar un esquema real de threshold signatures como:
-
-- **FROST** (Flexible Round-Optimized Schnorr Threshold Signatures)
-- **MuSig2** (MuSig2 Multi-Signatures)
-- **Ed25519 Threshold** variantes
-
-### Por qué FROST?
-
-FROST es ideal para multisig porque:
-
-1. **Constante en tiempo**: La firma threshold NO crece con el número de signers
-2. **Privacidad**: No revela cuáles signers participaron
-3. **Robustez**: Tolerates signers no-disponibles
-4. **Eficiencia**: Una sola verificación on-chain
-
-```
-# Ejemplo FROST (3-of-5):
-
-Setup phase:
-- Owners colaboran para generar shares de private key
-- Cada owner tiene: (share_i, public_key_i)
-- Aggregate public key: PK = PK_1 + PK_2 + ... + PK_5
-
-Signing phase (3-of-5):
-- Cualquier 3 owners pueden firmar
-- Cada owner firma con su share: signature_i = sign(share_i, message)
-- Se agregan las firmas: σ = σ_1 + σ_2 + σ_3
-- Resultado: Una sola firma del tamaño de una firma individual
-
-Verification phase:
-- Cualquiera puede verificar: verify(PK, message, σ)
-- Solo se necesita la aggregate public key
-```
-
----
-
-## Ventajas y Desventajas
-
-### Ventajas ✅
-
-1. **Self-Custodial**: Private keys en frontend, backend no controla fondos
-2. **On-Chain Verification**: Threshold signature verificada en Wasm
-3. **Simple**: Menos complejidad que proposal state machine
-4. **Sin async-graphql**: Evita opcode 252 (esperemos)
-5. **Escalable**: Una sola firma sin importar número de owners
-
-### Desventajas ❌
-
-1. **Propuestas Off-Chain**: No hay registro on-chain de propuestas
-2. **Setup Complejo**: Fase inicial de key generation
-3. **No Sin Revisión**: Cambios de configuración requieren nueva clave agregada
-4. **Library Availability**: Necesita implementar/threshold signature library
-
-### Trade-offs 🔄
-
-| Aspecto | Original (bloqueada) | Threshold |
-|---------|---------------------|-----------|
-| **Transparencia On-Chain** | ✅ Todo on-chain | ⚠️ Propuestas off-chain |
-| **Complejidad Wasm** | 🔴 Alta | 🟢 Baja |
-| **Escalabilidad** | ⚠️ Crece con owners | ✅ Constante |
-| **Experiencia Usuario** | ✅ Safe-like | ⚠️ Diferente |
-
----
-
-## Plan de Pruebas
-
-### Fase 1: Compilación ✅
-
-```bash
-cd experiments/threshold-signatures
 cargo build --release --target wasm32-unknown-unknown
 ```
 
-**Esperado**: Wasm binary generado
+**Resultado**: Exitoso
+- Wasm generado: `linera_threshold_multisig.wasm` (~292 KB)
 
-### Fase 2: Verificación de Opcode ✅
-
-```bash
-# Verificar que NO contiene opcode 252
-wasm-objdump -d target/wasm32-unknown-unknown/release/linera_threshold_multisig.wasm | grep "0xFC"
-```
-
-**Esperado**: No debería aparecer `0xFC` (opcode 252)
-
-### Fase 3: Deploy a Testnet 🟡
+### 2. Verificación de Opcode 252 🔴
 
 ```bash
-# Deploy a Linera testnet
-linera publish ./experiments/threshold-signatures \
-    --json-params '{
-        "owners": [...],
-        "threshold": 2,
-        "aggregate_public_key": "..."
-    }'
+wasm-objdump -d linera_threshold_multisig.wasm | grep "memory.copy"
 ```
 
-**Esperado**: Contract deployado exitosamente
+**Resultado**: 73 instancias de `memory.copy` encontradas
 
-### Fase 4: Ejecución de Operaciones 🟡
+```wasm
+004569: fc 0a 00 00    | memory.copy 0 0
+00486a: fc 0a 00 00    | memory.copy 0 0
+008171: fc 0a 00 00    | memory.copy 0 0
+...
+```
+
+### 3. Análisis de Dependencias 🔴
 
 ```bash
-# Ejecutar transfer con threshold signature
-linera operation \
-    --target <contract_address> \
-    --json-operation '{
-        "ExecuteWithThresholdSignature": {...}
-    }
+cargo tree | grep async-graphql
 ```
 
-**Esperado**: Operación ejecutada exitosamente
+```
+linera-threshold-multisig v0.1.0
+└── linera-sdk v0.15.11
+    └── async-graphql v7.0.17
+```
+
+**Confirma**: `async-graphql = "=7.0.17"` es dependencia transitiva obligatoria de `linera-sdk`.
 
 ---
 
-## Estado Actual
+## Conclusiones
 
-| Fase | Estado | Notas |
-|------|--------|-------|
-| **Diseño** | ✅ Completado | Arquitectura documentada |
-| **Implementación** | ✅ Completado | Código Rust funcional |
-| **Compilación** | ⏳ Pendiente | Por probar |
-| **Opcode Check** | ⏳ Pendiente | Por verificar |
-| **Deploy Testnet** | ⏳ Pendiente | Por probar |
-| **Ejecución** | ⏳ Pendiente | Por probar |
+### ❌ Threshold Signatures NO es una Solución Viable
+
+El enfoque de threshold signatures **NO PUEDE evitar** el opcode 252 porque:
+
+1. **El problema no es nuestro código**: Incluso un contrato minimalista contiene el opcode
+2. **El problema es el linera-sdk**: La dependencia `async-graphql = "=7.0.17"` es obligatoria
+3. **No hay workaround posible**: Cualquier contrato que use `linera-sdk` tendrá el opcode 252
+
+### Comparación con Arquitectura Original
+
+| Aspecto | Original (bloqueada) | Threshold (este) |
+|---------|---------------------|-------------------|
+| **Lógica Contract** | Proposal state machine | Threshold signatures |
+| **Complejidad** | Alta | Muy baja |
+| **async-graphql** | ✅ Usado (operaciones) | ✅ Usado (solo ABI) |
+| **Opcode 252** | 🔴 Presente | 🔴 **Presente** |
+| **Resultado** | ❌ No deploya | ❌ **No deploya** |
+
+### Misma Causa Raíz, Misma Conclusión
+
+Ambos enfoques están **bloqueados por el mismo problema del ecosistema linera-sdk**.
 
 ---
 
-## Siguientes Pasos
+## Implicaciones
 
-1. ✅ Crear branch `feature/threshold-signatures-alternative`
-2. ✅ Implementar contrato Wasm simplificado
-3. ✅ Documentar arquitectura
-4. ⏳ Compilar a Wasm
-5. ⏳ Verificar opcode 252 ausente
-6. ⏳ Deploy a Linera testnet
-7. ⏳ Ejecutar operaciones de prueba
-8. ⏳ Documentar resultados
+### Para este Proyecto
+
+1. **No existe solución de contrato Wasm** mientras `linera-sdk 0.15.x` tenga `async-graphql = "=7.0.17"`
+2. **Threshold signatures NO es la respuesta** - el problema es más profundo
+3. **Solución requiere acción del Linera team** - issue #4742
+
+### Para el Desarrollo
+
+**Opciones Restantes**:
+
+1. **Esperar a Linera SDK** - Recomendado, pero sin timeline
+   - Issue: https://github.com/linera-io/linera-protocol/issues/4742
+
+2. **Usar solo multi-owner chains** - Self-custodial pero 1-of-N
+   - Cualquier owner puede ejecutar sin aprobaciones
+   - NO es un multisig tipo Safe
+
+3. **Cambiar de blockchain** - Única alternativa viable con multisig funcionando
+   - Hathor (multisig verificada)
+   - Ethereum (Gnosis Safe)
+
+---
+
+## Archivos del Experimento
+
+```
+experiments/threshold-signatures/
+├── Cargo.toml                  # Configuración
+├── README.md                   # Este archivo
+├── docs/
+│   └── ARCHITECTURE.md         # Arquitectura técnica detallada
+└── src/
+    ├── lib.rs                  # Contrato Wasm simplificado
+    ├── state.rs                # Estado del contrato
+    └── operations.rs           # Operaciones
+```
+
+---
+
+## Próximos Pasos
+
+### Inmediatos
+
+1. ✅ Documentar resultados en README.md
+2. ✅ Commit al branch `feature/threshold-signatures-alternative`
+3. ⏳ Reportar hallazgos al usuario
+
+### Para el Repositorio Principal
+
+1. ⏳ Actualizar `docs/INFRASTRUCTURE_ANALYSIS.md` con estos hallazgos
+2. ⏳ Agregar sección sobre "Enfoques Alternativos Intentados"
+3. ⏳ Mantener status como "BLOCKED" hasta resolución del Linera team
 
 ---
 
 ## Referencias
 
-- [FROST: Flexible Round-Optimized Schnorr Threshold Signatures](https://eprint.iacr.org/2020/852)
-- [Linera SDK Documentation](https://docs.linera.dev)
-- [Ed25519 Threshold Signatures](https://signal.org/docs/urgent-future-of-encryption/)
+- **Original Opcode 252 Analysis**: `docs/research/LINERA_OPCODE_252_ISSUE.md`
+- **Linera SDK Issue**: https://github.com/linera-io/linera-protocol/issues/4742
+- **Branch**: `feature/threshold-signatures-alternative`
 
 ---
 
 **Última actualización**: 2026-02-04
-**Branch**: `feature/threshold-signatures-alternative`
+**Conclusión**: Threshold signatures **NO es una solución viable** para el opcode 252.

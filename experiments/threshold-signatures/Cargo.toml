@@ -8,8 +8,7 @@ linera-sdk = "0.15.11"
 linera-views = "0.15.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-ed25519-dalek = "2.0"
-hex = "0.4"
+async-graphql = "7.0.17"
 
 [dev-dependencies]
 linera-sdk = { version = "0.15.11", features = ["test"] }

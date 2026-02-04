@@ -1,0 +1,10 @@
+/Users/alfredolopez/Documents/GitHub/PalmeraDAO/linera.dev/experiments/threshold-signatures/target/wasm32-unknown-unknown/release/deps/ed25519-350fa14f7c07d199.d: /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/lib.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/hex.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/serde.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/../README.md
+
+/Users/alfredolopez/Documents/GitHub/PalmeraDAO/linera.dev/experiments/threshold-signatures/target/wasm32-unknown-unknown/release/deps/libed25519-350fa14f7c07d199.rlib: /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/lib.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/hex.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/serde.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/../README.md
+
+/Users/alfredolopez/Documents/GitHub/PalmeraDAO/linera.dev/experiments/threshold-signatures/target/wasm32-unknown-unknown/release/deps/libed25519-350fa14f7c07d199.rmeta: /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/lib.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/hex.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/serde.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/../README.md
+
+/Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/lib.rs:
+/Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/hex.rs:
+/Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/serde.rs:
+/Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-2.2.3/src/../README.md:

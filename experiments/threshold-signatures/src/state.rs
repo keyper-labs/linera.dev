@@ -1,21 +1,21 @@
 // Estado simplificado para evitar opcode 252
-// NO contiene proposal history, solo información esencial
 
-use linera_views::{views::View, types::Owner, register::RegisterView};
-use serde::{Deserialize, Serialize};
+use linera_sdk::{
+    linera_base_types::AccountOwner,
+    views::{RegisterView, RootView, ViewStorageContext},
+};
 
 /// Estructura principal del estado del contrato
-/// Simplificada al mínimo para evitar operaciones complejas de Wasm
-#[derive(View, Debug, Clone, Serialize, Deserialize)]
+#[derive(RootView)]
+#[view(context = ViewStorageContext)]
 pub struct MultisigState {
     /// Lista de owners (direcciones públicas)
-    pub owners: RegisterView<Vec<Owner>>,
+    pub owners: RegisterView<Vec<AccountOwner>>,
 
     /// Threshold requerido (m-of-n)
     pub threshold: RegisterView<u64>,
 
     /// Public key del contrato para verificar threshold signatures
-    /// Esta es la clave agregada de todos los owners
     pub aggregate_public_key: RegisterView<Vec<u8>>,
 
     /// Counter para nonce (evita replay attacks)
@@ -23,24 +23,30 @@ pub struct MultisigState {
 }
 
 impl MultisigState {
-    /// Crear nuevo estado de multisig
-    pub fn new(owners: Vec<Owner>, threshold: u64, aggregate_key: Vec<u8>) -> Self {
-        Self {
-            owners: RegisterView::new(owners),
-            threshold: RegisterView::new(threshold),
-            aggregate_public_key: RegisterView::new(aggregate_key),
-            nonce: RegisterView::new(0),
-        }
+    /// Inicializar el estado con los parámetros
+    pub fn initialize(&mut self, owners: Vec<AccountOwner>, threshold: u64, aggregate_key: Vec<u8>) {
+        self.owners.set(owners);
+        self.threshold.set(threshold);
+        self.aggregate_public_key.set(aggregate_key);
+        self.nonce.set(0);
     }
 
-    /// Verificar si una address es owner
-    pub fn is_owner(&self, address: &Owner) -> bool {
-        self.owners.get().contains(address)
+    /// Actualizar configuración
+    pub fn update_config(&mut self, owners: Vec<AccountOwner>, threshold: u64, aggregate_key: Vec<u8>) {
+        self.owners.set(owners);
+        self.threshold.set(threshold);
+        self.aggregate_public_key.set(aggregate_key);
+        self.increment_nonce();
     }
 
-    /// Obtener threshold actual
-    pub fn threshold(&self) -> u64 {
-        *self.threshold.get()
+    /// Obtener aggregate public key
+    pub fn aggregate_public_key(&self) -> Vec<u8> {
+        self.aggregate_public_key.get().clone()
+    }
+
+    /// Obtener nonce actual
+    pub fn nonce(&self) -> u64 {
+        *self.nonce.get()
     }
 
     /// Incrementar nonce
@@ -49,8 +55,13 @@ impl MultisigState {
         self.nonce.set(current + 1);
     }
 
-    /// Obtener nonce actual
-    pub fn nonce(&self) -> u64 {
-        *self.nonce.get()
+    /// Verificar si una address es owner
+    pub fn is_owner(&self, address: &AccountOwner) -> bool {
+        self.owners.get().contains(address)
+    }
+
+    /// Obtener threshold actual
+    pub fn threshold(&self) -> u64 {
+        *self.threshold.get()
     }
 }

@@ -1,0 +1,8 @@
+/Users/alfredolopez/Documents/GitHub/PalmeraDAO/linera.dev/experiments/threshold-signatures/target/release/deps/serde_with_macros-d84bc50293bcc295.d: /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/lib.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/apply.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/lazy_bool.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/utils.rs
+
+/Users/alfredolopez/Documents/GitHub/PalmeraDAO/linera.dev/experiments/threshold-signatures/target/release/deps/libserde_with_macros-d84bc50293bcc295.dylib: /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/lib.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/apply.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/lazy_bool.rs /Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/utils.rs
+
+/Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/lib.rs:
+/Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/apply.rs:
+/Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/lazy_bool.rs:
+/Users/alfredolopez/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.16.1/src/utils.rs:
