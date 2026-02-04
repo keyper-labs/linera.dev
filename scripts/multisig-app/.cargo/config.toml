@@ -1,0 +1,26 @@
+# Cargo config for Linera Wasm compilation
+# Configured to avoid unsupported opcodes like memory.copy (0xFC 0x0A)
+
+[build]
+target = "wasm32-unknown-unknown"
+
+[target.wasm32-unknown-unknown]
+# Rust compiler flags for Wasm
+# -C opt-level=s: Optimize for size while maintaining performance
+# -C lto=false: Disable link-time optimization (reduces optimization passes)
+# -C codegen-units=1: Single codegen unit for reproducibility
+rustflags = [
+    "-C", "opt-level=s",
+    "-C", "lto=no",
+    "-C", "codegen-units=1",
+    # Avoid bulk memory operations which may not be supported by Linera
+    "-C", "target-feature=-bulk-memory",
+]
+
+[profile.release]
+# Release profile optimized for Linera Wasm
+opt-level = "s"
+lto = false
+codegen-units = 1
+panic = "abort"
+strip = true
