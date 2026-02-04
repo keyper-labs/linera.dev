@@ -116,9 +116,6 @@ linera-sdk 0.15.11
 - Not Safe-like
 - ~300 hours
 
-**Option C**: Choose different blockchain
-- Ethereum (Gnosis Safe) - reference implementation for multisig functionality
-
 ---
 
 ## Quick Reference: Testnet Conway

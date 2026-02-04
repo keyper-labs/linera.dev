@@ -134,11 +134,6 @@ linera-sdk 0.15.11
 
 **Estimate**: ~300 hours
 
-### Option 3: Different Blockchain
-
-**Alternative**:
-- Ethereum (Gnosis Safe) - reference implementation for multisig functionality
-
 ---
 
 ## 7. Recommendation

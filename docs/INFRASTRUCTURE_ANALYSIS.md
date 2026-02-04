@@ -202,9 +202,6 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 - Not competitive with existing multisig solutions
 - ~300 hours
 
-**Option 3**: Choose different blockchain
-- Ethereum (Gnosis Safe) - reference implementation for multisig functionality
-
 ---
 
 ## 5. Technology Stack
