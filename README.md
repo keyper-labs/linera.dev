@@ -117,8 +117,7 @@ linera-sdk 0.15.11
 - ~300 hours
 
 **Option C**: Choose different blockchain
-- Hathor (working multisig)
-- Ethereum (Gnosis Safe)
+- Ethereum (Gnosis Safe) - reference implementation for multisig functionality
 
 ---
 

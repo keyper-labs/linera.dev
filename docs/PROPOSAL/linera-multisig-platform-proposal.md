@@ -136,9 +136,8 @@ linera-sdk 0.15.11
 
 ### Option 3: Different Blockchain
 
-**Alternatives**:
-- Hathor (working multisig)
-- Ethereum (Gnosis Safe)
+**Alternative**:
+- Ethereum (Gnosis Safe) - reference implementation for multisig functionality
 
 ---
 

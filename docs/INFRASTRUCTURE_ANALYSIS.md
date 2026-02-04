@@ -43,13 +43,13 @@ linera-sdk 0.15.11
 
 **Purpose**: Build Wasm applications (smart contracts)
 
-**What it provides**:
+**Provides**:
 - Application state management (Views)
 - Contract logic implementation
 - Cross-chain messaging
 - Wasm compilation
 
-**What it doesn't provide**:
+**Does NOT provide**:
 - Client SDK features (queries, wallet, network)
 - These are in separate `linera-client` crate
 
@@ -64,7 +64,7 @@ linera-sdk 0.15.11
 | Python | - | ❌ Not available |
 | Go | - | ❌ Not available |
 
-**Finding**: Use TypeScript for backend, not Rust.
+**Finding**: Use TypeScript for backend.
 
 **@linera/client package** (npm):
 ```typescript
@@ -73,8 +73,6 @@ import { Client } from '@linera/client';
 const client = await Client.openWalletFromFile();
 const balance = await client.queryBalance(chainId);
 ```
-
-This makes TypeScript backend viable.
 
 ---
 
@@ -205,8 +203,7 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 - ~300 hours
 
 **Option 3**: Choose different blockchain
-- Hathor (working multisig)
-- Ethereum (Gnosis Safe)
+- Ethereum (Gnosis Safe) - reference implementation for multisig functionality
 
 ---
 
