@@ -57,3 +57,7 @@ scripts/multisig-app/target/
 
 # linera deployment files
 .linera-deploy/
+
+# Temporary folders
+.tmp/
+tmp/
