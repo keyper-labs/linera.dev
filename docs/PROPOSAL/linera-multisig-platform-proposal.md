@@ -701,17 +701,183 @@ GET    /metrics                              - Prometheus metrics
 
 | Risk | Mitigation | Priority |
 |------|------------|----------|
-| **🔴 CRITICAL: Wasm Opcode 252 Issue** - Cannot deploy complex Wasm contracts to Linera testnet due to SDK dependency conflict (async-graphql 7.0.17 requires Rust 1.87+ which generates unsupported bulk memory opcodes) | **BLOCKER**: Requires Linera team action. Monitor issue [linera-protocol#4742](https://github.com/linera-io/linera-protocol/issues/4742). Contract implementation complete (74/74 tests passing) but deployment blocked until Linera SDK ecosystem issue resolved. | **CRITICAL** |
+| **🔴 CRITICAL BLOCKER: Custom Wasm Multisig Contract Cannot Deploy** | **IMPOSSIBLE TO MITIGATE AT PROJECT LEVEL** - Requires Linera SDK team action. See **Critical Blocker Analysis** below for complete details. | **CRITICAL** |
 | **GraphQL not functional** - Tested on Testnet Conway, schema doesn't load | Use CLI wrapper or gRPC instead; build REST API in Rust | **High** |
 | **No official backend SDK** - @linera/client is frontend-only | Build Rust backend with direct Linera integration (gRPC/compiled client); budget +20% backend time | **High** |
 | **No wallet connector** - No MetaMask-style connector for Linera | Build custom wallet using @linera/client SDK (Ed25519 key management); budget +40h frontend | **High** |
-| **Application-level multisig complexity** - Custom Wasm contract required | Thorough testing, external audit, start with simple m-of-n; comprehensive unit tests | **High** |
 | **Cross-chain message delivery** - Asynchronous messaging can fail | Error handling, retry logic, monitoring, timeout handling | **Medium** |
 | **SDK immaturity** - Limited documentation/examples | Budget for research, Linera community support, study examples (matching-engine) | **Medium** |
 | **Testnet stability** - Testnet Conway may be unstable | Budget for debugging, contingency time, local dev network as fallback | **Medium** |
-| **Smart contract bugs** - Security vulnerabilities | External audit, bug bounty, comprehensive testing, formal verification if possible | **High** |
 | **Fee model unknown** - Not documented; N approvals = N transactions | Measure costs during PoC; optimize operations; budget for gas costs | **Medium** |
 | **Polling vs. WebSocket** - No native WebSocket support | Implement 5-10s polling; budget for optimization; monitor API costs | **Low** |
+
+---
+
+## 🔴 CRITICAL BLOCKER: Custom Wasm Multisig Contract Cannot Deploy
+
+### Executive Summary
+
+**We CANNOT build a Safe-like multisig experience on Linera at this time.**
+
+The **Frontend and Backend are viable** using @linera/client SDK, but the **Custom Wasm Application (required for threshold multisig logic) cannot be deployed** due to an **unresolvable Linera SDK ecosystem issue**.
+
+### What Works ✅
+
+| Component | Technology | Status |
+|-----------|-----------|--------|
+| **Frontend** | React + @linera/client SDK | ✅ **VIABLE** - Official TypeScript SDK available |
+| **Backend** | Node.js/TypeScript + @linera/client | ✅ **VIABLE** - Same SDK works for backend API |
+| **Wallet Integration** | @linera/client built-in wallet | ✅ **VIABLE** - Ed25519 key management included |
+| **Multi-Owner Chains** | Native Linera protocol | ✅ **WORKING** - Verified on Testnet Conway |
+
+### What DOES NOT Work ❌
+
+| Component | Technology | Status |
+|-----------|-----------|--------|
+| **Custom Wasm Multisig** | Rust + linera-sdk → Wasm | ❌ **BLOCKED** - Opcode 252 deployment failure |
+| **Threshold m-of-n Logic** | Application-level contract | ❌ **IMPOSSIBLE** - Requires Wasm deployment |
+| **Safe-like UX** | Proposal/approve/execute workflow | ❌ **CANNOT PROVIDE** - Without threshold enforcement |
+
+### Root Cause: Impossible Dependency Triangle
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│           LINERA SDK ECOSYSTEM IMPOSSIBLE TRIANGLE              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  linera-sdk 0.15.11                                             │
+│      ↓ (requires exact version)                                 │
+│  async-graphql = "=7.0.17"                                     │
+│      ↓ (requires Rust 1.87+ for let-chains)                    │
+│  Rust 1.87+ compiler                                            │
+│      ↓ (generates bulk memory operations)                       │
+│  memory.copy (Wasm opcode 252)                                  │
+│      ↓ (NOT supported by Linera runtime)                        │
+│  linera-kywasmtime runtime                                      │
+│      ↓ ❌ DEPLOYMENT BLOCKED                                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Why This Cannot Be Fixed at Project Level
+
+**All attempted workarounds FAILED**:
+
+| Attempt | Method | Result | Why It Failed |
+|---------|--------|--------|---------------|
+| **Remove .clone() operations** | Code changes | ❌ | Breaks mutability (contract becomes read-only) |
+| **Remove proposal history** | Simplify state | ❌ | Only 12% reduction, still 85 opcodes |
+| **Remove GraphQL service** | Delete dependency | ❌ | Still generates 82 memory.copy opcodes |
+| **Use Rust 1.86.0** | Downgrade compiler | ❌ | async-graphql 7.0.17 doesn't compile (let-chains) |
+| **Patch async-graphql to 6.x** | [patch.crates-io] | ❌ | Exact version pin (=7.0.17) cannot be overridden |
+| **Replace async-graphql** | [replace] directive | ❌ | 6.x and 7.x have incompatible crate structures |
+| **Hand-written Wasm assembly** | Unsafe code | ❌ | Security risk, still may generate opcode 252 |
+| **Combined ALL above** | All workarounds | ❌ | Still 67 memory.copy opcodes remain |
+
+**Complete analysis**: [`docs/research/LINERA_OPCODE_252_ISSUE.md`](../research/LINERA_OPCODE_252_ISSUE.md)
+
+**Failed patch attempts**: [`docs/research/ASYNC_GRAPHQL_DOWNGRADE_ATTEMPTS.md`](../research/ASYNC_GRAPHQL_DOWNGRADE_ATTEMPTS.md)
+
+### What This Means for the Project
+
+**WE CANNOT PROVIDE A SAFE-LIKE MULTISIG EXPERIENCE** because:
+
+1. **No Threshold Enforcement**: Multi-owner chains are 1-of-N (any owner can execute)
+2. **No Proposal Workflow**: No submit/approve/execute lifecycle
+3. **No Confirmation Tracking**: Cannot track approvals across owners
+4. **No Execution Controls**: Anyone with access can execute immediately
+
+**Multi-owner chains provide**:
+- ✅ Multiple owners can control a chain
+- ❌ But ANY owner can propose and execute WITHOUT approval from others
+
+**Custom Wasm contract would provide** (but CANNOT be deployed):
+- ✅ m-of-n threshold enforcement
+- ✅ Proposal/approve/execute workflow
+- ✅ Confirmation tracking and revocation
+- ✅ Execution time-delay controls
+- ✅ Safe-like user experience
+
+### Only Viable Alternatives
+
+#### Option A: Use Multi-Owner Chains Only (Limited Experience)
+
+**What works**:
+- ✅ Multiple owners control shared wallet
+- ✅ On-chain verification
+- ✅ Tested and verified on Testnet Conway
+
+**Limitations** (compared to Safe):
+- ❌ No threshold - it's 1-of-N (any owner can execute)
+- ❌ No proposal/approval workflow
+- ❌ No confirmation tracking
+- ❌ Anyone with access can execute immediately
+
+**This is NOT a Safe-like multisig** - it's just a shared wallet.
+
+#### Option B: Wait for Linera SDK Team Resolution
+
+**Required actions** (Linera team ONLY):
+1. Update `linera-kywasmtime` to support Wasm Bulk Memory Operations, OR
+2. Refactor `linera-sdk` to use async-graphql 6.x (Rust 1.86 compatible), OR
+3. Provide alternative query layer compatible with Rust 1.86
+
+**Track progress**: [Issue #4742](https://github.com/linera-io/linera-protocol/issues/4742)
+
+**Timeline**: UNKNOWN - Not under project control
+
+#### Option C: Build Off-Chain Multisig (Less Secure)
+
+**Approach**: Use backend service for multisig logic instead of smart contract
+
+**Problems**:
+- ❌ Less secure (trust backend, not trustless)
+- ❌ Centralized point of failure
+- ❌ Not truly decentralized
+- ❌ Defeats purpose of blockchain multisig
+
+### Impact on Proposal
+
+**Original proposal assumes**: Custom Wasm multisig contract can be deployed
+
+**Current reality**: Contract cannot be deployed due to SDK ecosystem blocker
+
+**What we CAN deliver**:
+- ✅ Frontend (React + @linera/client)
+- ✅ Backend REST API (Node.js/TypeScript)
+- ✅ Wallet integration (@linera/client)
+- ✅ Multi-owner chain creation
+- ✅ On-chain balance queries
+- ✅ Basic shared wallet functionality
+
+**What we CANNOT deliver**:
+- ❌ Safe-like multisig experience (threshold m-of-n)
+- ❌ Proposal/approval/execute workflow
+- ❌ Confirmation tracking
+- ❌ Custom Wasm multisig contract deployment
+
+### Recommendation
+
+**DO NOT PROCEED** with full Safe-like multisig platform until Linera SDK team resolves the opcode 252 issue.
+
+**Alternative approach**: Build simplified wallet using multi-owner chains only, accepting the limitations (1-of-N, no thresholds).
+
+### Documentation
+
+All research and test evidence documented in:
+- [`docs/research/LINERA_OPCODE_252_ISSUE.md`](../research/LINERA_OPCODE_252_ISSUE.md) - Technical analysis
+- [`docs/research/OPCODE_252_CODE_ANALYSIS.md`](../research/OPCODE_252_CODE_ANALYSIS.md) - Code-level analysis
+- [`docs/research/OPCODE_252_INVESTIGATION_LOG.md`](../research/OPCODE_252_INVESTIGATION_LOG.md) - Complete test log (27 commands)
+- [`docs/research/ASYNC_GRAPHQL_DOWNGRADE_ATTEMPTS.md`](../research/ASYNC_GRAPHQL_DOWNGRADE_ATTEMPTS.md) - Failed patch attempts
+- [`docs/research/MULTISIG_GRAPHQL_SERVICE.md`](../research/MULTISIG_GRAPHQL_SERVICE.md) - GraphQL analysis
+
+**Contract implementation status**:
+- ✅ Code complete (Safe standard implementation)
+- ✅ 74/74 unit tests passing
+- ✅ 0 warnings after validation fixes
+- ❌ Deployment BLOCKED by opcode 252
+
+---
 
 ---
 
@@ -770,32 +936,109 @@ GET    /metrics                              - Prometheus metrics
 
 ## 12) Conclusion
 
-**Feasibility**: **FEASIBLE** with Rust backend + TypeScript frontend architecture
+### 🔴 CRITICAL BLOCKER - PROJECT NOT VIABLE AS PROPOSED
 
-**Key Considerations**:
+**Current Status**: **BLOCKED** - Cannot deliver Safe-like multisig platform due to Linera SDK ecosystem issue.
 
-- No native multisig at protocol level - must implement application-level Wasm contract
-- Higher complexity than Hathor/Supra (custom contract required)
-- **Rust required** for smart contracts (linera-sdk → Wasm)
-- **Rust backend required** (no official backend SDK exists)
-- **TypeScript frontend** with @linera/client (frontend-only library)
-- Uses Linera's multi-owner chains (verified working on Testnet Conway)
-- Cross-chain messaging enables coordination
-- Sub-second finality with polling-based updates (5-10s)
-- EVM support: Experimental/Planned for Q2'25
+**What Works** ✅:
+- Frontend (React + @linera/client) - **VIABLE**
+- Backend API (Node.js/TypeScript + @linera/client) - **VIABLE**
+- Wallet Integration (@linera/client Ed25519 keys) - **VIABLE**
+- Multi-Owner Chains (native Linera protocol) - **VERIFIED WORKING**
 
-**Recommendation**: PROCEED with Rust backend + TypeScript frontend architecture
+**What DOES NOT Work** ❌:
+- **Custom Wasm Multisig Contract** - **CANNOT DEPLOY** (opcode 252 issue)
+- **Threshold m-of-n Logic** - **IMPOSSIBLE** without Wasm contract
+- **Safe-like User Experience** - **CANNOT PROVIDE** (no proposal/approve/execute workflow)
 
-**Architecture**:
+### Why The Original Proposal Is Not Viable
 
-- Frontend: TypeScript/React + @linera/client
-- Backend: Rust + Actix-web + Direct Linera integration
-- Smart Contracts: Rust (linera-sdk) → Wasm
+The proposal assumes a **custom Wasm multisig contract can be deployed** to provide:
+- m-of-n threshold enforcement
+- Proposal/approval/execute workflow
+- Safe-like user experience
 
-**Total Effort**: 690 hours (~18 weeks with 1 FTE or ~11 weeks with 2 FTEs)
+**Reality**: This contract **CANNOT be deployed** due to an **unresolvable Linera SDK ecosystem issue**.
 
-**Note**: +20% from original 610h estimate due to Rust backend requirement
+### The Impossible Triangle
+
+```
+linera-sdk 0.15.11
+    └─ async-graphql = "=7.0.17" (exact version pin)
+        └─ requires Rust 1.87+ (for let-chains)
+            └─ generates memory.copy (opcode 252)
+                └─ Linera runtime doesn't support ❌
+```
+
+**All attempted workarounds FAILED** (see Section 9 for complete analysis).
+
+### What We CAN Deliver
+
+If we proceed WITHOUT custom Wasm multisig contract:
+
+**Available Features** (using multi-owner chains only):
+- ✅ Shared wallet with multiple owners
+- ✅ On-chain balance tracking
+- ✅ Basic transaction operations
+- ✅ Frontend wallet interface
+- ✅ Backend REST API
+
+**Missing Features** (compared to Safe):
+- ❌ No threshold m-of-n (it's 1-of-N - any owner can execute)
+- ❌ No proposal/approval workflow
+- ❌ No confirmation tracking
+- ❌ No execution time-delay controls
+- ❌ No Safe-like security model
+
+**This is NOT a multisig platform** - it's just a shared wallet.
+
+### Recommendation
+
+**DO NOT PROCEED** with full Safe-like multisig platform as proposed.
+
+**Options**:
+
+1. **WAIT** for Linera SDK team to resolve opcode 252 issue
+   - Track: [Issue #4742](https://github.com/linera-io/linera-protocol/issues/4742)
+   - Timeline: UNKNOWN
+
+2. **BUILD SIMPLIFIED VERSION** using multi-owner chains only
+   - Accept 1-of-N limitation (any owner can execute)
+   - No Safe-like features
+   - Not competitive with existing multisig solutions
+
+3. **CHOOSE DIFFERENT BLOCKCHAIN** with working multisig support
+   - Hathor (has working multisig)
+   - Ethereum (Gnosis Safe)
+   - Other established chains
+
+### Impact Assessment
+
+**Original Estimate**: 580-690 hours (~15-18 weeks)
+
+**Reality**:
+- ✅ Frontend/Backend with @linera/client: **VIABLE** (~300 hours)
+- ❌ Custom Wasm multisig: **IMPOSSIBLE** (blocked by SDK issue)
+- ❌ Safe-like UX: **CANNOT PROVIDE** (requires threshold logic)
+
+**Revised Estimate for Simplified Version** (multi-owner chains only):
+- ~300 hours (~8 weeks) for basic shared wallet
+- NOT competitive with dedicated multisig platforms
+- DOES NOT meet original Safe-like requirements
+
+### Final Verdict
+
+**The Linera multisig platform proposal as specified is NOT VIABLE** due to:
+1. Custom Wasm multisig contract cannot be deployed (SDK ecosystem blocker)
+2. Multi-owner chains lack threshold m-of-n logic
+3. Cannot provide Safe-like user experience without custom contract
+
+**Recommendation**: **HOLD** project until Linera SDK team resolves the opcode 252 issue.
+
+See **Section 9: Critical Blocker Analysis** for complete technical details and all failed workaround attempts.
 
 ---
 
 **Produced by Palmera DAO Team**
+**Last Updated**: February 4, 2026
+**Status**: 🔴 BLOCKED - Awaiting Linera SDK ecosystem resolution

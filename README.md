@@ -232,49 +232,102 @@ These provide reference for proposal structure and estimation methodology.
 | Component | Status | Notes |
 |-----------|--------|-------|
 | Research | ✅ Complete | Includes Testnet Conway validation |
-| Infrastructure Analysis | ✅ Complete | Updated with test results |
-| Proposal | ✅ Complete | Timeline based on TypeScript SDK |
-| Multisig Contract (Rust) | ✅ Complete | Safe standard, 74/74 tests passing |
-| Testnet Deployment | 🔴 **CRITICAL BLOCKER** | SDK ecosystem issue |
-| Backend Development | ⏳ Not Started | Blocked by Linera SDK issue |
+| Infrastructure Analysis | ✅ Complete | Updated with critical blocker |
+| Proposal | ✅ Complete | **BLOCKED** - See critical blocker below |
+| Frontend/Backend (with @linera/client) | ✅ **VIABLE** | TypeScript SDK works for both |
+| Multisig Contract (Rust) | ✅ Complete | **CANNOT DEPLOY** - 74/74 tests pass |
+| Multi-Owner Chains | ✅ **VERIFIED** | Working on Testnet Conway |
+| Custom Wasm Multisig | 🔴 **BLOCKED** | SDK ecosystem issue (opcode 252) |
 
-### 🔴 Critical Blocker: SDK Ecosystem Issue
+### 🔴 CRITICAL BLOCKER: Safe-like Multisig NOT Possible
 
-**Problem**: Cannot deploy to Linera testnet due to SDK dependency chain conflict
+**Summary**: We CANNOT build a Safe-like multisig platform on Linera at this time.
 
-**Root Cause Analysis**:
+**What Works** ✅:
+- ✅ **Frontend** (React + @linera/client SDK) - **VIABLE**
+- ✅ **Backend API** (Node.js/TypeScript + @linera/client) - **VIABLE**
+- ✅ **Wallet Integration** (@linera/client Ed25519 keys) - **VIABLE**
+- ✅ **Multi-Owner Chains** (native Linera protocol) - **VERIFIED**
+
+**What DOES NOT Work** ❌:
+- 🔴 **Custom Wasm Multisig Contract** - **CANNOT DEPLOY** (opcode 252)
+- 🔴 **Threshold m-of-n Logic** - **IMPOSSIBLE** without Wasm contract
+- 🔴 **Safe-like User Experience** - **CANNOT PROVIDE** (no proposal/approve/execute)
+
+### The Problem in Detail
+
+**Root Cause - Impossible Dependency Triangle**:
 ```
 linera-sdk 0.15.11
-    └─ requires: async-graphql = "=7.0.17" (exact version)
+    └─ async-graphql = "=7.0.17" (exact version pin)
         └─ requires: Rust 1.87+ (for let-chain syntax)
-            └─ generates: memory.copy (opcode 252)
+            └─ generates: memory.copy (opcode 252 / 0xFC)
                 └─ blocked by: Linera runtime (no bulk memory support)
 ```
 
-**Why This is Critical**:
-- ❌ Rust 1.86 = Wasm compatible ✅ BUT async-graphql 7.x doesn't compile ❌
-- ❌ Rust 1.87+ = async-graphql compiles ✅ BUT generates opcode 252 ❌
-- ❌ ALL linera-sdk 0.15.x versions pin async-graphql 7.0.17
-- ❌ This affects ALL developers using modern Rust + Linera SDK
+**All 8 Workaround Attempts FAILED**:
+| Attempt | Result |
+|---------|--------|
+| Remove .clone() operations | ❌ Breaks mutability |
+| Remove proposal history | ❌ Still 85 opcodes |
+| Remove GraphQL service | ❌ Still 82 opcodes |
+| Use Rust 1.86.0 | ❌ async-graphql doesn't compile |
+| Patch async-graphql to 6.x | ❌ Version pin cannot be overridden |
+| Replace async-graphql | ❌ 6.x/7.x incompatible |
+| Hand-written Wasm | ❌ Security risk |
+| Combined ALL above | ❌ Still 67 opcodes remain |
 
-**Official Issue**: [linera-protocol#4742](https://github.com/linera-io/linera-protocol/issues/4742)
+**Complete Evidence**:
+- [Technical Analysis](docs/research/LINERA_OPCODE_252_ISSUE.md)
+- [Code Analysis](docs/research/OPCODE_252_CODE_ANALYSIS.md)
+- [Test Log (27 commands)](docs/research/OPCODE_252_INVESTIGATION_LOG.md)
+- [Failed Patch Attempts](docs/research/ASYNC_GRAPHQL_DOWNGRADE_ATTEMPTS.md)
 
-**Status**: 🔴 **WAITING FOR LINERA TEAM ACTION**
+### What This Means
 
-This is not a project bug - it's a **Linera SDK ecosystem blocker**.
+**WE CANNOT OFFER A SAFE-LIKE MULTISIG EXPERIENCE** because:
 
-**Documentation**:
-- [`docs/research/LINERA_OPCODE_252_ISSUE.md`](docs/research/LINERA_OPCODE_252_ISSUE.md) - Technical analysis and root cause
-- [`docs/research/OPCODE_252_INVESTIGATION_LOG.md`](docs/research/OPCODE_252_INVESTIGATION_LOG.md) - **Complete test log with all commands and results** |
+1. **Multi-Owner Chains** (protocol level):
+   - ✅ Multiple owners can control a chain
+   - ❌ But ANY owner can execute WITHOUT approval (1-of-N)
+   - ❌ No threshold enforcement
+   - ❌ No proposal/approval workflow
+
+2. **Custom Wasm Contract** (required for Safe-like features):
+   - ✅ Code complete (74/74 tests passing)
+   - ✅ Logic correct (threshold, proposals, approvals)
+   - ❌ **CANNOT DEPLOY** to Linera testnet
+   - ❌ Opcode 252 causes deployment failure
+
+### Only Viable Options
+
+**Option A**: Build simplified wallet (multi-owner chains only)
+- ✅ Shared wallet with multiple owners
+- ❌ 1-of-N (any owner can execute)
+- ❌ NOT a Safe-like multisig
+- ~300 hours (~8 weeks)
+
+**Option B**: Wait for Linera SDK team resolution
+- Track: [Issue #4742](https://github.com/linera-io/linera-protocol/issues/4742)
+- Timeline: UNKNOWN (not under project control)
+
+**Option C**: Choose different blockchain with working multisig
+- Hathor (has working multisig)
+- Ethereum (Gnosis Safe)
+
+### Official Status
+
+🔴 **PROJECT BLOCKED** - Cannot proceed with Safe-like multisig platform until Linera SDK team resolves the opcode 252 issue.
+
+This is a **Linera SDK ecosystem blocker**, not a project bug.
 
 ---
 
 ## Next Steps
 
-1. ✅ Read [`docs/INFRASTRUCTURE_ANALYSIS.md`](docs/INFRASTRUCTURE_ANALYSIS.md)
-2. ✅ Review [`docs/PROPOSAL/linera-multisig-platform-proposal.md`](docs/PROPOSAL/linera-multisig-platform-proposal.md)
-3. ⏳ Approve adjusted timeline (580 hours)
-4. ⏳ Begin M1: Project Setup
+1. ✅ Read [`docs/INFRASTRUCTURE_ANALYSIS.md`](docs/INFRASTRUCTURE_ANALYSIS.md) - Complete technical analysis
+2. ✅ Review [`docs/PROPOSAL/linera-multisig-platform-proposal.md`](docs/PROPOSAL/linera-multisig-platform-proposal.md) - Updated with blocker
+3. ❌ **DO NOT BEGIN M1** until Linera SDK issue is resolved OR requirements change
 
 ---
 
@@ -294,5 +347,5 @@ This is a research repository. When making changes:
 
 ---
 
-**Last Updated**: February 3, 2026
+**Last Updated**: February 4, 2026
 **Contact**: [Your Contact Information]
