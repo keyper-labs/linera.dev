@@ -208,7 +208,33 @@ make all
 | Research | ✅ Complete | Includes Testnet Conway validation |
 | Infrastructure Analysis | ✅ Complete | Updated with test results |
 | Proposal | ✅ Complete | Timeline based on TypeScript SDK |
-| Development | ⏳ Not Started | Awaiting approval to proceed |
+| Multisig Contract (Rust) | ✅ Complete | Safe standard, 74/74 tests passing |
+| Testnet Deployment | 🔴 **CRITICAL** | SDK ecosystem blocker |
+| Backend Development | ⏳ Not Started | Blocked by Linera SDK |
+
+### 🔴 Critical Blocker: Linera SDK Ecosystem Issue
+
+**Problem**: No working combination of current linera-sdk + modern Rust + Linera runtime
+
+**Dependency Chain**:
+```
+linera-sdk 0.15.11
+  └─ async-graphql = "=7.0.17" (pinned, all 0.15.x versions)
+      └─ requires Rust 1.87+ (let-chain syntax)
+          └─ generates memory.copy (opcode 252)
+              └─ Linera runtime doesn't support
+```
+
+**Why No Solution Exists Currently**:
+- Rust 1.86 ✅ = Wasm compatible, BUT async-graphql 7.x ❌
+- Rust 1.87+ ✅ = async-graphql compiles, BUT opcode 252 ❌
+- ALL linera-sdk 0.15.x versions require async-graphql 7.0.17
+
+**This requires Linera team action** - not solvable at project level.
+
+**Official Issue**: [linera-protocol#4742](https://github.com/linera-io/linera-protocol/issues/4742)
+
+**Full Analysis**: [`docs/research/LINERA_OPCODE_252_ISSUE.md`](docs/research/LINERA_OPCODE_252_ISSUE.md) |
 
 ---
 

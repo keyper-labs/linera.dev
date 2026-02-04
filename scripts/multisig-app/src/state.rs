@@ -19,6 +19,10 @@ pub struct MultisigState {
     pub threshold: RegisterView<u64>,
     /// Proposal nonce (unique ID for each proposal)
     pub nonce: RegisterView<u64>,
+    /// Proposal lifetime in seconds (default: 7 days = 604800s)
+    pub proposal_lifetime: RegisterView<u64>,
+    /// Time-delay in seconds before execution (default: 0 = disabled, Safe native behavior)
+    pub time_delay: RegisterView<u64>,
     /// Pending proposals by ID
     pub pending_proposals: MapView<u64, Proposal>,
     /// Confirmations per owner: owner -> list of proposal IDs they've confirmed
@@ -40,6 +44,10 @@ pub struct Proposal {
     pub confirmation_count: u64,
     /// Whether the proposal has been executed
     pub executed: bool,
-    /// Timestamp when proposal was created (for expiration)
+    /// Timestamp when proposal was created (microseconds)
     pub created_at: u64,
+    /// Expiration timestamp (microseconds) - Safe standard: 7+ days
+    pub expires_at: u64,
+    /// Earliest execution timestamp (microseconds) - only used if time_delay > 0
+    pub executable_after: u64,
 }

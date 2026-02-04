@@ -144,9 +144,58 @@ graph TB
 
 **Multi-Owner Chain vs Application Multisig**:
 
-- **Multi-Owner Chain**: Protocol-level feature allowing N owners to control a chain (verified working on Testnet Conway).
-- **Application Multisig**: Custom Wasm contract implementing m-of-n threshold logic (required for true multisig).
-- **Combined Approach**: Deploy multi-owner chain, then deploy multisig Wasm application on it.
+**CRITICAL DISTINCTION**: Linera's multi-owner chains are NOT sufficient for multisig wallets.
+
+**Multi-Owner Chain** (Protocol-level - What Linera Provides):
+
+| Feature | Multi-Owner Chain | What We Need |
+|---------|-------------------|--------------|
+| Owner Control | ✅ N owners can control chain | ✅ Same |
+| Threshold | ❌ 1-of-N (any owner can propose) | ❌ Need m-of-n |
+| Proposals | ❌ No proposal system | ✅ Required |
+| Approvals | ❌ No approval tracking | ✅ Required |
+| Execution | ❌ Anyone can execute immediately | ❌ Need threshold enforcement |
+| Timelocks | ❌ Not supported | ⚠️ Optional |
+| Revocation | ❌ Not supported | ✅ Required |
+
+**What Multi-Owner Chain Lacks**:
+
+1. **No Threshold Enforcement**: Any owner can propose and execute transactions immediately
+   ```bash
+   # OWNER1 can execute WITHOUT owner2/owner3 approval
+   # ❌ NO 2-of-3 threshold
+   # ❌ NO approval counting
+   ```
+
+2. **No Proposal Lifecycle**:
+   - ❌ No proposal submission tracking
+   - ❌ No approval collection
+   - ❌ No proposal expiration
+   - ❌ No execution state management
+
+3. **No Security Controls**:
+   - ❌ No confirmation revocation
+   - ❌ No double-execution prevention
+   - ❌ No proposal validation
+
+**Application Multisig** (Custom Wasm Contract - What We Must Build):
+
+| Feature | Implementation |
+|---------|----------------|
+| **Submit Proposal** | `submit_proposal()` - Creates proposal, auto-confirms from submitter |
+| **Confirm Proposal** | `confirm_proposal()` - Tracks approval, checks owner, enforces idempotency |
+| **Execute Proposal** | `execute_proposal()` - Verifies threshold, prevents double-execution |
+| **Revoke Confirmation** | `revoke_confirmation()` - Allows revoking before execution |
+| **Owner Management** | `add_owner()`, `remove_owner()`, `replace_owner()` |
+| **Threshold Management** | `change_threshold()` with validation rules |
+| **Proposal State** | `pending_proposals`, `executed_proposals` maps |
+| **Confirmation Tracking** | `confirmations` map per proposal |
+
+**Combined Approach**:
+1. Deploy multi-owner chain (protocol-level foundation)
+2. Deploy multisig Wasm application on it (application-level logic)
+3. Multi-owner chain provides: owner consensus for block production
+4. Multisig application provides: threshold enforcement for transactions
 
 **Source of Truth**: On-chain Wasm application holds owners, threshold, pending proposals. Off-chain PostgreSQL is UX cache (proposals, approvals, metadata) — never stores private keys.
 
@@ -442,9 +491,10 @@ enum Operation {
 
 **Version**: 0.15.11 (crates.io)
 
-**Documentation**: https://docs.rs/linera-client/latest/linera_client/
+**Documentation**: <https://docs.rs/linera-client/latest/linera_client/>
 
 **Key Capabilities**:
+
 - Wallet management via `ClientContext`
 - Chain operations via `ChainClient`
 - Direct blockchain queries and transactions
@@ -452,6 +502,7 @@ enum Operation {
 - Multi-owner chain management
 
 **Architecture**:
+
 ```
 Backend Service (Actix-web/Axum)
          |
@@ -466,6 +517,7 @@ Backend Service (Actix-web/Axum)
 ```
 
 **Example Integration**:
+
 ```rust
 use linera_client::{ClientContext, config::WalletState};
 use linera_core::client::ChainClient;
@@ -511,6 +563,7 @@ impl MultisigService {
 ```
 
 **Available Methods** (linera-core Client):
+
 - `query_balance()` - Query chain balance
 - `query_application()` - Query application state
 - `execute_operations()` - Submit multiple operations
@@ -520,6 +573,7 @@ impl MultisigService {
 - `process_inbox()` - Process pending messages
 
 **Available Methods** (linera-client ClientContext):
+
 - `make_chain_client()` - Create ChainClient for specific chain
 - `wallet()` - Access wallet state
 - `ownership()` - Get chain ownership info
@@ -647,6 +701,7 @@ GET    /metrics                              - Prometheus metrics
 
 | Risk | Mitigation | Priority |
 |------|------------|----------|
+| **🔴 CRITICAL: Wasm Opcode 252 Issue** - Cannot deploy complex Wasm contracts to Linera testnet due to SDK dependency conflict (async-graphql 7.0.17 requires Rust 1.87+ which generates unsupported bulk memory opcodes) | **BLOCKER**: Requires Linera team action. Monitor issue [linera-protocol#4742](https://github.com/linera-io/linera-protocol/issues/4742). Contract implementation complete (74/74 tests passing) but deployment blocked until Linera SDK ecosystem issue resolved. | **CRITICAL** |
 | **GraphQL not functional** - Tested on Testnet Conway, schema doesn't load | Use CLI wrapper or gRPC instead; build REST API in Rust | **High** |
 | **No official backend SDK** - @linera/client is frontend-only | Build Rust backend with direct Linera integration (gRPC/compiled client); budget +20% backend time | **High** |
 | **No wallet connector** - No MetaMask-style connector for Linera | Build custom wallet using @linera/client SDK (Ed25519 key management); budget +40h frontend | **High** |

@@ -61,10 +61,20 @@ impl Contract for MultisigContract {
         // Initialize nonce to 0
         self.state.nonce.set(0);
 
+        // Set proposal lifetime (default: 7 days = 604800 seconds) - Safe standard
+        let lifetime = args.proposal_lifetime.unwrap_or(604800);
+        self.state.proposal_lifetime.set(lifetime);
+
+        // Set time-delay (default: 0 = disabled, Safe native behavior)
+        let delay = args.time_delay.unwrap_or(0);
+        self.state.time_delay.set(delay);
+
         info!(
-            "Multisig instantiated with {} owners and threshold {}",
+            "Multisig instantiated: {} owners, threshold={}, lifetime={}s, delay={}s",
             args.owners.len(),
-            args.threshold
+            args.threshold,
+            lifetime,
+            delay
         );
     }
 
@@ -125,7 +135,11 @@ impl MultisigContract {
         // Get current timestamp
         let created_at = self.runtime.system_time().micros();
 
-        // Create proposal
+        // Calculate expiration (Safe standard: 7+ days)
+        let lifetime_seconds = *self.state.proposal_lifetime.get();
+        let expires_at = created_at + (lifetime_seconds * 1_000_000);
+
+        // Create proposal (executable_after set to 0 initially, updated when threshold reached)
         let proposal = Proposal {
             id: proposal_id,
             proposal_type,
@@ -133,6 +147,8 @@ impl MultisigContract {
             confirmation_count: 0,
             executed: false,
             created_at,
+            expires_at,
+            executable_after: 0, // Will be set when threshold reached (if time_delay > 0)
         };
 
         // Store proposal
@@ -240,6 +256,19 @@ impl MultisigContract {
 
         // Update confirmation count
         proposal.confirmation_count += 1;
+
+        // Set executable_after when threshold is reached (if time_delay > 0)
+        let threshold = *self.state.threshold.get();
+        let time_delay = *self.state.time_delay.get();
+        if proposal.confirmation_count == threshold && time_delay > 0 {
+            let now = self.runtime.system_time().micros();
+            proposal.executable_after = now + (time_delay * 1_000_000);
+            info!(
+                "Proposal {} reached threshold, executable in {} seconds",
+                proposal_id, time_delay
+            );
+        }
+
         let confirmation_count = proposal.confirmation_count;
         self.state
             .pending_proposals
@@ -270,12 +299,31 @@ impl MultisigContract {
             panic!("Proposal already executed");
         }
 
+        // Check expiration (Safe standard)
+        let now = self.runtime.system_time().micros();
+        if now > proposal.expires_at {
+            panic!(
+                "Proposal expired: current time {} > expiration {}",
+                now, proposal.expires_at
+            );
+        }
+
         let threshold = *self.state.threshold.get();
 
         if proposal.confirmation_count < threshold {
             panic!(
                 "Insufficient confirmations: {} < {} (required)",
                 proposal.confirmation_count, threshold
+            );
+        }
+
+        // Check time-delay if configured (optional feature)
+        let time_delay = *self.state.time_delay.get();
+        if time_delay > 0 && now < proposal.executable_after {
+            let wait_seconds = (proposal.executable_after - now) / 1_000_000;
+            panic!(
+                "Time-delay not met: must wait {} more seconds (configure time_delay=0 to disable)",
+                wait_seconds
             );
         }
 
@@ -322,14 +370,29 @@ impl MultisigContract {
     async fn execute_transfer(&mut self, source: AccountOwner, to: AccountOwner, value: u64) -> MultisigResponse {
         // Convert u64 to Amount (from_tokens expects u128)
         let amount = Amount::from_tokens(value.into());
-        
+
+        // Validate balance before transfer (prevent state corruption)
+        let contract_balance = self.runtime.chain_balance();
+        if contract_balance < amount {
+            panic!(
+                "Insufficient balance: required={}, available={}",
+                amount, contract_balance
+            );
+        }
+
         // Execute the actual transfer from contract to destination
         let chain_id = self.runtime.chain_id();
         let destination = linera_sdk::linera_base_types::Account::new(chain_id, to);
         self.runtime.transfer(source, destination, amount);
-        
+
+        // Validate post-transfer balance (ensure transfer succeeded)
+        let new_balance = self.runtime.chain_balance();
+        if new_balance >= contract_balance {
+            panic!("Transfer validation failed - balance did not decrease");
+        }
+
         info!("Transferred {} tokens to {:?}", value, to);
-        
+
         MultisigResponse::FundsTransferred { to, value }
     }
 
@@ -472,4 +535,8 @@ pub struct InstantiationArgs {
     pub owners: Vec<AccountOwner>,
     /// Number of confirmations required
     pub threshold: u64,
+    /// Proposal lifetime in seconds (optional, default: 7 days = 604800s)
+    pub proposal_lifetime: Option<u64>,
+    /// Time-delay in seconds before execution (optional, default: 0 = disabled, Safe native)
+    pub time_delay: Option<u64>,
 }

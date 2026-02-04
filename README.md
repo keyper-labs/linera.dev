@@ -234,7 +234,38 @@ These provide reference for proposal structure and estimation methodology.
 | Research | ✅ Complete | Includes Testnet Conway validation |
 | Infrastructure Analysis | ✅ Complete | Updated with test results |
 | Proposal | ✅ Complete | Timeline based on TypeScript SDK |
-| Development | ⏳ Not Started | Awaiting approval to proceed |
+| Multisig Contract (Rust) | ✅ Complete | Safe standard, 74/74 tests passing |
+| Testnet Deployment | 🔴 **CRITICAL BLOCKER** | SDK ecosystem issue |
+| Backend Development | ⏳ Not Started | Blocked by Linera SDK issue |
+
+### 🔴 Critical Blocker: SDK Ecosystem Issue
+
+**Problem**: Cannot deploy to Linera testnet due to SDK dependency chain conflict
+
+**Root Cause Analysis**:
+```
+linera-sdk 0.15.11
+    └─ requires: async-graphql = "=7.0.17" (exact version)
+        └─ requires: Rust 1.87+ (for let-chain syntax)
+            └─ generates: memory.copy (opcode 252)
+                └─ blocked by: Linera runtime (no bulk memory support)
+```
+
+**Why This is Critical**:
+- ❌ Rust 1.86 = Wasm compatible ✅ BUT async-graphql 7.x doesn't compile ❌
+- ❌ Rust 1.87+ = async-graphql compiles ✅ BUT generates opcode 252 ❌
+- ❌ ALL linera-sdk 0.15.x versions pin async-graphql 7.0.17
+- ❌ This affects ALL developers using modern Rust + Linera SDK
+
+**Official Issue**: [linera-protocol#4742](https://github.com/linera-io/linera-protocol/issues/4742)
+
+**Status**: 🔴 **WAITING FOR LINERA TEAM ACTION**
+
+This is not a project bug - it's a **Linera SDK ecosystem blocker**.
+
+**Documentation**:
+- [`docs/research/LINERA_OPCODE_252_ISSUE.md`](docs/research/LINERA_OPCODE_252_ISSUE.md) - Technical analysis and root cause
+- [`docs/research/OPCODE_252_INVESTIGATION_LOG.md`](docs/research/OPCODE_252_INVESTIGATION_LOG.md) - **Complete test log with all commands and results** |
 
 ---
 

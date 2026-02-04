@@ -4,7 +4,55 @@ This directory contains comprehensive research and analysis of the Linera SDK fo
 
 ## 📚 Document Index
 
-### 1. **Comprehensive Capabilities Analysis**
+### 🔴 CRITICAL: Opcode 252 Issue (Read First!)
+
+#### 1. **Opcode 252 Investigation Log** ⭐ **NEW**
+**File**: [OPCODE_252_INVESTIGATION_LOG.md](./OPCODE_252_INVESTIGATION_LOG.md)
+
+**Overview**: Complete test log with ALL commands, results, and findings from the investigation.
+
+**Contents**:
+- ✅ 27 test commands executed with full output
+- ✅ Dependency tree analysis (ruzstd, async-graphql, linera-sdk)
+- ✅ Rust version testing (1.86.0 vs 1.92.0)
+- ✅ Wasm binary analysis (hexdump, wasm-tools)
+- ✅ PR #4894 investigation (ruzstd 0.8.1 fix)
+- ✅ async-graphql version research
+- ✅ Error message appendix
+- ✅ Complete dependency chain visualization
+
+**Test Results**:
+| Test Category | Tests Run | Passed | Failed |
+|---------------|-----------|--------|--------|
+| Compilation | 2 | 1 | 1 (expected) |
+| Binary Analysis | 2 | 2 | 0 |
+| Dependency Check | 3 | 3 | 0 |
+| Validation | 1 | 1 | 0 |
+
+**Read This First**: YES - Contains complete evidence and test data.
+
+---
+
+#### 2. **Opcode 252 Issue Analysis**
+**File**: [LINERA_OPCODE_252_ISSUE.md](./LINERA_OPCODE_252_ISSUE.md)
+
+**Overview**: Technical analysis of the Wasm opcode 252 blocker.
+
+**Contents**:
+- Root cause analysis (dependency chain conflict)
+- Official issue #4742 details
+- PR #4894 investigation (ruzstd fix)
+- Rust 1.86.0 compilation test results
+- Possible solutions and workarounds
+- Recommended actions
+
+**Status**: 🔴 CRITICAL BLOCKER - SDK ecosystem issue
+
+**Read This First**: YES - For understanding the blocker.
+
+---
+
+### 2. **Comprehensive Capabilities Analysis**
 **File**: [linera-sdk-capabilities-and-limitations-comprehensive-analysis.md](./linera-sdk-capabilities-and-limitations-comprehensive-analysis.md)
 
 **Overview**: Complete analysis of what you CAN and CANNOT do with the Linera SDK.
@@ -242,8 +290,27 @@ docs/research/
 |-----------|--------|-------|
 | Research | ✅ Complete | All capabilities analyzed |
 | Documentation | ✅ Complete | All documents created |
-| Validation | ⏳ In Progress | Testnet Conway validation ongoing |
-| Implementation | ⏳ Not Started | Awaiting approval |
+| Validation | ✅ Complete | 74/74 tests passing, 0 warnings |
+| Multisig Contract | ✅ Complete | Safe standard implemented |
+| **Testnet Deployment** | 🔴 **BLOCKED** | See [Opcode 252 Issue](./LINERA_OPCODE_252_ISSUE.md) |
+| Implementation | ⏳ Not Started | Blocked by SDK ecosystem issue |
+
+### 🔴 Current Blocker
+
+**Issue**: Cannot deploy to Linera testnet due to SDK dependency conflict.
+
+**Root Cause**:
+```
+linera-sdk 0.15.11
+    └─ async-graphql 7.0.17 (exact version)
+        └─ requires Rust 1.87+ (for let-chains)
+            └─ generates memory.copy (opcode 252)
+                └─ Linera runtime doesn't support it
+```
+
+**Status**: Waiting for Linera team action (issue #4742)
+
+**See**: [OPCODE_252_INVESTIGATION_LOG.md](./OPCODE_252_INVESTIGATION_LOG.md) for complete test evidence.
 
 ---
 

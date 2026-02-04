@@ -204,23 +204,147 @@ const chainId = await client.createMultiOwnerChain({
 
 **Multi-Owner Chain** (Protocol-level):
 
-- N owners can independently propose blocks
-- 1-of-N signature requirement
-- No threshold configuration
-- No timelock support
+- ✅ N owners can independently propose blocks
+- ✅ 1-of-N signature requirement (any owner can propose)
+- ❌ No threshold configuration (no m-of-n)
+- ❌ No proposal/approval/execution workflow
+- ❌ No timelock support
+- ❌ Anyone with owner access can execute transactions immediately
+
+**CRITICAL GAPS - Multi-Owner Chain vs Multisig Application**:
+
+| Feature | Multi-Owner Chain | Multisig Application (Required) |
+|---------|-------------------|----------------------------------|
+| **Threshold** | ❌ None (1-of-N) | ✅ Configurable m-of-n |
+| **Proposal System** | ❌ No proposals | ✅ Submit, track, execute proposals |
+| **Approval Tracking** | ❌ Not tracked | ✅ Count/store approvals |
+| **Execution Control** | ❌ Anyone can execute | ✅ Only after threshold met |
+| **Revocation** | ❌ No revocation | ✅ Revoke confirmations |
+| **Timelocks** | ❌ Not supported | ✅ Optional time-delay |
+| **Proposal Expiration** | ❌ Not supported | ✅ Optional expiration |
+
+**Multi-Owner Chain Reality**:
+```bash
+# ANY owner can propose and execute immediately
+linera open-multi-owner-chain \
+    --owners "$OWNER1" "$OWNER2" "$OWNER3" \
+    --threshold 2  # ❌ This is for proposing blocks, NOT for transactions
+
+# OWNER1 can execute a transaction WITHOUT owner2/owner3 approval
+# ❌ NO threshold enforcement
+# ❌ NO proposal tracking
+# ❌ NO approval workflow
+```
+
+**What's Missing (Must Implement in Application)**:
+
+1. **Proposal Submission**
+   ```rust
+   async fn submit_proposal(&mut self, proposal: Proposal) -> Result<u64> {
+       // Track proposal in state
+       // Auto-confirm from submitter
+       // Generate proposal ID
+   }
+   ```
+
+2. **Approval Collection**
+   ```rust
+   async fn confirm_proposal(&mut self, proposal_id: u64, approver: Owner) {
+       // Verify approver is owner
+       // Check not already confirmed
+       // Count confirmations
+       // Check if threshold met
+   }
+   ```
+
+3. **Threshold Enforcement**
+   ```rust
+   async fn execute_proposal(&mut self, proposal_id: u64) {
+       // Verify approval_count >= threshold
+       // Prevent double-execution
+       // Execute proposal operation
+   }
+   ```
+
+4. **Confirmation Revocation**
+   ```rust
+   async fn revoke_confirmation(&mut self, proposal_id: u64, revoker: Owner) {
+       // Allow revoking before execution
+       // Decrement confirmation count
+       // Prevent revoking executed proposals
+   }
+   ```
 
 **Application-Level Multisig** (Required):
 
-- Custom Wasm application
-- m-of-n threshold logic
-- All approvals tracked in application state
-- Each approval = separate on-chain transaction
+- ✅ Custom Wasm application
+- ✅ m-of-n threshold logic
+- ✅ All approvals tracked in application state
+- ✅ Each approval = separate on-chain transaction
+- ✅ Proposal lifecycle management
+- ✅ Idempotency for duplicate confirmations
+- ✅ Security checks (owner verification, double-execution prevention)
 
-**Impact**: Multisig requires custom smart contract development
+**Impact**: Multisig requires custom smart contract development with complete proposal/approval/execution workflow
 
 ---
 
-### 2.2 No REST or GraphQL API
+### 2.2 🔴 CRITICAL: Wasm Opcode 252 Issue (Deployment Blocker)
+
+**Status**: 🔴 **CRITICAL BLOCKER** - SDK ecosystem issue requiring Linera team action
+
+**Issue**: [linera-protocol#4742](https://github.com/linera-io/linera-protocol/issues/4742)
+
+**Problem**: Cannot deploy complex Wasm contracts to Linera testnet due to SDK dependency conflict
+
+**Root Cause**:
+```
+linera-sdk 0.15.11
+    └─ async-graphql = "=7.0.17" (exact version pinned)
+        └─ requires: Rust 1.87+ (for let-chain syntax)
+            └─ generates: memory.copy (opcode 252 / 0xFC)
+                └─ blocked by: Linera runtime (no bulk memory support)
+```
+
+**Why This is Critical**:
+- ❌ Rust 1.86 = Wasm compatible ✅ BUT async-graphql 7.x doesn't compile ❌
+- ❌ Rust 1.87+ = async-graphql compiles ✅ BUT generates opcode 252 ❌
+- ❌ ALL linera-sdk 0.15.x versions pin async-graphql 7.0.17
+- ❌ This affects ALL developers using modern Rust + Linera SDK
+
+**Verification Results**:
+| Test | Result |
+|------|--------|
+| Rust 1.86.0 compilation | ❌ async-graphql error: let-chains unstable |
+| Rust 1.92.0 compilation | ✅ Compiles, ❌ generates opcode 252 |
+| Wasm binary analysis | ❌ 3 instances of memory.copy found |
+| Contract validation | ✅ 74/74 tests passing |
+| Testnet deployment | ❌ Unknown opcode 252 error |
+
+**Impact on Multisig Implementation**:
+- ✅ Source code: Complete (Safe standard)
+- ✅ Unit tests: 74/74 passing
+- ✅ Validation: 0 warnings
+- ❌ **Testnet deployment: BLOCKED**
+- ❌ **Cannot test contract functionality on-chain**
+- ❌ **Cannot validate end-to-end operations**
+
+**Documentation**:
+- Technical analysis: [`docs/research/LINERA_OPCODE_252_ISSUE.md`](docs/research/LINERA_OPCODE_252_ISSUE.md)
+- Complete test log: [`docs/research/OPCODE_252_INVESTIGATION_LOG.md`](docs/research/OPCODE_252_INVESTIGATION_LOG.md)
+
+**Timeline Impact**: Deployment blocked until Linera team resolves SDK ecosystem issue
+
+**Possible Solutions** (Requires Linera Team Action):
+1. Update linera-kywasmtime to support Wasm bulk memory extensions
+2. Refactor linera-sdk to remove async-graphql dependency
+3. Coordinate with async-graphql team for Rust 1.86 compatibility
+
+**Status**: ⏳ **WAITING FOR LINERA TEAM ACTION**
+
+---
+
+### 2.3 No REST or GraphQL API
 
 **Current State**: No provided REST or GraphQL APIs
 
@@ -247,7 +371,7 @@ const chainId = await client.createMultiOwnerChain({
 
 ---
 
-### 2.3 Backend SDK Availability
+### 2.4 Backend SDK Availability
 
 **Current State**: Official Rust SDK exists via `linera-client` crate
 
@@ -273,7 +397,7 @@ const chainId = await client.createMultiOwnerChain({
 
 ---
 
-### 2.4 Limited Documentation
+### 2.5 Limited Documentation
 
 **Current State**: Early-stage documentation
 

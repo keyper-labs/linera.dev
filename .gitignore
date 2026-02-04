@@ -54,3 +54,6 @@ scripts/multisig-app/target/
 *_CORRECTION*.md
 *_ANALYSIS*.md
 *.local.md
+
+# linera deployment files
+.linera-deploy/
