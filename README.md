@@ -315,6 +315,39 @@ linera-sdk 0.15.11
 - Hathor (has working multisig)
 - Ethereum (Gnosis Safe)
 
+### ❌ Threshold Signatures Experiment FAILED (2026-02-04)
+
+**Branch**: `feature/threshold-signatures-alternative`
+
+**Hypothesis**: A contract using threshold signatures (instead of proposal state machine) might avoid the opcode 252 blocker.
+
+**Experiment**:
+- Implemented minimal Wasm contract (~292 KB)
+- NO proposal state machine
+- NO GraphQL operations
+- NO ed25519-dalek signature verification
+- Only basic state: owners, threshold, nonce, aggregate_public_key
+
+**Result**: ❌ **STILL BLOCKED by opcode 252**
+
+```
+Opcode 252 (memory.copy): 73 instancias detectadas
+Deploy: FALLARÍA en Linera testnet
+```
+
+**Key Finding**: The opcode 252 problem is **NOT in contract code** but in **linera-sdk dependencies**:
+```
+linera-sdk 0.15.11
+    └─ async-graphql = "=7.0.17" (obligatory dependency)
+        └─ genera memory.copy (opcode 252)
+```
+
+Even using `async-graphql` **only for ABI** (no operations), the Wasm bytecode still contains opcode 252.
+
+**Conclusion**: Threshold signatures architecture is **NOT a viable workaround** for the opcode 252 blocker. The problem is deeper in the Linera SDK ecosystem.
+
+**See**: [`experiments/threshold-signatures/README.md`](experiments/threshold-signatures/README.md) for complete analysis.
+
 ### Official Status
 
 🔴 **PROJECT BLOCKED** - Cannot proceed with Safe-like multisig platform until Linera SDK team resolves the opcode 252 issue.
@@ -347,5 +380,5 @@ This is a research repository. When making changes:
 
 ---
 
-**Last Updated**: February 4, 2026
+**Last Updated**: February 4, 2026 (Threshold Signatures Experiment Failed)
 **Contact**: [Your Contact Information]

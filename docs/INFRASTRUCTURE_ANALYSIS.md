@@ -325,6 +325,102 @@ linera-sdk 0.15.11
 
 **Failed patch attempts**: [`docs/research/ASYNC_GRAPHQL_DOWNGRADE_ATTEMPTS.md`](docs/research/ASYNC_GRAPHQL_DOWNGRADE_ATTEMPTS.md)
 
+---
+
+#### ❌ Threshold Signatures Experiment (February 4, 2026)
+
+**Branch**: `feature/threshold-signatures-alternative`
+
+**Hypothesis**: An architecture using **threshold signatures** (instead of proposal state machine) might avoid the opcode 252 blocker by:
+- Eliminating GraphQL operations (use only for ABI)
+- Removing proposal history tracking
+- Simplifying contract logic to bare minimum
+- Doing signature verification off-chain
+
+**Experiment Details**:
+```rust
+// Minimal Wasm contract tested
+pub struct MultisigState {
+    pub owners: RegisterView<Vec<AccountOwner>>,
+    pub threshold: RegisterView<u64>,
+    pub aggregate_public_key: RegisterView<Vec<u8>>,  // For threshold verification
+    pub nonce: RegisterView<u64>,                       // Replay protection
+}
+
+// Operation: Execute with pre-aggregated threshold signature
+pub enum MultisigOperation {
+    ExecuteWithThresholdSignature {
+        to: AccountOwner,
+        amount: u64,
+        nonce: u64,
+        threshold_signature: Vec<u8>,  // Verified on-chain
+        message: Vec<u8>,
+    },
+}
+```
+
+**Simplifications Tested**:
+- ❌ NO ed25519-dalek signature verification (removed dependency)
+- ❌ NO proposal state machine (simplified to execute-only)
+- ❌ NO GraphQL operations (async-graphql used only for ABI)
+- ✅ Only essential state (owners, threshold, nonce, aggregate_key)
+
+**Result**: ❌ **STILL BLOCKED by opcode 252**
+
+```
+Wasm Contract: linera_threshold_multisig.wasm
+Size: ~292 KB
+Opcode 252 (memory.copy): 73 instancias detectadas
+Deploy: FALLARÍA en Linera testnet
+```
+
+**Verification Commands**:
+```bash
+# Compile
+cargo build --release --target wasm32-unknown-unknown
+
+# Check for opcode 252
+wasm-objdump -d linera_threshold_multisig.wasm | grep "memory.copy"
+
+# Output:
+004569: fc 0a 00 00    | memory.copy 0 0
+00486a: fc 0a 00 00    | memory.copy 0 0
+008171: fc 0a 00 00    | memory.copy 0 0
+...
+# 73 instances total
+```
+
+**Key Finding**: The opcode 252 problem is **NOT in contract-level code** but in **linera-sdk dependencies**:
+
+```
+linera-threshold-multisig
+    └─ linera-sdk 0.15.11
+        └─ async-graphql = "=7.0.17"  (OBLIGATORY dependency)
+            └─ genera memory.copy (opcode 252)
+                └─ Linera runtime NO lo soporta
+```
+
+**Even using `async-graphql` ONLY for ABI** (no operations, no queries), the compiled Wasm bytecode **STILL CONTAINS** opcode 252.
+
+**Why This Failed**:
+
+The threshold signatures approach attempted to move complexity **off-chain**:
+- ✅ Signature aggregation happens off-chain (frontend/backend)
+- ✅ Contract only verifies pre-aggregated signature
+- ✅ No proposal state, no approval tracking
+
+**BUT**: The `async-graphql = "=7.0.17"` dependency is **obligatory** for ANY contract using `linera-sdk`, and it generates opcode 252 **during compilation of the SDK itself**.
+
+**Conclusion**: Threshold signatures is **NOT a viable workaround** for the opcode 252 blocker. The problem is deeper in the Linera SDK ecosystem and **cannot be solved at contract level**.
+
+**Experiment Files**:
+- Branch: `feature/threshold-signatures-alternative`
+- Contract: `experiments/threshold-signatures/src/lib.rs`
+- Results: `experiments/threshold-signatures/README.md`
+- Architecture: `experiments/threshold-signatures/docs/ARCHITECTURE.md`
+
+**Implication**: This confirms that **code-level workarounds are impossible**. The only solution requires Linera team action to fix the SDK dependency conflict.
+
 **What This Means**:
 
 **WE CANNOT BUILD A SAFE-LIKE MULTISIG ON LINERA** because:

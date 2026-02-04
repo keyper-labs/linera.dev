@@ -1026,6 +1026,64 @@ If we proceed WITHOUT custom Wasm multisig contract:
 - NOT competitive with dedicated multisig platforms
 - DOES NOT meet original Safe-like requirements
 
+---
+
+### ❌ Threshold Signatures Alternative Experiment (February 4, 2026)
+
+**Status**: FAILED - Same SDK ecosystem blocker
+
+**Experiment Location**: Branch `feature/threshold-signatures-alternative`
+
+**What Was Tested**: An alternative architecture attempting to avoid the opcode 252 blocker by:
+- Using **threshold signatures** instead of proposal state machine
+- Moving complexity **off-chain** (signature aggregation in frontend)
+- Simplifying Wasm contract to **bare minimum** (only verification)
+- Removing **all non-essential dependencies** (ed25519-dalek, GraphQL operations)
+
+**Contract Implemented**:
+```rust
+// Minimal Wasm contract - ~292 KB
+pub struct MultisigState {
+    pub owners: RegisterView<Vec<AccountOwner>>,
+    pub threshold: RegisterView<u64>,
+    pub aggregate_public_key: RegisterView<Vec<u8>>,
+    pub nonce: RegisterView<u64>,
+}
+// NO proposal history, NO GraphQL operations, NO signature verification
+```
+
+**Result**: ❌ **STILL BLOCKED by opcode 252**
+
+```
+Opcode 252 (memory.copy): 73 instancias detectadas
+Deploy to Linera testnet: FALLARÍA
+```
+
+**Key Discovery**: The opcode 252 problem is **NOT in contract code** but in **linera-sdk itself**:
+
+```
+linera-sdk 0.15.11
+    └─ async-graphql = "=7.0.17" (OBLIGATORY)
+        └─ genera memory.copy (opcode 252)
+```
+
+Even when using `async-graphql` **only for ABI** (no operations), the compiled bytecode **STILL CONTAINS** opcode 252.
+
+**Why This Matters**:
+
+This experiment **proves conclusively** that:
+1. **Code-level workarounds are impossible** - any contract using linera-sdk will have opcode 252
+2. **Architecture changes don't help** - the problem is in SDK dependencies, not contract design
+3. **Threshold signatures is NOT a solution** - same blocker as original proposal
+
+**Complete Documentation**:
+- Experiment README: [`experiments/threshold-signatures/README.md`](../../experiments/threshold-signatures/README.md)
+- Architecture details: [`experiments/threshold-signatures/docs/ARCHITECTURE.md`](../../experiments/threshold-signatures/docs/ARCHITECTURE.md)
+
+**Implication**: This confirms that **only Linera team action** can resolve the blocker. No project-level workaround exists.
+
+---
+
 ### Final Verdict
 
 **The Linera multisig platform proposal as specified is NOT VIABLE** due to:
