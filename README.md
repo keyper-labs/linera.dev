@@ -22,6 +22,7 @@ This repository contains comprehensive research and implementation proposal for 
 ### What is Linera?
 
 Linera is a blockchain protocol where each user has their own **microchain**, enabling:
+
 - High throughput through parallel execution
 - Low latency for user operations
 - Native multi-owner chain support
@@ -30,6 +31,7 @@ Linera is a blockchain protocol where each user has their own **microchain**, en
 ### Project Goal
 
 Build a platform that allows users to:
+
 1. Create multisig wallets with configurable thresholds (m-of-n)
 2. Propose, approve, and execute transactions
 3. Manage multiple signers and owner sets
@@ -156,11 +158,13 @@ See [`docs/PROPOSAL/linera-multisig-platform-proposal.md`](docs/PROPOSAL/linera-
 ## Quick Reference: Testnet Conway
 
 ### Faucet
+
 ```bash
 https://faucet.testnet-conway.linera.net
 ```
 
 ### Validators
+
 ```
 validator-1.testnet-conway.linera.net:443
 validator-2.testnet-conway.linera.net:443
@@ -168,6 +172,7 @@ validator-3.testnet-conway.linera.net:443
 ```
 
 ### Verified Commands
+
 ```bash
 # Initialize wallet
 linera wallet init --faucet https://faucet.testnet-conway.linera.net
@@ -192,12 +197,14 @@ linera query-balance "$CHAIN_ID"
 ### Multi-Owner Chain vs. Multisig Application
 
 **Multi-Owner Chain (Protocol Level)**:
+
 - ✅ Native to Linera
 - ✅ Multiple owners can propose blocks
 - ❌ NO threshold m-of-n (it's 1-of-N by default)
 - ✅ Verified working on Testnet Conway
 
 **Multisig Application (Smart Contract)**:
+
 - ✅ Custom Wasm contract with m-of-n logic
 - ✅ Thresholds, time-locks, conditions
 - ❌ Requires learning linera-sdk
@@ -244,12 +251,14 @@ These provide reference for proposal structure and estimation methodology.
 **Summary**: We CANNOT build a Safe-like multisig platform on Linera at this time.
 
 **What Works** ✅:
+
 - ✅ **Frontend** (React + @linera/client SDK) - **VIABLE**
 - ✅ **Backend API** (Node.js/TypeScript + @linera/client) - **VIABLE**
 - ✅ **Wallet Integration** (@linera/client Ed25519 keys) - **VIABLE**
 - ✅ **Multi-Owner Chains** (native Linera protocol) - **VERIFIED**
 
 **What DOES NOT Work** ❌:
+
 - 🔴 **Custom Wasm Multisig Contract** - **CANNOT DEPLOY** (opcode 252)
 - 🔴 **Threshold m-of-n Logic** - **IMPOSSIBLE** without Wasm contract
 - 🔴 **Safe-like User Experience** - **CANNOT PROVIDE** (no proposal/approve/execute)
@@ -257,6 +266,7 @@ These provide reference for proposal structure and estimation methodology.
 ### The Problem in Detail
 
 **Root Cause - Impossible Dependency Triangle**:
+
 ```
 linera-sdk 0.15.11
     └─ async-graphql = "=7.0.17" (exact version pin)
@@ -266,6 +276,7 @@ linera-sdk 0.15.11
 ```
 
 **All 8 Workaround Attempts FAILED**:
+
 | Attempt | Result |
 |---------|--------|
 | Remove .clone() operations | ❌ Breaks mutability |
@@ -278,6 +289,7 @@ linera-sdk 0.15.11
 | Combined ALL above | ❌ Still 67 opcodes remain |
 
 **Complete Evidence**:
+
 - [Technical Analysis](docs/research/LINERA_OPCODE_252_ISSUE.md)
 - [Code Analysis](docs/research/OPCODE_252_CODE_ANALYSIS.md)
 - [Test Log (27 commands)](docs/research/OPCODE_252_INVESTIGATION_LOG.md)
@@ -302,16 +314,19 @@ linera-sdk 0.15.11
 ### Only Viable Options
 
 **Option A**: Build simplified wallet (multi-owner chains only)
+
 - ✅ Shared wallet with multiple owners
 - ❌ 1-of-N (any owner can execute)
 - ❌ NOT a Safe-like multisig
 - ~300 hours (~8 weeks)
 
 **Option B**: Wait for Linera SDK team resolution
+
 - Track: [Issue #4742](https://github.com/linera-io/linera-protocol/issues/4742)
 - Timeline: UNKNOWN (not under project control)
 
 **Option C**: Choose different blockchain with working multisig
+
 - Hathor (has working multisig)
 - Ethereum (Gnosis Safe)
 

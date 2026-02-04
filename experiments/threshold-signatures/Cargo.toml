@@ -1,0 +1,27 @@
+[package]
+name = "linera-threshold-multisig"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+linera-sdk = "0.15.11"
+linera-views = "0.15.11"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+async-graphql = "7.0.17"
+
+[dev-dependencies]
+linera-sdk = { version = "0.15.11", features = ["test"] }
+
+[lib]
+name = "linera_threshold_multisig"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "linera-threshold-multisig"
+path = "src/main.rs"
+required-features = ["linera-sdk/test"]
+
+[features]
+default = []
+test = ["linera-sdk/test"]
