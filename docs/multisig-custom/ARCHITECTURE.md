@@ -41,43 +41,43 @@ The Linera Multisig Application is a **custom Wasm smart contract** that extends
 Linera provides several innovative features that this multisig application builds upon:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Linera Protocol (Native)                                       │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Multi-Owner Chains                                      │   │
-│  │ - Multiple owners per chain (verified working)          │   │
-│  │ - Co-owned by multiple keypairs                         │   │
-│  │ - ANY owner can publish applications                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Wasm Execution Environment                             │   │
-│  │ - Compile Rust to Wasm                                  │   │
-│  │ - Sandboxed execution                                   │   │
-│  │ - Deterministic gas metering                            │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ View-Based State Storage                               │   │
-│  │ - RegisterView: Single value                           │   │
-│  │ - MapView: Key-value store                             │   │
-│  │ - Automatic Merkle root calculation                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+
+  Linera Protocol (Native)                                       
+     
+   Multi-Owner Chains                                         
+   - Multiple owners per chain (verified working)             
+   - Co-owned by multiple keypairs                            
+   - ANY owner can publish applications                       
+     
+     
+   Wasm Execution Environment                                
+   - Compile Rust to Wasm                                     
+   - Sandboxed execution                                      
+   - Deterministic gas metering                               
+     
+     
+   View-Based State Storage                                  
+   - RegisterView: Single value                              
+   - MapView: Key-value store                                
+   - Automatic Merkle root calculation                       
+     
+
                               ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  Multisig Application (Custom - THIS APP)                       │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Transaction Lifecycle Management                        │   │
-│  │ - Submit → Confirm → Execute                            │   │
-│  │ - Threshold enforcement                                 │   │
-│  │ - Confirmation tracking                                 │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Owner Management                                        │   │
-│  │ - Add/Remove/Replace owners                             │   │
-│  │ - Dynamic threshold changes                             │   │
-│  │ - Authorization checks                                  │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+
+  Multisig Application (Custom - THIS APP)                       
+     
+   Transaction Lifecycle Management                           
+   - Submit → Confirm → Execute                               
+   - Threshold enforcement                                    
+   - Confirmation tracking                                    
+     
+     
+   Owner Management                                           
+   - Add/Remove/Replace owners                                
+   - Dynamic threshold changes                                
+   - Authorization checks                                     
+     
+
 ```
 
 ### How the Application Uses Linera Features
@@ -165,37 +165,37 @@ impl Service for MultisigService {
 ### Component Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Multisig Application Structure                                 │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ lib.rs (ABI Definition)                                │   │
-│  │ - MultisigOperation enum (8 operations)                │   │
-│  │ - MultisigResponse enum (8 responses)                  │   │
-│  │ - ContractAbi / ServiceAbi traits                      │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                              ↓                                   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ state.rs (State Management)                            │   │
-│  │ - MultisigState (RootView)                             │   │
-│  │ - Transaction struct                                   │   │
-│  │ - View definitions (RegisterView, MapView)             │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                              ↓                                   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ contract.rs (Business Logic)                           │   │
-│  │ - MultisigContract implementation                      │   │
-│  │ - Operation handlers (8 functions)                     │   │
-│  │ - Authorization and validation                         │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                              ↓                                   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ service.rs (Query Interface)                           │   │
-│  │ - GraphQL query handlers                               │   │
-│  │ - State read access                                    │   │
-│  │ - Type-safe responses                                  │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+
+  Multisig Application Structure                                 
+                                                                 
+     
+   lib.rs (ABI Definition)                                   
+   - MultisigOperation enum (8 operations)                   
+   - MultisigResponse enum (8 responses)                     
+   - ContractAbi / ServiceAbi traits                         
+     
+                              ↓                                   
+     
+   state.rs (State Management)                               
+   - MultisigState (RootView)                                
+   - Transaction struct                                      
+   - View definitions (RegisterView, MapView)                
+     
+                              ↓                                   
+     
+   contract.rs (Business Logic)                              
+   - MultisigContract implementation                         
+   - Operation handlers (8 functions)                        
+   - Authorization and validation                            
+     
+                              ↓                                   
+     
+   service.rs (Query Interface)                              
+   - GraphQL query handlers                                  
+   - State read access                                       
+   - Type-safe responses                                     
+     
+
 ```
 
 ### Module Responsibilities
@@ -304,24 +304,24 @@ pub struct QueryRoot;
 
 ```
 MultisigState
-├── owners: RegisterView<Vec<AccountOwner>>
-│   └── [owner1, owner2, owner3, ...]
-│
-├── threshold: RegisterView<u64>
-│   └── 3  (requires 3 confirmations)
-│
-├── nonce: RegisterView<u64>
-│   └── 42  (next transaction ID)
-│
-├── pending_transactions: MapView<u64, Transaction>
-│   ├── 0 → Transaction { to, value, data, nonce: 0, confirmations: 2, executed: false }
-│   ├── 1 → Transaction { to, value, data, nonce: 1, confirmations: 3, executed: true }
-│   └── 2 → Transaction { to, value, data, nonce: 2, confirmations: 1, executed: false }
-│
-└── confirmations: MapView<AccountOwner, Vec<u64>>
-    ├── owner1 → [0, 1, 2]  (confirmed txs 0, 1, 2)
-    ├── owner2 → [0, 1]     (confirmed txs 0, 1)
-    └── owner3 → [1]        (confirmed tx 1)
+ owners: RegisterView<Vec<AccountOwner>>
+    [owner1, owner2, owner3, ...]
+
+ threshold: RegisterView<u64>
+    3  (requires 3 confirmations)
+
+ nonce: RegisterView<u64>
+    42  (next transaction ID)
+
+ pending_transactions: MapView<u64, Transaction>
+    0 → Transaction { to, value, data, nonce: 0, confirmations: 2, executed: false }
+    1 → Transaction { to, value, data, nonce: 1, confirmations: 3, executed: true }
+    2 → Transaction { to, value, data, nonce: 2, confirmations: 1, executed: false }
+
+ confirmations: MapView<AccountOwner, Vec<u64>>
+     owner1 → [0, 1, 2]  (confirmed txs 0, 1, 2)
+     owner2 → [0, 1]     (confirmed txs 0, 1)
+     owner3 → [1]        (confirmed tx 1)
 ```
 
 ### State Transitions
@@ -370,7 +370,7 @@ Operation: ExecuteTransaction(transaction_id=0)
 State Changes:
   1. Verify caller is owner
   2. Verify not already executed
-  3. Verify confirmations >= threshold (3 >= 3) ✓
+  3. Verify confirmations >= threshold (3 >= 3) 
   4. Mark as executed
 
 Final State:
@@ -386,83 +386,83 @@ Final State:
 ### Complete Transaction Lifecycle
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Phase 1: Submission                                            │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ 1. Owner submits transaction                            │   │
-│  │ 2. System assigns unique nonce                          │   │
-│  │ 3. Transaction stored in pending_transactions           │   │
-│  │ 4. Submitter auto-confirms                              │   │
-│  │ Status: 1/X confirmations                               │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                              ↓                                   │
-│  Phase 2: Confirmation Collection                             │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ 5. Other owners call ConfirmTransaction                 │   │
-│  │ 6. Each call increments confirmation count              │   │
-│  │ 7. Confirmations tracked per-owner in MapView           │   │
-│  │ Status: 2/X, then 3/X confirmations                     │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                              ↓                                   │
-│  Phase 3: Execution                                           │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ 8. Any owner calls ExecuteTransaction                   │   │
-│  │ 9. System verifies:                                     │   │
-│  │    - Transaction exists                                 │   │
-│  │    - Not already executed                              │   │
-│  │    - confirmations >= threshold (3 >= 3)               │   │
-│  │ 10. Mark transaction as executed                        │   │
-│  │ Status: EXECUTED                                        │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+
+  Phase 1: Submission                                            
+     
+   1. Owner submits transaction                               
+   2. System assigns unique nonce                             
+   3. Transaction stored in pending_transactions              
+   4. Submitter auto-confirms                                 
+   Status: 1/X confirmations                                  
+     
+                              ↓                                   
+  Phase 2: Confirmation Collection                             
+     
+   5. Other owners call ConfirmTransaction                    
+   6. Each call increments confirmation count                 
+   7. Confirmations tracked per-owner in MapView              
+   Status: 2/X, then 3/X confirmations                        
+     
+                              ↓                                   
+  Phase 3: Execution                                           
+     
+   8. Any owner calls ExecuteTransaction                      
+   9. System verifies:                                        
+      - Transaction exists                                    
+      - Not already executed                                 
+      - confirmations >= threshold (3 >= 3)                  
+   10. Mark transaction as executed                           
+   Status: EXECUTED                                           
+     
+
 ```
 
 ### Revoke Confirmation Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Scenario: Owner wants to revoke confirmation                  │
-│                                                                 │
-│  1. Owner calls RevokeConfirmation(transaction_id)             │
-│  2. System verifies:                                           │
-│     - Caller is owner                                          │
-│     - Transaction exists                                       │
-│     - Transaction NOT executed (safety check)                  │
-│  3. Remove transaction_id from owner's confirmation list       │
-│  4. Decrement confirmation count                               │
-│  5. Status: X-1 confirmations                                  │
-└─────────────────────────────────────────────────────────────────┘
+
+  Scenario: Owner wants to revoke confirmation                  
+                                                                 
+  1. Owner calls RevokeConfirmation(transaction_id)             
+  2. System verifies:                                           
+     - Caller is owner                                          
+     - Transaction exists                                       
+     - Transaction NOT executed (safety check)                  
+  3. Remove transaction_id from owner's confirmation list       
+  4. Decrement confirmation count                               
+  5. Status: X-1 confirmations                                  
+
 ```
 
 ### Owner Management Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  AddOwner                                                       │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ 1. Any owner calls AddOwner(new_owner)                  │   │
-│  │ 2. Verify new_owner not already in list                 │   │
-│  │ 3. Append to owners list                                │   │
-│  │ 4. New owner can now participate                        │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  RemoveOwner                                                    │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ 1. Any owner calls RemoveOwner(target)                   │   │
-│  │ 2. Verify target is current owner                       │   │
-│  │ 3. CRITICAL: Check new_count >= threshold               │   │
-│  │ 4. Remove from owners list                              │   │
-│  │ 5. Threshold still valid                                │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ReplaceOwner                                                   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ 1. Any owner calls ReplaceOwner(old, new)               │   │
-│  │ 2. Verify old_owner exists                              │   │
-│  │ 3. Verify new_owner not already in list                 │   │
-│  │ 4. In-place replacement (preserves threshold)           │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+
+  AddOwner                                                       
+     
+   1. Any owner calls AddOwner(new_owner)                     
+   2. Verify new_owner not already in list                    
+   3. Append to owners list                                   
+   4. New owner can now participate                           
+     
+                                                                 
+  RemoveOwner                                                    
+     
+   1. Any owner calls RemoveOwner(target)                      
+   2. Verify target is current owner                          
+   3. CRITICAL: Check new_count >= threshold                  
+   4. Remove from owners list                                 
+   5. Threshold still valid                                   
+     
+                                                                 
+  ReplaceOwner                                                   
+     
+   1. Any owner calls ReplaceOwner(old, new)                  
+   2. Verify old_owner exists                                 
+   3. Verify new_owner not already in list                    
+   4. In-place replacement (preserves threshold)              
+     
+
 ```
 
 ---
@@ -589,15 +589,15 @@ async fn store(mut self) {
 
 | Feature | Linera Native | Multisig App | Gap Filled |
 |---------|---------------|--------------|------------|
-| **Multi-owner chains** | ✅ Yes | N/A | - |
-| **Publish applications** | ✅ (any owner) | N/A | - |
-| **Transaction submission** | ❌ | ✅ SubmitTransaction | ✅ |
-| **Confirmation tracking** | ❌ | ✅ ConfirmTransaction | ✅ |
-| **Threshold enforcement** | ❌ | ✅ ExecuteTransaction | ✅ |
-| **Owner management** | ❌ | ✅ Add/Remove/Replace | ✅ |
-| **Dynamic threshold** | ❌ | ✅ ChangeThreshold | ✅ |
-| **Revocation** | ❌ | ✅ RevokeConfirmation | ✅ |
-| **State queries** | ❌ | ✅ GraphQL Service | ✅ |
+| **Multi-owner chains** |  Yes | N/A | - |
+| **Publish applications** |  (any owner) | N/A | - |
+| **Transaction submission** |  |  SubmitTransaction |  |
+| **Confirmation tracking** |  |  ConfirmTransaction |  |
+| **Threshold enforcement** |  |  ExecuteTransaction |  |
+| **Owner management** |  |  Add/Remove/Replace |  |
+| **Dynamic threshold** |  |  ChangeThreshold |  |
+| **Revocation** |  |  RevokeConfirmation |  |
+| **State queries** |  |  GraphQL Service |  |
 
 ### Why These Gaps Exist
 
@@ -677,11 +677,11 @@ pub struct Transaction {
 
 The Linera Multisig Application successfully extends Linera's native multi-owner chain capabilities with a complete multisig wallet implementation. By leveraging Linera Views, Wasm compilation, and the SDK, it provides:
 
-- ✅ All 8 required operations
-- ✅ Strong security guarantees
-- ✅ Efficient state management
-- ✅ Type-safe GraphQL queries
-- ✅ Production-ready POC code
+-  All 8 required operations
+-  Strong security guarantees
+-  Efficient state management
+-  Type-safe GraphQL queries
+-  Production-ready POC code
 
 **Next Steps**:
 

@@ -1,7 +1,7 @@
 //! Linera Threshold Multisig Contract
 //!
-//! Contrato Wasm simplificado que usa threshold signatures.
-//! Diseñado para evitar opcode 252 causado por async-graphql.
+//! Simplified Wasm contract using threshold signatures.
+//! Designed to avoid opcode 252 caused by async-graphql.
 
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
@@ -72,10 +72,10 @@ impl Contract for ThresholdMultisigContract {
     }
 
     async fn instantiate(&mut self, _arg: InstantiationArgument) {
-        // Validar application parameters
+        // Validate application parameters
         let params = self.runtime.application_parameters();
 
-        // Validar parámetros
+        // Validate parameters
         if params.owners.is_empty() {
             panic!("Cannot create multisig with no owners");
         }
@@ -86,7 +86,7 @@ impl Contract for ThresholdMultisigContract {
             panic!("Invalid aggregate public key length");
         }
 
-        // Crear estado inicial
+        // Create initial state
         self.state.initialize(params.owners, params.threshold, params.aggregate_public_key);
     }
 
@@ -99,7 +99,7 @@ impl Contract for ThresholdMultisigContract {
                 threshold_signature: _,
                 message: _,
             } => {
-                // Verificar nonce
+                // Verify nonce
                 if nonce != self.state.nonce() {
                     return MultisigResponse {
                         success: false,
@@ -107,11 +107,11 @@ impl Contract for ThresholdMultisigContract {
                     };
                 }
 
-                // NOTA: La verificación de threshold signature se omite por ahora
-                // para poder compilar. En producción, esto es CRÍTICO.
-                // Se agregará cuando ed25519-dalek funcione correctamente en Wasm.
+                // NOTE: Threshold signature verification is omitted for now
+                // to be able to compile. In production, this is CRITICAL.
+                // Will be added when ed25519-dalek works correctly in Wasm.
 
-                // Incrementar nonce
+                // Increment nonce
                 self.state.increment_nonce();
 
                 MultisigResponse {
@@ -127,7 +127,7 @@ impl Contract for ThresholdMultisigContract {
                 nonce,
                 threshold_signature: _,
             } => {
-                // Verificar nonce
+                // Verify nonce
                 if nonce != self.state.nonce() {
                     return MultisigResponse {
                         success: false,
@@ -135,9 +135,9 @@ impl Contract for ThresholdMultisigContract {
                     };
                 }
 
-                // NOTA: La verificación de threshold signature se omite por ahora
+                // NOTE: Threshold signature verification is omitted for now
 
-                // Actualizar configuración
+                // Update configuration
                 self.state.update_config(new_owners, new_threshold, new_aggregate_key);
 
                 MultisigResponse {

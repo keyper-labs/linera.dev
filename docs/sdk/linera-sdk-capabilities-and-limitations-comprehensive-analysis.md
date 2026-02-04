@@ -37,22 +37,22 @@ The Linera SDK (`linera-sdk`) is a **Rust-based WebAssembly framework** for buil
 Every Linera application consists of **two separate Wasm binaries**:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Linera Application                       │
-├──────────────────────────────────┬──────────────────────────┤
-│         Contract (Wasm)          │       Service (Wasm)      │
-├──────────────────────────────────┼──────────────────────────┤
-│ • Handles state changes          │ • Read-only queries       │
-│ • Executes operations            │ • GraphQL interface       │
-│ • Processes messages             │ • Cannot modify storage   │
-│ • Gas-metered                    │ • Not gas-metered         │
-│ • Write access to state          │ • Read access to state    │
-└──────────────────────────────────┴──────────────────────────┘
+
+                    Linera Application                       
+
+         Contract (Wasm)                 Service (Wasm)      
+
+ • Handles state changes           • Read-only queries       
+ • Executes operations             • GraphQL interface       
+ • Processes messages              • Cannot modify storage   
+ • Gas-metered                     • Not gas-metered         
+ • Write access to state           • Read access to state    
+
                         ↓
-                ┌──────────────────┐
-                │  Shared Storage  │
-                │  (linera-views)  │
-                └──────────────────┘
+                
+                  Shared Storage  
+                  (linera-views)  
+                
 ```
 
 ### Contract Trait
@@ -90,7 +90,7 @@ pub trait Service: WithServiceAbi + ServiceAbi + Sized {
 
 ## What You CAN Do with the SDK
 
-### 1. **State Management** ✅
+### 1. **State Management** 
 
 #### View System (linera-views)
 
@@ -126,7 +126,7 @@ impl RootView for FungibleTokenState {
 - Automatic batching
 - Reentrant access patterns
 
-### 2. **Multi-Owner Chains** ✅
+### 2. **Multi-Owner Chains** 
 
 Linera supports **native multi-owner chains** through `ChainOwnership`:
 
@@ -172,7 +172,7 @@ linera change-ownership --chain-id <CHAIN> --owners NEW_OWNER1,NEW_OWNER2
 
 **This is CRITICAL for multisig**: You can create a chain where N owners must collectively sign transactions.
 
-### 3. **Cross-Application Calls** ✅
+### 3. **Cross-Application Calls** 
 
 Contracts can call other contracts synchronously:
 
@@ -202,7 +202,7 @@ let response = self.runtime
 - Reuse functionality (e.g., token transfers)
 - Build complex DeFi protocols
 
-### 4. **Cross-Chain Messaging** ✅
+### 4. **Cross-Chain Messaging** 
 
 Asynchronous messaging between chains:
 
@@ -240,7 +240,7 @@ self.runtime
     .send_to(target_account.chain_id);
 ```
 
-### 5. **Event Streams** ✅
+### 5. **Event Streams** 
 
 Publish and subscribe to event streams:
 
@@ -273,7 +273,7 @@ async fn process_streams(&mut self, updates: Vec<StreamUpdate>)
 - Event-driven architectures
 - Cross-chain coordination
 
-### 6. **Dynamic Application Creation** ✅
+### 6. **Dynamic Application Creation** 
 
 Contracts can create new applications:
 
@@ -292,7 +292,7 @@ pub fn create_application<Abi, Parameters, InstantiationArgument>(
 - Dynamic deployment
 - Application templates
 
-### 7. **Module Publishing** ✅
+### 7. **Module Publishing** 
 
 Publish Wasm bytecode for contracts and services:
 
@@ -310,7 +310,7 @@ pub fn publish_module(
 - Upgrade applications
 - Share modules across applications
 
-### 8. **Chain Management** ✅
+### 8. **Chain Management** 
 
 Contracts can open and close chains:
 
@@ -338,7 +338,7 @@ pub fn change_application_permissions(
 - Hierarchical chain structures
 - Permission management
 
-### 9. **HTTP Oracle Calls** ✅
+### 9. **HTTP Oracle Calls** 
 
 Make HTTP requests as an oracle:
 
@@ -356,7 +356,7 @@ pub fn http_request(&mut self, request: http::Request) -> http::Response
 - External data feeds
 - Cross-chain bridges (with caution)
 
-### 10. **Time Assertions** ✅
+### 10. **Time Assertions** 
 
 Enforce time-based constraints:
 
@@ -373,7 +373,7 @@ pub fn assert_before(&mut self, timestamp: Timestamp)
 - Time-locked operations
 - Expiration logic
 
-### 11. **Data Blob Storage** ✅
+### 11. **Data Blob Storage** 
 
 Store and retrieve large data blobs:
 
@@ -393,7 +393,7 @@ pub fn assert_data_blob_exists(&mut self, hash: DataBlobHash)
 - Metadata storage
 - Cross-chain data sharing
 
-### 12. **Permission Checks** ✅
+### 12. **Permission Checks** 
 
 Verify account permissions:
 
@@ -409,7 +409,7 @@ pub fn check_account_permission(
 - Access control
 - Multi-sig validation
 
-### 13. **Balance Queries** ✅
+### 13. **Balance Queries** 
 
 Query chain and account balances:
 
@@ -421,13 +421,13 @@ pub fn chain_balance(&mut self) -> Amount
 pub fn owner_balance(&mut self, owner: AccountOwner) -> Amount
 ```
 
-### 14. **Chain Ownership Queries** ✅
+### 14. **Chain Ownership Queries** 
 
 ```rust
 pub fn chain_ownership(&mut self) -> ChainOwnership
 ```
 
-### 15. **Service Queries** ✅
+### 15. **Service Queries** 
 
 Services can query other applications:
 
@@ -439,7 +439,7 @@ pub fn query_application<A: ServiceAbi>(
 ) -> A::QueryResponse
 ```
 
-### 16. **Service Operations Scheduling** ✅
+### 16. **Service Operations Scheduling** 
 
 Services can schedule operations:
 
@@ -451,7 +451,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 
 ## What You CANNOT Do with the SDK
 
-### 1. **Direct Database Access** ❌
+### 1. **Direct Database Access** 
 
 **Limitation**: You cannot directly access databases, file systems, or external storage.
 
@@ -460,7 +460,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 - All state must go through the view abstraction
 - No SQL, no direct file I/O
 
-### 2. **Network I/O (Except Oracle)** ❌
+### 2. **Network I/O (Except Oracle)** 
 
 **Limitation**: Cannot make arbitrary network calls.
 
@@ -469,7 +469,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 - Only deterministic queries allowed
 - Cannot call arbitrary APIs
 
-### 3. **Async/Await in Traditional Sense** ❌
+### 3. **Async/Await in Traditional Sense** 
 
 **Limitation**: While the SDK uses `async fn`, this is for Wasm compatibility, not true async concurrency.
 
@@ -478,7 +478,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 - No concurrent task spawning
 - `async` is a requirement for the Wasm host interface
 
-### 4. **Direct Access to Other Chains** ❌
+### 4. **Direct Access to Other Chains** 
 
 **Limitation**: Cannot directly read or modify state on other chains.
 
@@ -487,7 +487,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 - Use cross-application calls (same chain only)
 - Queries through services are read-only
 
-### 5. **Floating Point Arithmetic** ❌
+### 5. **Floating Point Arithmetic** 
 
 **Limitation**: Wasm doesn't guarantee deterministic floating point.
 
@@ -496,7 +496,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 - Use integer arithmetic
 - All financial calculations use fixed-point
 
-### 6. **Random Number Generation** ❌
+### 6. **Random Number Generation** 
 
 **Limitation**: Cannot generate random numbers directly (non-deterministic).
 
@@ -505,7 +505,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 - Use oracle-provided randomness
 - Use VRFs (Verifiable Random Functions)
 
-### 7. **Direct Cryptographic Operations** ❌
+### 7. **Direct Cryptographic Operations** 
 
 **Limitation**: Limited access to cryptographic primitives.
 
@@ -519,7 +519,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 - Arbitrary signature algorithms
 - Direct keypair generation in contracts
 
-### 8. **Unbounded Loops** ❌
+### 8. **Unbounded Loops** 
 
 **Limitation**: Gas metering prevents unbounded computation.
 
@@ -528,19 +528,19 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 - Large iterations will hit gas limits
 - Need pagination for large datasets
 
-### 9. **Direct Memory Access** ❌
+### 9. **Direct Memory Access** 
 
 **Limitation**: No direct pointer manipulation or unsafe memory access.
 
 **Reasoning**: Wasm security model
 
-### 10. **Operating System Calls** ❌
+### 10. **Operating System Calls** 
 
 **Limitation**: No syscalls, no process spawning, no threads.
 
 **Reasoning**: Wasm sandbox
 
-### 11. **Dynamic Code Loading** ❌
+### 11. **Dynamic Code Loading** 
 
 **Limitation**: Cannot load arbitrary code at runtime (except through published modules).
 
@@ -549,7 +549,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 - Use `create_application` for instantiation
 - No `eval()` or dynamic compilation
 
-### 12. **GraphQL Writes** ❌
+### 12. **GraphQL Writes** 
 
 **Limitation**: Services (GraphQL) cannot modify state.
 
@@ -558,7 +558,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 - Use operations (through contracts) for writes
 - Services can `schedule_operation()` but not execute
 
-### 13. **Fast Block Restrictions** ❌
+### 13. **Fast Block Restrictions** 
 
 **Limitation**: Certain operations cannot be used in fast blocks:
 - `http_request()`
@@ -569,7 +569,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 - Use regular owner blocks for these operations
 - Design around fast block limitations
 
-### 14. **Cross-Application Call Limitations** ❌
+### 14. **Cross-Application Call Limitations** 
 
 **Limitation**: Cross-application calls are synchronous and same-chain only.
 
@@ -582,7 +582,7 @@ pub fn schedule_operation(&self, operation: &impl Serialize)
 
 ## Multisig-Specific Capabilities
 
-### Native Multi-Owner Support ✅
+### Native Multi-Owner Support 
 
 The SDK provides **native support for multi-owner chains**, which is the foundation for multisig:
 
@@ -605,7 +605,7 @@ let ownership = ChainOwnership::multiple(
 let chain_id = runtime.open_chain(ownership, permissions, balance);
 ```
 
-### Application-Level Multisig ✅
+### Application-Level Multisig 
 
 You can build **application-level multisig** on top of the SDK:
 
@@ -638,7 +638,7 @@ struct Proposal {
 3. **Execute**: Execute if threshold reached
 4. **Revoke**: Remove approval
 
-### Cross-Chain Multisig ✅
+### Cross-Chain Multisig 
 
 Using messaging, you can build **cross-chain multisig**:
 
@@ -729,13 +729,13 @@ async fn store(mut self) {
 
 ### Message Guarantees
 
-✅ **Guaranteed**:
+ **Guaranteed**:
 - Exactly-once delivery
 - Ordered delivery (within a channel)
 - No duplicates
 - No reordering
 
-❌ **Not Guaranteed**:
+ **Not Guaranteed**:
 - Immediate delivery (depends on block inclusion)
 - Low latency (cross-chain has latency)
 
@@ -823,7 +823,7 @@ The SDK tracks:
 
 ## Critical Limitations
 
-### 1. No Native Multisig Application ❌
+### 1. No Native Multisig Application 
 
 **Issue**: There is no built-in multisig application in the SDK.
 
@@ -831,25 +831,25 @@ The SDK tracks:
 - Multi-owner chains (for chain-level multisig)
 - Application-level logic (for flexible multisig)
 
-### 2. Cross-Application Calls Are Same-Chain Only ❌
+### 2. Cross-Application Calls Are Same-Chain Only 
 
 **Issue**: `call_application()` only works on the same chain.
 
 **Solution**: Use messaging for cross-chain coordination.
 
-### 3. GraphQL Cannot Write State ❌
+### 3. GraphQL Cannot Write State 
 
 **Issue**: Services (GraphQL) are read-only.
 
 **Solution**: Use operations for writes, GraphQL for queries.
 
-### 4. Fast Block Restrictions ❌
+### 4. Fast Block Restrictions 
 
 **Issue**: Oracle calls and time assertions don't work in fast blocks.
 
 **Solution**: Use regular owner blocks for these operations.
 
-### 5. No Direct Access to Other Chain State ❌
+### 5. No Direct Access to Other Chain State 
 
 **Issue**: Cannot query other chain state directly.
 
@@ -862,31 +862,31 @@ The SDK tracks:
 ### Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Frontend (TypeScript)                    │
-│              React + @linera/client SDK                     │
-└─────────────────────────────────────────────────────────────┘
+
+                    Frontend (TypeScript)                    
+              React + @linera/client SDK                     
+
                               ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    Backend (Node.js)                        │
-│              REST API + @linera/client SDK                  │
-└─────────────────────────────────────────────────────────────┘
+
+                    Backend (Node.js)                        
+              REST API + @linera/client SDK                  
+
                               ↓
-┌─────────────────────────────────────────────────────────────┐
-│              Linera Multisig Application (Wasm)             │
-├─────────────────────────────────────────────────────────────┤
-│  Contract:                                                  │
-│  • Multi-owner chain (3-of-5, 2-of-3, etc.)                │
-│  • Proposal management                                      │
-│  • Approval aggregation                                     │
-│  • Threshold validation                                     │
-│  • Execution logic                                          │
-├─────────────────────────────────────────────────────────────┤
-│  Service:                                                   │
-│  • Query proposals                                          │
-│  • Query approvals                                          │
-│  • Query multisig configuration                            │
-└─────────────────────────────────────────────────────────────┘
+
+              Linera Multisig Application (Wasm)             
+
+  Contract:                                                  
+  • Multi-owner chain (3-of-5, 2-of-3, etc.)                
+  • Proposal management                                      
+  • Approval aggregation                                     
+  • Threshold validation                                     
+  • Execution logic                                          
+
+  Service:                                                   
+  • Query proposals                                          
+  • Query approvals                                          
+  • Query multisig configuration                            
+
 ```
 
 ### State Design
@@ -963,14 +963,14 @@ The Linera SDK is a **powerful and capable framework** for building complex bloc
 
 ### Key Takeaways
 
-✅ **Strengths**:
+ **Strengths**:
 - Native multi-owner chain support
 - Sophisticated cross-chain messaging
 - Powerful views system for state management
 - Composable applications
 - Strong security model
 
-❌ **Limitations**:
+ **Limitations**:
 - No built-in multisig application (must build custom)
 - Cross-application calls are same-chain only
 - GraphQL is read-only
@@ -978,7 +978,7 @@ The Linera SDK is a **powerful and capable framework** for building complex bloc
 
 ### For Multisig Platform
 
-**Feasibility**: ✅ **HIGHLY FEASIBLE**
+**Feasibility**:  **HIGHLY FEASIBLE**
 
 **Recommended Approach**:
 1. Use multi-owner chains for foundation
@@ -1003,6 +1003,6 @@ The Linera SDK is a **powerful and capable framework** for building complex bloc
 
 ---
 
-**Document Status**: ✅ Complete
+**Document Status**:  Complete
 **Next Review**: After testnet validation
 **Maintainer**: Claude Code (Research Agent)

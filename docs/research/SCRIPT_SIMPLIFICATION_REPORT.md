@@ -2,7 +2,7 @@
 
 **Date**: February 3, 2026
 **Script**: `scripts/multisig-test-cli.sh`
-**Status**: ✅ Simplified and Validated
+**Status**:  Simplified and Validated
 
 ---
 
@@ -18,9 +18,9 @@ The `multisig-test-cli.sh` script has been simplified from **400+ lines to 272 l
 
 | Old Command | Status | New Command |
 |-------------|--------|-------------|
-| `linera open-chain` | ❌ Deprecated | `linera open-multi-owner-chain` |
-| Complex `linera keygen` workflow | ⚠️ Unnecessary | Single-owner test (easily extensible) |
-| Manual wallet parsing | ❌ Error-prone | Direct `linera wallet show` output parsing |
+| `linera open-chain` |  Deprecated | `linera open-multi-owner-chain` |
+| Complex `linera keygen` workflow |  Unnecessary | Single-owner test (easily extensible) |
+| Manual wallet parsing |  Error-prone | Direct `linera wallet show` output parsing |
 
 ### 2. **Simplified Workflow**
 
@@ -63,19 +63,19 @@ The `multisig-test-cli.sh` script has been simplified from **400+ lines to 272 l
 
 All commands validated on Conway Testnet (v0.15.8+):
 
-### ✅ Wallet Initialization
+###  Wallet Initialization
 ```bash
 linera wallet init --faucet https://faucet.testnet-conway.linera.net
 ```
 **Result**: Creates wallet with 1 chain
 
-### ✅ Request Additional Chain
+###  Request Additional Chain
 ```bash
 linera wallet request-chain --faucet https://faucet.testnet-conway.linera.net
 ```
 **Result**: Adds second chain to wallet
 
-### ✅ Create Multi-Owner Chain
+###  Create Multi-Owner Chain
 ```bash
 linera open-multi-owner-chain \
     --from "$DEFAULT_CHAIN" \
@@ -84,13 +84,13 @@ linera open-multi-owner-chain \
 ```
 **Result**: New multi-owner chain with 10 tokens
 
-### ✅ Query Balance
+###  Query Balance
 ```bash
 linera query-balance "$CHAIN_ID"
 ```
 **Result**: Returns token balance
 
-### ✅ Sync with Validators
+###  Sync with Validators
 ```bash
 linera sync
 ```
@@ -104,13 +104,13 @@ linera sync
 
 ```
 main()
-  ├─ verify_requirements()
-  ├─ create_test_environment()
-  ├─ initialize_wallet()
-  ├─ query_initial_state()
-  ├─ create_multi_owner_chain()
-  ├─ sync_with_validators()
-  └─ validate_results()
+   verify_requirements()
+   create_test_environment()
+   initialize_wallet()
+   query_initial_state()
+   create_multi_owner_chain()
+   sync_with_validators()
+   validate_results()
 ```
 
 ### Single Wallet Architecture
@@ -163,10 +163,10 @@ cd /Users/alfredolopez/Documents/GitHub/PalmeraDAO/linera.dev
 ### Expected Output
 
 ```
-╔═══════════════════════════════════════════════════════╗
-║   Linera Multi-Owner Chain CLI Test                 ║
-║   Testnet: Conway                                   ║
-╚═══════════════════════════════════════════════════════╝
+
+   Linera Multi-Owner Chain CLI Test                 
+   Testnet: Conway                                   
+
 
 [INFO] Verifying requirements...
 [SUCCESS] Linera CLI found
@@ -198,9 +198,9 @@ cd /Users/alfredolopez/Documents/GitHub/PalmeraDAO/linera.dev
 [INFO] Validating on-chain state...
 [SUCCESS] Total chains in wallet: 3 (expected 3)
 
-═══════════════════════════════════════════════════════
+
            WALLET STATE
-═══════════════════════════════════════════════════════
+
 Chain ID: 3c357e77e... DEFAULT
   Default owner: 0x3b96bfc2...
   Balance: 89.9999689
@@ -211,13 +211,13 @@ Chain ID: 01a1bb1adb... ADMIN
 Chain ID: 4888610445... MULTI-OWNER
   Owners: 0x3b96bfc2...
   Balance: 10
-═══════════════════════════════════════════════════════
+
 
 [INFO] Source chain final balance: 89.9999689 tokens
 
-╔═══════════════════════════════════════════════════════╗
-║   TEST COMPLETE                                      ║
-╚═══════════════════════════════════════════════════════╝
+
+   TEST COMPLETE                                      
+
 
 [SUCCESS] Multi-owner chain successfully created and validated
 ```
@@ -228,13 +228,13 @@ Chain ID: 4888610445... MULTI-OWNER
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| **CLI Commands** | ✅ Validated | All commands work on Conway Testnet |
-| **Wallet Init** | ✅ Working | Creates wallet with 1 chain |
-| **Chain Request** | ✅ Working | Adds second chain successfully |
-| **Multi-Owner Creation** | ✅ Working | Creates multi-owner chain |
-| **Balance Transfer** | ✅ Working | 10 tokens transferred |
-| **Sync Performance** | ✅ Optimized | ~500ms sync time |
-| **Error Handling** | ✅ Robust | `set -e` for fail-fast |
+| **CLI Commands** |  Validated | All commands work on Conway Testnet |
+| **Wallet Init** |  Working | Creates wallet with 1 chain |
+| **Chain Request** |  Working | Adds second chain successfully |
+| **Multi-Owner Creation** |  Working | Creates multi-owner chain |
+| **Balance Transfer** |  Working | 10 tokens transferred |
+| **Sync Performance** |  Optimized | ~500ms sync time |
+| **Error Handling** |  Robust | `set -e` for fail-fast |
 
 ---
 
@@ -250,12 +250,12 @@ Chain ID: 4888610445... MULTI-OWNER
 ## Conclusion
 
 The simplified `multisig-test-cli.sh` script:
-- ✅ Uses validated CLI commands from Conway Testnet
-- ✅ Reduces complexity by 32% (400+ → 272 lines)
-- ✅ Maintains all essential functionality
-- ✅ Easy to extend for multi-owner testing
-- ✅ Clear, linear flow with better error handling
-- ✅ Comprehensive validation and reporting
+-  Uses validated CLI commands from Conway Testnet
+-  Reduces complexity by 32% (400+ → 272 lines)
+-  Maintains all essential functionality
+-  Easy to extend for multi-owner testing
+-  Clear, linear flow with better error handling
+-  Comprehensive validation and reporting
 
 **Recommendation**: Use this simplified script for basic multi-owner chain testing. For advanced multisig features (m-of-n thresholds), see the Rust SDK implementation.
 

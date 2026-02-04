@@ -7,35 +7,35 @@ Asynchronous communication between microchains.
 Unlike single-chain blockchains where all state is shared, Linera chains are isolated except for explicit message passing. This enables scalability while allowing application composition.
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                   CROSS-CHAIN MESSAGING                             │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│   Chain A                          Chain B                          │
-│   ───────                          ───────                          │
-│                                                                      │
-│   ┌─────────────┐                  ┌─────────────┐                  │
-│   │  Operation  │                  │   Message   │                  │
-│   │  (Local)    │                  │   (Remote)  │                  │
-│   └──────┬──────┘                  └──────┬──────┘                  │
-│          │                                │                         │
-│          │  State change                  │  State change           │
-│          │  on Chain A                    │  on Chain B             │
-│          │                                │                         │
-│          ▼                                ▼                         │
-│   ┌─────────────┐                  ┌─────────────┐                  │
-│   │  Synchronous│                  │  Asynchronous│                  │
-│   │  Execution  │                  │  Execution  │                  │
-│   │             │                  │  (via inbox)│                  │
-│   │  Immediate  │                  │             │                  │
-│   │  result     │                  │  Delayed    │                  │
-│   │             │                  │  result     │                  │
-│   └─────────────┘                  └─────────────┘                  │
-│                                                                      │
-│   Key difference: Messages don't execute immediately.                │
-│   They wait in the target chain's inbox for processing.              │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+
+                   CROSS-CHAIN MESSAGING                             
+
+                                                                      
+   Chain A                          Chain B                          
+                                                       
+                                                                      
+                                       
+     Operation                       Message                     
+     (Local)                         (Remote)                    
+                                       
+                                                                   
+            State change                    State change           
+            on Chain A                      on Chain B             
+                                                                   
+                                                                   
+                                       
+     Synchronous                    Asynchronous                  
+     Execution                      Execution                    
+                                    (via inbox)                  
+     Immediate                                                   
+     result                         Delayed                      
+                                    result                       
+                                       
+                                                                      
+   Key difference: Messages don't execute immediately.                
+   They wait in the target chain's inbox for processing.              
+                                                                      
+
 ```
 
 ## Message Flow
@@ -60,54 +60,54 @@ sequenceDiagram
 ## Inbox/Outbox Model
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    INBOX / OUTBOX MODEL                             │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│   SOURCE CHAIN                                                       │
-│   ────────────                                                       │
-│   ┌─────────────────────────────────────────────────────────────┐  │
-│   │                     OUTBOX                                   │  │
-│   │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐           │  │
-│   │  │ Msg to B│ │ Msg to C│ │ Msg to D│ │ Msg to B│           │  │
-│   │  │ (ID: 1) │ │ (ID: 2) │ │ (ID: 3) │ │ (ID: 4) │           │  │
-│   │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘           │  │
-│   │       └───────────┴───────────┴───────────┘                │  │
-│   │                   │                                        │  │
-│   └───────────────────┼────────────────────────────────────────┘  │
-│                       │                                             │
-│                       ▼ Broadcast to validators                     │
-│            ┌─────────────────────┐                                  │
-│            │  Validator Network  │                                  │
-│            └──────────┬──────────┘                                  │
-│                       │                                             │
-│                       ▼ Route to target                             │
-│   TARGET CHAIN                                                       │
-│   ────────────                                                       │
-│   ┌─────────────────────────────────────────────────────────────┐  │
-│   │                     INBOX                                    │  │
-│   │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐           │  │
-│   │  │From A:1 │ │From A:2 │ │From C:1 │ │From A:4 │           │  │
-│   │  │[pending]│ │[pending]│ │[pending]│ │[pending]│           │  │
-│   │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘           │  │
-│   │       └───────────┴───────────┴───────────┘                │  │
-│   │                   │                                        │  │
-│   └───────────────────┼────────────────────────────────────────┘  │
-│                       │                                             │
-│                       ▼ Owner selects for next block                │
-│              ┌─────────────────┐                                    │
-│              │  Process &      │                                    │
-│              │  Remove from    │                                    │
-│              │  inbox          │                                    │
-│              └─────────────────┘                                    │
-│                                                                      │
-│   Key Properties:                                                    │
-│   • Outbox: Ordered, FIFO                                            │
-│   • Inbox: Messages must be processed in order per origin            │
-│   • Owner decides which messages to include                          │
-│   • Validators guarantee delivery (tracked messages)                 │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+
+                    INBOX / OUTBOX MODEL                             
+
+                                                                      
+   SOURCE CHAIN                                                       
+                                                          
+     
+                        OUTBOX                                     
+                     
+      Msg to B  Msg to C  Msg to D  Msg to B             
+      (ID: 1)   (ID: 2)   (ID: 3)   (ID: 4)              
+                     
+                            
+                                                                
+     
+                                                                    
+                        Broadcast to validators                     
+                                              
+              Validator Network                                    
+                                              
+                                                                    
+                        Route to target                             
+   TARGET CHAIN                                                       
+                                                          
+     
+                        INBOX                                      
+                     
+     From A:1  From A:2  From C:1  From A:4              
+     [pending] [pending] [pending] [pending]             
+                     
+                            
+                                                                
+     
+                                                                    
+                        Owner selects for next block                
+                                                  
+                Process &                                          
+                Remove from                                        
+                inbox                                              
+                                                  
+                                                                      
+   Key Properties:                                                    
+   • Outbox: Ordered, FIFO                                            
+   • Inbox: Messages must be processed in order per origin            
+   • Owner decides which messages to include                          
+   • Validators guarantee delivery (tracked messages)                 
+                                                                      
+
 ```
 
 ## Message Types
@@ -156,26 +156,26 @@ Guaranteed delivery with confirmation:
 
 ```
 Source Chain                    Target Chain
-────────────                    ────────────
-    │                                │
-    │  Send tracked message          │
-    │ ──────────────────────────────▶│
-    │                                │
-    │                       ┌────────┴───────┐
-    │                       │ Processed?     │
-    │                       └────────┬───────┘
-    │                                │
-    │              ┌─────────────────┴───────────────┐
-    │              │                                 │
-    │              ▼                                 ▼
-    │      ┌───────────────┐            ┌───────────────┐
-    │      │ Success       │            │ Failure       │
-    │      │ Delivery proof│            │ Bounce back   │
-    │      └───────┬───────┘            └───────┬───────┘
-    │              │                            │
-    │◀─────────────┘                    ◀───────┘
-    │
-    │  Application can react to bounce
+                    
+                                    
+      Send tracked message          
+     
+                                    
+                           
+                            Processed?     
+                           
+                                    
+                  
+                                                   
+                                                   
+                      
+           Success                    Failure       
+           Delivery proof             Bounce back   
+                      
+                                              
+                        
+    
+      Application can react to bounce
 ```
 
 ### Bouncing Messages
@@ -238,31 +238,31 @@ pub struct MessageContext {
 ## Ordering Guarantees
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    ORDERING GUARANTEES                              │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│   Per-Origin Ordering:                                               │
-│   ┌─────────┐                                                        │
-│   │ Chain A │ ──Msg1──Msg2──Msg3──▶ Chain B                          │
-│   └─────────┘        Must process in order: 1, 2, 3                  │
-│                                                                      │
-│   Cannot process Msg2 before Msg1                                    │
-│   Can skip Msg1 (if skipping kind) and process Msg2                  │
-│                                                                      │
-│   ─────────────────────────────────────────────────────────────────  │
-│                                                                      │
-│   Cross-Origin Independence:                                         │
-│   ┌─────────┐ ──MsgA1──MsgA2──▶                                     │
-│   │ Chain A │                                                        │
-│   └─────────┘                                                        │
-│   ┌─────────┐ ──MsgB1──MsgB2──▶ Chain C                              │
-│   │ Chain B │                                                        │
-│   └─────────┘        Order: A1, B1, A2, B2 (interleaved OK)         │
-│                                                                      │
-│   No ordering requirement between different source chains            │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+
+                    ORDERING GUARANTEES                              
+
+                                                                      
+   Per-Origin Ordering:                                               
+                                                           
+    Chain A  Msg1Msg2Msg3 Chain B                          
+           Must process in order: 1, 2, 3                  
+                                                                      
+   Cannot process Msg2 before Msg1                                    
+   Can skip Msg1 (if skipping kind) and process Msg2                  
+                                                                      
+     
+                                                                      
+   Cross-Origin Independence:                                         
+    MsgA1MsgA2                                     
+    Chain A                                                         
+                                                           
+    MsgB1MsgB2 Chain C                              
+    Chain B                                                         
+           Order: A1, B1, A2, B2 (interleaved OK)         
+                                                                      
+   No ordering requirement between different source chains            
+                                                                      
+
 ```
 
 ## Latency

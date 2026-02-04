@@ -51,31 +51,31 @@ flowchart TB
 
 ```
 User Action                           System Response
-───────────                           ───────────────
+                           
                                       
-┌─────────────┐                       ┌─────────────┐
-│  Request    │                       │             │
-│  New Chain  │                       │             │
-└──────┬──────┘                       │             │
-       │                              │             │
-       ▼                              │             │
-┌─────────────┐                       │             │
-│  Generate   │                       │             │
-│  Chain ID   │                       │             │
-└──────┬──────┘                       │             │
-       │                              │             │
-       ▼                              │             │
-┌─────────────┐                       │             │
-│  Create     │                       │             │
-│  Genesis    │                       │             │
-│  Block      │──────────────────────▶│  Validator  │
-└──────┬──────┘                       │  Accepts    │
-       │                              │  Chain      │
-       ▼                              └─────────────┘
-┌─────────────┐                       ┌─────────────┐
-│  Add to     │                       │  Chain      │
-│  Wallet     │                       │  Active     │
-└─────────────┘                       └─────────────┘
+                       
+  Request                                        
+  New Chain                                      
+                                    
+                                                  
+                                                  
+                                    
+  Generate                                       
+  Chain ID                                       
+                                    
+                                                  
+                                                  
+                                    
+  Create                                         
+  Genesis                                        
+  Block        Validator  
+                         Accepts    
+                                       Chain      
+                                     
+                       
+  Add to                              Chain      
+  Wallet                              Active     
+                       
 
 Timeline: ~1-2 seconds
 ```
@@ -84,48 +84,48 @@ Timeline: ~1-2 seconds
 
 ```
 Step 1: Owner Identification                    Step 2: Chain Creation
-───────────────────────────                     ─────────────────────
+                     
 
-┌─────────┐   ┌─────────┐   ┌─────────┐         ┌─────────────┐
-│ Owner A │   │ Owner B │   │ Owner C │         │  Main Chain │
-│(Creator)│   │         │   │         │         │  (Parent)   │
-└────┬────┘   └────┬────┘   └────┬────┘         └──────┬──────┘
-     │             │             │                      │
-     │  Collect    │  Public     │  Public              │
-     │  Public     │  Keys       │  Keys                │
-     │  Keys       │             │                      │
-     └─────────────┴─────────────┘                      │
-                   │                                    │
-                   ▼                                    ▼
-          ┌─────────────┐                      ┌─────────────┐
-          │  Configure  │─────────────────────▶│  Open-Multi-│
-          │  Ownership  │                      │  Owner-Chain│
-          │  (N-of-N)   │                      │  Operation  │
-          └─────────────┘                      └──────┬──────┘
-                                                      │
-                                                      ▼
-                                             ┌─────────────┐
-                                             │  Genesis    │
-                                             │  Block with │
-                                             │  All Owners │
-                                             └─────────────┘
+               
+ Owner A     Owner B     Owner C            Main Chain 
+(Creator)                                   (Parent)   
+               
+                                                     
+       Collect      Public       Public              
+       Public       Keys         Keys                
+       Keys                                          
+                           
+                                                       
+                                                       
+                                
+            Configure    Open-Multi-
+            Ownership                          Owner-Chain
+            (N-of-N)                           Operation  
+                                
+                                                      
+                                                      
+                                             
+                                               Genesis    
+                                               Block with 
+                                               All Owners 
+                                             
 
 Step 3: Owner Configuration                     Step 4: Chain Active
-───────────────────────────                     ───────────────────
+                     
 
-┌─────────────┐                                 ┌─────────────┐
-│  Each Owner │                                 │  Multi-Owner│
-│  Receives   │                                 │  Chain      │
-│  Chain ID   │                                 │  Operational│
-└──────┬──────┘                                 └──────┬──────┘
-       │                                              │
-       ▼                                              ▼
-┌─────────────┐                                 ┌─────────────┐
-│  Add to     │                                 │  Consensus: │
-│  Local      │                                 │  Multi-     │
-│  Wallet     │                                 │  Leader     │
-└─────────────┘                                 │  (1-of-N)   │
-                                                └─────────────┘
+                                 
+  Each Owner                                    Multi-Owner
+  Receives                                      Chain      
+  Chain ID                                      Operational
+                                 
+                                                     
+                                                     
+                                 
+  Add to                                        Consensus: 
+  Local                                         Multi-     
+  Wallet                                        Leader     
+                                   (1-of-N)   
+                                                
 
 Note: For m-of-N threshold, deploy custom application contract
 ```
@@ -133,55 +133,55 @@ Note: For m-of-N threshold, deploy custom application contract
 ## Consensus Rounds
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        CONSENSUS ROUNDS                             │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ROUND TYPE 1: FAST ROUNDS                                          │
-│  ┌─────────────┐                                                    │
-│  │ Super-Owner │  Only designated super-owner can propose           │
-│  │  Proposes   │  Minimal latency, no contention                    │
-│  └──────┬──────┘                                                    │
-│         │                                                           │
-│         ▼                                                           │
-│  ┌─────────────┐                                                    │
-│  │  Validators │  Quick validation and execution                    │
-│  │  Execute    │                                                    │
-│  └─────────────┘                                                    │
-│                                                                     │
-│  ROUND TYPE 2: MULTI-LEADER ROUNDS                                  │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐                               │
-│  │ Owner A │ │ Owner B │ │ Owner C │  Any owner can propose         │
-│  │ Can     │ │ Can     │ │ Can     │  Handles occasional contention │
-│  │ Propose │ │ Propose │ │ Propose │                                │
-│  └────┬────┘ └────┬────┘ └────┬────┘                               │
-│       │           │           │                                     │
-│       └───────────┼───────────┘                                     │
-│                   ▼                                                 │
-│            ┌─────────────┐                                          │
-│            │  Select     │  Round-robin with timeout fallback       │
-│            │  Proposer   │                                          │
-│            └──────┬──────┘                                          │
-│                   │                                                 │
-│                   ▼                                                 │
-│            ┌─────────────┐                                          │
-│            │  Execute    │                                          │
-│            └─────────────┘                                          │
-│                                                                     │
-│  ROUND TYPE 3: SINGLE-LEADER ROUNDS                                 │
-│  ┌─────────┬─────────┬─────────┬─────────┐                         │
-│  │ Slot 1  │ Slot 2  │ Slot 3  │ Slot 4  │  Time-based rotation   │
-│  │(Owner A)│(Owner B)│(Owner C)│(Owner A)│  Predictable schedule  │
-│  └────┬────┴────┬────┴────┬────┴────┬────┘                         │
-│       │         │         │         │                               │
-│       └─────────┴────┬────┴─────────┘                               │
-│                      ▼                                              │
-│               ┌─────────────┐                                       │
-│               │  Scheduled  │                                       │
-│               │  Execution  │                                       │
-│               └─────────────┘                                       │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+
+                        CONSENSUS ROUNDS                             
+
+                                                                     
+  ROUND TYPE 1: FAST ROUNDS                                          
+                                                      
+   Super-Owner   Only designated super-owner can propose           
+    Proposes     Minimal latency, no contention                    
+                                                      
+                                                                    
+                                                                    
+                                                      
+    Validators   Quick validation and execution                    
+    Execute                                                        
+                                                      
+                                                                     
+  ROUND TYPE 2: MULTI-LEADER ROUNDS                                  
+                                   
+   Owner A   Owner B   Owner C   Any owner can propose         
+   Can       Can       Can       Handles occasional contention 
+   Propose   Propose   Propose                                 
+                                   
+                                                                  
+                                            
+                                                                    
+                                                      
+              Select       Round-robin with timeout fallback       
+              Proposer                                             
+                                                      
+                                                                    
+                                                                    
+                                                      
+              Execute                                              
+                                                      
+                                                                     
+  ROUND TYPE 3: SINGLE-LEADER ROUNDS                                 
+                           
+   Slot 1   Slot 2   Slot 3   Slot 4    Time-based rotation   
+  (Owner A)(Owner B)(Owner C)(Owner A)  Predictable schedule  
+                           
+                                                                 
+                                      
+                                                                    
+                                                      
+                 Scheduled                                         
+                 Execution                                         
+                                                      
+                                                                     
+
 ```
 
 ## Chain State Transitions
@@ -233,37 +233,37 @@ stateDiagram-v2
 Current State: Multi-Owner Chain with Owners A, B, C
 
 Add Owner D:
-┌─────────┐
-│ Owner A │  (super-owner)
-│ Proposes│
-│ Add D   │
-└────┬────┘
-     │
-     ▼
-┌─────────────┐
-│  Validators │
-│  Execute    │
-│  Change     │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ New Owners: │
-│ A, B, C, D  │
-└─────────────┘
+
+ Owner A   (super-owner)
+ Proposes
+ Add D   
+
+     
+     
+
+  Validators 
+  Execute    
+  Change     
+
+       
+       
+
+ New Owners: 
+ A, B, C, D  
+
 
 Remove Owner C:
-┌─────────┐
-│ Owner A │  (super-owner)
-│ Proposes│
-│ Remove C│
-└────┬────┘
-     │
-     ▼
-┌─────────────┐
-│ New Owners: │
-│ A, B, D     │
-└─────────────┘
+
+ Owner A   (super-owner)
+ Proposes
+ Remove C
+
+     
+     
+
+ New Owners: 
+ A, B, D     
+
 ```
 
 ---

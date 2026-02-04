@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-### Overall Security Rating: **6.5/10** ⚠️
+### Overall Security Rating: **6.5/10** 
 
 The Linera multisig application demonstrates **fundamental security flaws** that could lead to **complete bypass of multisig protections**, **unauthorized fund transfers**, and **permanent denial of service**. While the code structure is well-organized and follows Linera SDK patterns, critical vulnerabilities in authorization logic, state management, and race condition handling make this **unsuitable for production use without significant remediation**.
 
@@ -18,10 +18,10 @@ The Linera multisig application demonstrates **fundamental security flaws** that
 
 | Severity | Count | Issues |
 |----------|-------|--------|
-| 🔴 **CRITICAL (9-10)** | 3 | Complete multisig bypass, unauthorized transfers, permanent DoS |
-| 🟠 **HIGH (7-8)** | 4 | Privilege escalation, threshold manipulation, state corruption |
-| 🟡 **MEDIUM (5-6)** | 5 | Double-spend prevention gaps, validation bypasses |
-| 🟢 **LOW (1-4)** | 2 | Minor logic issues, missing edge cases |
+|  **CRITICAL (9-10)** | 3 | Complete multisig bypass, unauthorized transfers, permanent DoS |
+|  **HIGH (7-8)** | 4 | Privilege escalation, threshold manipulation, state corruption |
+|  **MEDIUM (5-6)** | 5 | Double-spend prevention gaps, validation bypasses |
+|  **LOW (1-4)** | 2 | Minor logic issues, missing edge cases |
 
 ### Critical Findings Summary
 
@@ -41,7 +41,7 @@ The Linera multisig application demonstrates **fundamental security flaws** that
 
 ## Detailed Findings
 
-### 🔴 CRITICAL-001: Authorization Bypass in Transfer Execution
+###  CRITICAL-001: Authorization Bypass in Transfer Execution
 
 **Severity**: 10/10
 **Location**: `contract.rs:283-293` (`execute_transfer`)
@@ -57,7 +57,7 @@ async fn execute_transfer(&mut self, source: AccountOwner, to: AccountOwner, val
     let chain_id = self.runtime.chain_id();
     let destination = linera_sdk::linera_base_types::Account::new(chain_id, to);
 
-    // ⚠️ CRITICAL: 'source' is never validated!
+    //  CRITICAL: 'source' is never validated!
     // Anyone can pass any AccountOwner as source
     self.runtime.transfer(source, destination, amount);
 
@@ -108,17 +108,17 @@ let malicious_operation = MultisigOperation::SubmitProposal {
 
 ```rust
 async fn execute_transfer(&mut self, _caller: AccountOwner, to: AccountOwner, value: u64) -> MultisigResponse {
-    // ✅ FIX 1: Transfer from contract's own account, not arbitrary source
+    //  FIX 1: Transfer from contract's own account, not arbitrary source
     let chain_id = self.runtime.chain_id();
     let contract_account = linera_sdk::linera_base_types::Account::new(chain_id, self.runtime.authenticated_signer()?);
     let destination = linera_sdk::linera_base_types::Account::new(chain_id, to);
 
     let amount = Amount::from_tokens(value.into());
 
-    // ✅ FIX 2: Transfer from contract to destination
+    //  FIX 2: Transfer from contract to destination
     self.runtime.transfer_to(destination, amount);
 
-    // ✅ FIX 3: Validate contract has sufficient balance
+    //  FIX 3: Validate contract has sufficient balance
     let current_balance = self.runtime.current_balance();
     if current_balance < amount {
         panic!("Insufficient balance");
@@ -130,7 +130,7 @@ async fn execute_transfer(&mut self, _caller: AccountOwner, to: AccountOwner, va
 
 ---
 
-### 🔴 CRITICAL-002: Threshold Manipulation Attack
+###  CRITICAL-002: Threshold Manipulation Attack
 
 **Severity**: 9/10
 **Location**: `contract.rs:348-363` (`execute_change_threshold`), `contract.rs:173-230` (execute flow)
@@ -148,7 +148,7 @@ async fn execute_change_threshold(&mut self, threshold: u64) -> MultisigResponse
         panic!("Threshold cannot be zero");
     }
 
-    // ⚠️ WEAK CHECK: Can still set threshold = 1
+    //  WEAK CHECK: Can still set threshold = 1
     if threshold as usize > owners.len() {
         panic!("Threshold cannot exceed number of owners");
     }
@@ -192,18 +192,18 @@ async fn execute_change_threshold(&mut self, threshold: u64) -> MultisigResponse
     let owners = self.state.owners.get();
     let current_threshold = *self.state.threshold.get();
 
-    // ✅ FIX 1: Prevent threshold reduction below safe minimum (e.g., 50% + 1)
+    //  FIX 1: Prevent threshold reduction below safe minimum (e.g., 50% + 1)
     let min_threshold = (owners.len() / 2) + 1;
     if threshold as usize < min_threshold {
         panic!("Threshold cannot be below majority (min: {})", min_threshold);
     }
 
-    // ✅ FIX 2: Prevent setting above 100%
+    //  FIX 2: Prevent setting above 100%
     if threshold as usize > owners.len() {
         panic!("Threshold cannot exceed number of owners");
     }
 
-    // ✅ FIX 3: Require supermajority for threshold changes (e.g., 80%)
+    //  FIX 3: Require supermajority for threshold changes (e.g., 80%)
     // This should be checked at the operation level, not just execution
     // See HIGH-001 for details
 
@@ -223,7 +223,7 @@ pub struct Proposal {
     pub confirmation_count: u64,
     pub executed: bool,
     pub created_at: u64,
-    pub executable_at: u64, // ✅ Add timelock
+    pub executable_at: u64, //  Add timelock
 }
 
 // In execute_proposal
@@ -237,7 +237,7 @@ if proposal.proposal_type.is_sensitive() {
 
 ---
 
-### 🔴 CRITICAL-003: Double-Spend via Race Condition in Execution
+###  CRITICAL-003: Double-Spend via Race Condition in Execution
 
 **Severity**: 9/10
 **Location**: `contract.rs:173-230` (`execute_proposal`)
@@ -259,14 +259,14 @@ async fn execute_proposal(&mut self, caller: AccountOwner, proposal_id: u64) -> 
         .expect("Failed to get proposal")
         .unwrap_or_else(|| panic!("Proposal {} not found", proposal_id));
 
-    // ⚠️ RACE WINDOW: Another transaction can execute here
+    //  RACE WINDOW: Another transaction can execute here
     if proposal.executed {
         panic!("Proposal already executed");
     }
 
     // ... validation and execution logic ...
 
-    // ⚠️ RACE WINDOW: Another transaction can pass the executed check
+    //  RACE WINDOW: Another transaction can pass the executed check
     // before this one marks it as executed
 
     // Mark as executed
@@ -311,12 +311,12 @@ This works because:
 async fn execute_proposal(&mut self, caller: AccountOwner, proposal_id: u64) -> MultisigResponse {
     self.ensure_is_owner(&caller);
 
-    // ✅ FIX: Use compare-and-swap (CAS) pattern
+    //  FIX: Use compare-and-swap (CAS) pattern
     // Atomically move proposal from pending to executed
     let proposal = self
         .state
         .pending_proposals
-        .remove(&proposal_id) // ✅ Atomic removal
+        .remove(&proposal_id) //  Atomic removal
         .await
         .expect("Failed to get proposal")
         .unwrap_or_else(|| panic!("Proposal {} not found", proposal_id));
@@ -372,13 +372,13 @@ pub struct MultisigState {
     pub pending_proposals: MapView<u64, Proposal>,
     pub confirmations: MapView<AccountOwner, Vec<u64>>,
     pub executed_proposals: MapView<u64, Proposal>,
-    pub executed_nonce_set: RegisterView<std::collections::HashSet<u64>>, // ✅ Track executed nonces
+    pub executed_nonce_set: RegisterView<std::collections::HashSet<u64>>, //  Track executed nonces
 }
 ```
 
 ---
 
-### 🟠 HIGH-001: Privilege Escalation via Owner Replacement
+###  HIGH-001: Privilege Escalation via Owner Replacement
 
 **Severity**: 8/10
 **Location**: `contract.rs:313-346` (`execute_replace_owner`), `contract.rs:107-140` (`validate_proposal`)
@@ -401,7 +401,7 @@ async fn execute_replace_owner(
             panic!("New owner already exists");
         }
 
-        // ⚠️ No check if new_owner is the proposer themselves
+        //  No check if new_owner is the proposer themselves
         // Allows proposer to gradually replace all owners
 
         owners[pos] = new_owner;
@@ -453,12 +453,12 @@ async fn execute_replace_owner(
             panic!("New owner already exists");
         }
 
-        // ✅ FIX 1: Prevent self-appointment
+        //  FIX 1: Prevent self-appointment
         if new_owner == proposer {
             panic!("Cannot replace owner with yourself");
         }
 
-        // ✅ FIX 2: Require old_owner's consent for replacement
+        //  FIX 2: Require old_owner's consent for replacement
         // Check if old_owner has confirmed this proposal
         let old_owner_confirmations = self.state.confirmations.get(&old_owner).await
             .unwrap().unwrap_or_default();
@@ -467,7 +467,7 @@ async fn execute_replace_owner(
             panic!("Old owner must consent to replacement");
         }
 
-        // ✅ FIX 3: Limit replacement rate (e.g., 1 replacement per day)
+        //  FIX 3: Limit replacement rate (e.g., 1 replacement per day)
         let last_replacement = self.state.last_replacement_time.get();
         let now = self.runtime.system_time().micros();
         const ONE_DAY_MICROS: u64 = 86_400_000_000;
@@ -488,7 +488,7 @@ async fn execute_replace_owner(
 
 ---
 
-### 🟠 HIGH-002: Integer Overflow in Confirmation Count
+###  HIGH-002: Integer Overflow in Confirmation Count
 
 **Severity**: 7/10
 **Location**: `contract.rs:161-173` (`confirm_proposal_internal`)
@@ -502,7 +502,7 @@ The confirmation counter is incremented without bounds checking:
 async fn confirm_proposal_internal(&mut self, caller: AccountOwner, proposal_id: u64) -> u64 {
     // ... code ...
 
-    // ⚠️ No overflow protection
+    //  No overflow protection
     proposal.confirmation_count += 1;
     let confirmation_count = proposal.confirmation_count;
 
@@ -550,14 +550,14 @@ async fn confirm_proposal_internal(&mut self, caller: AccountOwner, proposal_id:
         return proposal.confirmation_count;
     }
 
-    // ✅ FIX: Checked arithmetic
+    //  FIX: Checked arithmetic
     proposal.confirmation_count = proposal.confirmation_count
         .checked_add(1)
         .expect("Confirmation count overflow");
 
     let confirmation_count = proposal.confirmation_count;
 
-    // ✅ ADDITIONAL: Sanity check against owner count
+    //  ADDITIONAL: Sanity check against owner count
     let owner_count = self.state.owners.get().len() as u64;
     if confirmation_count > owner_count {
         panic!("Confirmation count exceeds owner count");
@@ -569,7 +569,7 @@ async fn confirm_proposal_internal(&mut self, caller: AccountOwner, proposal_id:
 
 ---
 
-### 🟠 HIGH-003: Missing Input Validation in Transfer Amount
+###  HIGH-003: Missing Input Validation in Transfer Amount
 
 **Severity**: 7/10
 **Location**: `contract.rs:110-114` (`validate_proposal` - Transfer case)
@@ -584,8 +584,8 @@ ProposalType::Transfer { value, .. } => {
     if *value == 0 {
         panic!("Transfer amount must be greater than 0");
     }
-    // ⚠️ No upper bound check
-    // ⚠️ No check against actual balance
+    //  No upper bound check
+    //  No check against actual balance
 }
 ```
 
@@ -613,24 +613,24 @@ Additionally, there's **no check** if the contract has sufficient balance before
 
 ```rust
 ProposalType::Transfer { value, to, .. } => {
-    // ✅ FIX 1: Check minimum
+    //  FIX 1: Check minimum
     if *value == 0 {
         panic!("Transfer amount must be greater than 0");
     }
 
-    // ✅ FIX 2: Check against contract balance
+    //  FIX 2: Check against contract balance
     let current_balance = self.get_contract_balance().await; // Implement this
     if *value > current_balance {
         panic!("Insufficient balance for transfer");
     }
 
-    // ✅ FIX 3: Reasonable upper bound (e.g., max balance)
+    //  FIX 3: Reasonable upper bound (e.g., max balance)
     const MAX_TRANSFER: u64 = 1_000_000_000_000_000_000; // Adjust based on token decimals
     if *value > MAX_TRANSFER {
         panic!("Transfer amount exceeds maximum allowed");
     }
 
-    // ✅ FIX 4: Validate recipient address
+    //  FIX 4: Validate recipient address
     if to == &AccountOwner::default() {
         panic!("Cannot transfer to zero address");
     }
@@ -639,7 +639,7 @@ ProposalType::Transfer { value, to, .. } => {
 
 ---
 
-### 🟠 HIGH-004: Race Condition in Confirmation Tracking
+###  HIGH-004: Race Condition in Confirmation Tracking
 
 **Severity**: 7/10
 **Location**: `contract.rs:161-173` (`confirm_proposal_internal`)
@@ -657,7 +657,7 @@ async fn confirm_proposal_internal(&mut self, caller: AccountOwner, proposal_id:
     let mut confirmed_proposals = self.state.confirmations.get(&caller).await
         .unwrap().unwrap_or_default();
 
-    // ⚠️ RACE WINDOW: Another transaction can modify confirmations here
+    //  RACE WINDOW: Another transaction can modify confirmations here
 
     // Check if already confirmed
     if confirmed_proposals.contains(&proposal_id) {
@@ -667,14 +667,14 @@ async fn confirm_proposal_internal(&mut self, caller: AccountOwner, proposal_id:
     // Add confirmation
     confirmed_proposals.push(proposal_id);
 
-    // ⚠️ Not atomic - two concurrent confirmations could both add the same proposal_id
+    //  Not atomic - two concurrent confirmations could both add the same proposal_id
     self.state.confirmations.insert(&caller, confirmed_proposals)
         .expect("Failed to store confirmations");
 
     // Update confirmation count
     proposal.confirmation_count += 1;
 
-    // ⚠️ Not atomic - confirmation count can be incremented twice for one confirmation
+    //  Not atomic - confirmation count can be incremented twice for one confirmation
     self.state.pending_proposals.insert(&proposal_id, proposal)
         .expect("Failed to store proposal");
 }
@@ -713,7 +713,7 @@ async fn confirm_proposal_internal(&mut self, caller: AccountOwner, proposal_id:
         panic!("Proposal already executed");
     }
 
-    // ✅ FIX: Use Set instead of Vec for confirmations
+    //  FIX: Use Set instead of Vec for confirmations
     let mut confirmed_set = self.state.confirmation_set.get(&caller).await
         .unwrap().unwrap_or_default();
 
@@ -740,14 +740,14 @@ async fn confirm_proposal_internal(&mut self, caller: AccountOwner, proposal_id:
 // In state.rs
 pub struct MultisigState {
     // ... other fields ...
-    // ✅ Change from Vec to HashSet
+    //  Change from Vec to HashSet
     pub confirmations: MapView<AccountOwner, HashSet<u64>>,
 }
 ```
 
 ---
 
-### 🟡 MEDIUM-001: Replay Attack via Nonce Reuse
+###  MEDIUM-001: Replay Attack via Nonce Reuse
 
 **Severity**: 6/10
 **Location**: `contract.rs:133-150` (`submit_proposal`)
@@ -763,7 +763,7 @@ async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: Proposa
 
     // Get current nonce and increment
     let proposal_id = *self.state.nonce.get();
-    self.state.nonce.set(proposal_id + 1); // ⚠️ Nonce is just a counter
+    self.state.nonce.set(proposal_id + 1); //  Nonce is just a counter
 
     // Create proposal
     let proposal = Proposal {
@@ -802,10 +802,10 @@ async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: Proposa
 async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: ProposalType) -> MultisigResponse {
     // ... validation ...
 
-    // ✅ FIX 1: Hash proposal content to create unique ID
+    //  FIX 1: Hash proposal content to create unique ID
     let proposal_hash = self.hash_proposal(&caller, &proposal_type);
 
-    // ✅ FIX 2: Check for duplicate proposals
+    //  FIX 2: Check for duplicate proposals
     if self.state.pending_proposals_hash.get(&proposal_hash).await.is_ok() {
         panic!("Duplicate proposal detected");
     }
@@ -823,7 +823,7 @@ async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: Proposa
         confirmation_count: 0,
         executed: false,
         created_at,
-        proposal_hash, // ✅ Store hash
+        proposal_hash, //  Store hash
     };
 
     // Store with both ID and hash
@@ -847,7 +847,7 @@ fn hash_proposal(&self, caller: &AccountOwner, proposal_type: &ProposalType) -> 
 
 ---
 
-### 🟡 MEDIUM-002: Denial of Service via Proposal Flooding
+###  MEDIUM-002: Denial of Service via Proposal Flooding
 
 **Severity**: 6/10
 **Location**: `contract.rs:133-150` (`submit_proposal`)
@@ -859,13 +859,13 @@ fn hash_proposal(&self, caller: &AccountOwner, proposal_type: &ProposalType) -> 
 
 ```rust
 async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: ProposalType) -> MultisigResponse {
-    self.ensure_is_owner(&caller); // ✅ Only owners can submit
+    self.ensure_is_owner(&caller); //  Only owners can submit
 
     // ... validation ...
 
-    // ⚠️ No rate limit on submissions
-    // ⚠️ No deposit/stake required
-    // ⚠️ No cleanup mechanism for old proposals
+    //  No rate limit on submissions
+    //  No deposit/stake required
+    //  No cleanup mechanism for old proposals
 
     // Create proposal
     let proposal = Proposal { /* ... */ };
@@ -898,7 +898,7 @@ async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: Proposa
 async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: ProposalType) -> MultisigResponse {
     self.ensure_is_owner(&caller);
 
-    // ✅ FIX 1: Rate limit per owner
+    //  FIX 1: Rate limit per owner
     let recent_submissions = self.state.proposal_submission_count.get(&caller).await
         .unwrap().unwrap_or(0);
     const MAX_DAILY_PROPOSALS: u64 = 10;
@@ -908,13 +908,13 @@ async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: Proposa
     self.state.proposal_submission_count.insert(&caller, recent_submissions + 1)
         .expect("Failed to update submission count");
 
-    // ✅ FIX 2: Require deposit (if Linera supports balance transfers in contract)
+    //  FIX 2: Require deposit (if Linera supports balance transfers in contract)
     let proposal_deposit = Amount::from_tokens(100u128);
     // self.runtime.charge_deposit(caller, proposal_deposit);
 
     // ... validation and proposal creation ...
 
-    // ✅ FIX 3: Add expiration time
+    //  FIX 3: Add expiration time
     let created_at = self.runtime.system_time().micros();
     const PROPOSAL_LIFETIME_MICROS: u64 = 30 * 24 * 3600 * 1_000_000; // 30 days
     let expires_at = created_at + PROPOSAL_LIFETIME_MICROS;
@@ -926,7 +926,7 @@ async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: Proposa
         confirmation_count: 0,
         executed: false,
         created_at,
-        expires_at, // ✅ Add expiration
+        expires_at, //  Add expiration
     };
 
     // ... store proposal ...
@@ -951,7 +951,7 @@ async fn cleanup_expired_proposals(&mut self) {
 
 ---
 
-### 🟡 MEDIUM-003: State Inconsistency in Confirmation Revocation
+###  MEDIUM-003: State Inconsistency in Confirmation Revocation
 
 **Severity**: 5/10
 **Location**: `contract.rs:365-400` (`revoke_confirmation`)
@@ -973,12 +973,12 @@ async fn revoke_confirmation(&mut self, caller: AccountOwner, proposal_id: u64) 
         self.state.confirmations.insert(&caller, confirmed_proposals)
             .expect("Failed to store confirmations");
 
-        // ⚠️ Problem: We don't know if this caller actually confirmed this proposal
+        //  Problem: We don't know if this caller actually confirmed this proposal
         // The confirmation tracking is per-owner (list of proposal IDs)
         // But the proposal.confirmation_count is just a counter
 
         proposal.confirmation_count = proposal.confirmation_count.saturating_sub(1);
-        // ⚠️ This decrements the counter, but what if:
+        //  This decrements the counter, but what if:
         // 1. Caller never confirmed this proposal (but it's in their confirmed list due to a bug)
         // 2. Caller confirmed, revoked, and someone else confirmed (counter is correct)
         // 3. Double-counting in confirm_proposal_internal (see HIGH-004)
@@ -1025,7 +1025,7 @@ async fn revoke_confirmation(&mut self, caller: AccountOwner, proposal_id: u64) 
         panic!("Cannot revoke confirmation for executed proposal");
     }
 
-    // ✅ FIX: Use Set instead of Vec
+    //  FIX: Use Set instead of Vec
     let mut confirmed_set = self.state.confirmation_set.get(&caller).await
         .unwrap().unwrap_or_default();
 
@@ -1051,7 +1051,7 @@ async fn revoke_confirmation(&mut self, caller: AccountOwner, proposal_id: u64) 
 // In state.rs
 pub struct MultisigState {
     // ... other fields ...
-    // ✅ Track confirmations per proposal: proposal_id -> set of owners who confirmed
+    //  Track confirmations per proposal: proposal_id -> set of owners who confirmed
     pub proposal_confirmations: MapView<u64, HashSet<AccountOwner>>,
 }
 
@@ -1074,7 +1074,7 @@ self.state.proposal_confirmations.insert(&proposal_id, confirmers);
 
 ---
 
-### 🟡 MEDIUM-004: Missing Validation for Empty Owner List
+###  MEDIUM-004: Missing Validation for Empty Owner List
 
 **Severity**: 5/10
 **Location**: `contract.rs:107-140` (`validate_proposal`), `contract.rs:327-346` (`execute_remove_owner`)
@@ -1094,7 +1094,7 @@ async fn validate_proposal(&self, proposal_type: &ProposalType) {
             }
             let threshold = *self.state.threshold.get();
 
-            // ⚠️ Only checks if owners.len() - 1 >= threshold
+            //  Only checks if owners.len() - 1 >= threshold
             // Doesn't prevent owners.len() - 1 == 0
             if owners.len() - 1 < threshold as usize {
                 panic!("Cannot remove owner: would make threshold impossible to reach");
@@ -1116,7 +1116,7 @@ async fn validate_proposal(&self, proposal_type: &ProposalType) {
 **Scenario: Last Owner Removal**
 1. Initial state: 2 owners (Alice, Bob), threshold = 1
 2. Alice (owner) approves: `RemoveOwner { owner: Bob }`
-3. Passes validation: `owners.len() - 1 = 1 >= threshold = 1` ✅
+3. Passes validation: `owners.len() - 1 = 1 >= threshold = 1` 
 4. New state: 1 owner (Alice), threshold = 1
 5. Alice approves: `RemoveOwner { owner: Alice }`
 6. **Validation passes** (1 - 1 = 0 >= 1)? **No**, this is caught...
@@ -1127,9 +1127,9 @@ async fn validate_proposal(&self, proposal_type: &ProposalType) {
 2. All approve: `ChangeThreshold { threshold: 1 }`
 3. New state: 3 owners, threshold = 1
 4. Alice + Bob approve: `RemoveOwner { owner: Charlie }`
-5. Passes validation: `3 - 1 = 2 >= threshold = 1` ✅
+5. Passes validation: `3 - 1 = 2 >= threshold = 1` 
 6. Alice approves: `RemoveOwner { owner: Bob }`
-7. Passes validation: `2 - 1 = 1 >= threshold = 1` ✅
+7. Passes validation: `2 - 1 = 1 >= threshold = 1` 
 8. New state: 1 owner (Alice), threshold = 1
 9. **Now Alice is the single point of failure**
 
@@ -1153,13 +1153,13 @@ async fn validate_proposal(&self, proposal_type: &ProposalType) {
             }
             let threshold = *self.state.threshold.get();
 
-            // ✅ FIX 1: Prevent removing last owner
+            //  FIX 1: Prevent removing last owner
             const MIN_OWNERS: usize = 2; // At least 2 owners required
             if owners.len() - 1 < MIN_OWNERS {
                 panic!("Cannot remove owner: must maintain at least {} owners", MIN_OWNERS);
             }
 
-            // ✅ FIX 2: Ensure threshold doesn't exceed remaining owners
+            //  FIX 2: Ensure threshold doesn't exceed remaining owners
             if owners.len() - 1 < threshold as usize {
                 panic!("Cannot remove owner: would make threshold impossible to reach");
             }
@@ -1176,7 +1176,7 @@ async fn execute_change_threshold(&mut self, threshold: u64) -> MultisigResponse
         panic!("Threshold cannot be zero");
     }
 
-    // ✅ FIX 3: Enforce majority threshold
+    //  FIX 3: Enforce majority threshold
     let min_threshold = (owners.len() / 2) + 1;
     if threshold as usize < min_threshold {
         panic!("Threshold must be at least majority (min: {})", min_threshold);
@@ -1186,7 +1186,7 @@ async fn execute_change_threshold(&mut self, threshold: u64) -> MultisigResponse
         panic!("Threshold cannot exceed number of owners");
     }
 
-    // ✅ FIX 4: Add invariant: threshold >= 2
+    //  FIX 4: Add invariant: threshold >= 2
     const MIN_THRESHOLD: u64 = 2;
     if threshold < MIN_THRESHOLD && owners.len() >= 2 {
         panic!("Threshold must be at least {} for multisig security", MIN_THRESHOLD);
@@ -1200,7 +1200,7 @@ async fn execute_change_threshold(&mut self, threshold: u64) -> MultisigResponse
 
 ---
 
-### 🟡 MEDIUM-005: No Protection Against Timestamp Manipulation
+###  MEDIUM-005: No Protection Against Timestamp Manipulation
 
 **Severity**: 5/10
 **Location**: `contract.rs:148` (`created_at = self.runtime.system_time().micros()`)
@@ -1214,7 +1214,7 @@ The proposal timestamp is obtained from `self.runtime.system_time()`, which on b
 async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: ProposalType) -> MultisigResponse {
     // ... validation ...
 
-    let created_at = self.runtime.system_time().micros(); // ⚠️ Validator-controlled
+    let created_at = self.runtime.system_time().micros(); //  Validator-controlled
 
     let proposal = Proposal {
         id: proposal_id,
@@ -1222,7 +1222,7 @@ async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: Proposa
         proposer: caller,
         confirmation_count: 0,
         executed: false,
-        created_at, // ⚠️ Can be manipulated
+        created_at, //  Can be manipulated
     };
 
     // ...
@@ -1256,7 +1256,7 @@ async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: Proposa
 
     let mut created_at = self.runtime.system_time().micros();
 
-    // ✅ FIX 1: Validate timestamp is reasonable
+    //  FIX 1: Validate timestamp is reasonable
     let last_proposal_time = self.state.last_proposal_time.get();
     if last_proposal_time > 0 && created_at < last_proposal_time {
         // Timestamp went backwards - validator manipulation or clock skew
@@ -1264,7 +1264,7 @@ async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: Proposa
         created_at = last_proposal_time + 1;
     }
 
-    // ✅ FIX 2: Don't allow timestamps too far in future
+    //  FIX 2: Don't allow timestamps too far in future
     const MAX_FUTURE_MICROS: u64 = 60 * 1_000_000; // 1 minute tolerance
     let approximate_now = self.get_approximate_time().await; // Use median of multiple sources
     if created_at > approximate_now + MAX_FUTURE_MICROS {
@@ -1288,7 +1288,7 @@ async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: Proposa
 
 ---
 
-### 🟢 LOW-001: Inefficient Proposal Iteration in Service Queries
+###  LOW-001: Inefficient Proposal Iteration in Service Queries
 
 **Severity**: 3/10
 **Location**: `service.rs:66-96` (`pending_proposals`, `executed_proposals`)
@@ -1303,7 +1303,7 @@ async fn pending_proposals(&self, ctx: &Context<'_>) -> Result<Vec<ProposalView>
     let state = ctx.data::<Arc<MultisigState>>()?;
     let mut proposals = Vec::new();
 
-    // ⚠️ Inefficient: Fetch each proposal individually
+    //  Inefficient: Fetch each proposal individually
     let indices = state.pending_proposals.indices().await?;
     for key in indices {
         if let Some(proposal) = state.pending_proposals.get(&key).await? {
@@ -1334,7 +1334,7 @@ This is more of a **performance issue** than a security vulnerability, but can f
 #### Remediation
 
 ```rust
-// ✅ FIX 1: Add pagination
+//  FIX 1: Add pagination
 async fn pending_proposals(
     &self,
     ctx: &Context<'_>,
@@ -1360,7 +1360,7 @@ async fn pending_proposals(
     Ok(proposals)
 }
 
-// ✅ FIX 2: Add filtering
+//  FIX 2: Add filtering
 async fn pending_proposals_filtered(
     &self,
     ctx: &Context<'_>,
@@ -1400,7 +1400,7 @@ async fn pending_proposals_filtered(
 
 ---
 
-### 🟢 LOW-002: Missing Event Logging for Critical Operations
+###  LOW-002: Missing Event Logging for Critical Operations
 
 **Severity**: 2/10
 **Location**: Throughout `contract.rs`
@@ -1417,7 +1417,7 @@ async fn execute_transfer(&mut self, source: AccountOwner, to: AccountOwner, val
     let destination = linera_sdk::linera_base_types::Account::new(chain_id, to);
     self.runtime.transfer(source, destination, amount);
 
-    log::info!("Transferred {} tokens to {:?}", value, to); // ⚠️ Just a log, not an event
+    log::info!("Transferred {} tokens to {:?}", value, to); //  Just a log, not an event
 
     MultisigResponse::FundsTransferred { to, value }
 }
@@ -1437,7 +1437,7 @@ In blockchain systems, **events should be emitted** so that:
 #### Remediation
 
 ```rust
-// ✅ Define events in lib.rs or a separate events.rs module
+//  Define events in lib.rs or a separate events.rs module
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum MultisigEvent {
@@ -1489,7 +1489,7 @@ async fn execute_transfer(&mut self, source: AccountOwner, to: AccountOwner, val
     let destination = linera_sdk::linera_base_types::Account::new(chain_id, to);
     self.runtime.transfer(source, destination, amount);
 
-    // ✅ Emit event
+    //  Emit event
     self.runtime.emit_event(MultisigEvent::Transfer { to, value });
 
     MultisigResponse::FundsTransferred { to, value }
@@ -1532,32 +1532,32 @@ async fn execute_transfer(&mut self, source: AccountOwner, to: AccountOwner, val
 
 ### Phase 1: Critical Security Fixes (1-2 days)
 
-1. ✅ **Fix CRITICAL-001**: Modify `execute_transfer()` to transfer from contract's account only
-2. ✅ **Fix CRITICAL-002**: Add minimum threshold enforcement (majority) to `execute_change_threshold()`
-3. ✅ **Fix CRITICAL-003**: Refactor `execute_proposal()` to atomically remove from pending before execution
-4. ✅ **Fix HIGH-004**: Change confirmation tracking from `Vec` to `HashSet`
+1.  **Fix CRITICAL-001**: Modify `execute_transfer()` to transfer from contract's account only
+2.  **Fix CRITICAL-002**: Add minimum threshold enforcement (majority) to `execute_change_threshold()`
+3.  **Fix CRITICAL-003**: Refactor `execute_proposal()` to atomically remove from pending before execution
+4.  **Fix HIGH-004**: Change confirmation tracking from `Vec` to `HashSet`
 
 ### Phase 2: High Priority Fixes (3-5 days)
 
-5. ✅ **Fix HIGH-001**: Add owner replacement validation (no self-appointment, require consent)
-6. ✅ **Fix HIGH-002**: Add `checked_add()` for confirmation count with overflow protection
-7. ✅ **Fix HIGH-003**: Add balance checks in `validate_proposal()` for transfers
-8. ✅ **Fix MEDIUM-003**: Track confirmations per-proposal instead of per-owner
+5.  **Fix HIGH-001**: Add owner replacement validation (no self-appointment, require consent)
+6.  **Fix HIGH-002**: Add `checked_add()` for confirmation count with overflow protection
+7.  **Fix HIGH-003**: Add balance checks in `validate_proposal()` for transfers
+8.  **Fix MEDIUM-003**: Track confirmations per-proposal instead of per-owner
 
 ### Phase 3: Medium Priority Fixes (1 week)
 
-9. ✅ **Fix MEDIUM-001**: Implement proposal content hashing and duplicate detection
-10. ✅ **Fix MEDIUM-002**: Add rate limiting, proposal deposits, and expiration
-11. ✅ **Fix MEDIUM-004**: Enforce minimum owner count (2) and threshold (majority)
-12. ✅ **Fix MEDIUM-005**: Add timestamp validation and monotonicity checks
+9.  **Fix MEDIUM-001**: Implement proposal content hashing and duplicate detection
+10.  **Fix MEDIUM-002**: Add rate limiting, proposal deposits, and expiration
+11.  **Fix MEDIUM-004**: Enforce minimum owner count (2) and threshold (majority)
+12.  **Fix MEDIUM-005**: Add timestamp validation and monotonicity checks
 
 ### Phase 4: Production Readiness (1-2 weeks)
 
-13. ✅ **Fix LOW-001**: Add pagination and filtering to GraphQL queries
-14. ✅ **Fix LOW-002**: Implement structured event emission
-15. ✅ **Add integration tests** for all security fixes
-16. ✅ **Perform third-party audit** after fixes are complete
-17. ✅ **Set up monitoring** for multisig operations
+13.  **Fix LOW-001**: Add pagination and filtering to GraphQL queries
+14.  **Fix LOW-002**: Implement structured event emission
+15.  **Add integration tests** for all security fixes
+16.  **Perform third-party audit** after fixes are complete
+17.  **Set up monitoring** for multisig operations
 
 ---
 

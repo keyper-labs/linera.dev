@@ -1,136 +1,136 @@
-# Arquitectura Detallada: Threshold Signatures Multisig
+# Detailed Architecture: Threshold Signatures Multisig
 
-Este documento explica la arquitectura técnica del sistema de threshold signatures para Linera multisig.
-
----
-
-## Tabla de Contenidos
-
-1. [Conceptos Fundamentales](#conceptos-fundamentales)
-2. [Arquitectura del Sistema](#arquitectura-del-sistema)
-3. [Flujo Completo](#flujo-completo)
-4. [Especificaciones Técnicas](#especificaciones-técnicas)
-5. [Implementación FROST](#implementación-frost)
-6. [Seguridad y Validación](#seguridad-y-validación)
+This document explains the technical architecture of the threshold signatures system for Linera multisig.
 
 ---
 
-## Conceptos Fundamentales
+## Table of Contents
 
-### ¿Qué es una Threshold Signature?
+1. [Fundamental Concepts](#fundamental-concepts)
+2. [System Architecture](#system-architecture)
+3. [Complete Flow](#complete-flow)
+4. [Technical Specifications](#technical-specifications)
+5. [FROST Implementation](#frost-implementation)
+6. [Security and Validation](#security-and-validation)
 
-Una **threshold signature** es una firma criptográfica que requiere que **m** de **n** participantes colaboren para producir una firma válida, pero que **se verifica como una sola firma**.
+---
+
+## Fundamental Concepts
+
+### What is a Threshold Signature?
+
+A **threshold signature** is a cryptographic signature that requires **m** of **n** participants to collaborate to produce a valid signature, but which **verifies as a single signature**.
 
 ```
-Firma Tradicional (Multisig Bitcoin):
-- Cada owner firma individualmente: σ₁, σ₂, σ₃
-- On-chain se verifican TODAS las firmas
-- Costo de gas: Crece con número de firmas
+Traditional Signature (Bitcoin Multisig):
+- Each owner signs individually: σ₁, σ₂, σ₃
+- ALL signatures are verified on-chain
+- Gas cost: Grows with number of signatures
 
 Threshold Signature (FROST):
-- Owners colaboran offline: σ₁, σ₂, σ₃ → σ_threshold
-- On-chain se verifica UNA sola firma
-- Costo de gas: Constante (como una sola firma)
+- Owners collaborate offline: σ₁, σ₂, σ₃ → σ_threshold
+- ONE signature is verified on-chain
+- Gas cost: Constant (like a single signature)
 ```
 
-### Ventajas Clave
+### Key Advantages
 
-| Aspecto | Multisig Tradicional | Threshold Signatures |
+| Aspect | Traditional Multisig | Threshold Signatures |
 |---------|---------------------|---------------------|
-| **Tamaño de firma** | O(m) firmas individuales | O(1) firma agregada |
-| **Costo verificación** | O(m) verificaciones | O(1) verificación |
-| **Privacidad** | Revela quién firmó | No revela signers |
-| **Escalabilidad** | Empeora con más owners | Constante |
+| **Signature size** | O(m) individual signatures | O(1) aggregated signature |
+| **Verification cost** | O(m) verifications | O(1) verification |
+| **Privacy** | Reveals who signed | Does not reveal signers |
+| **Scalability** | Worsens with more owners | Constant |
 
 ---
 
-## Arquitectura del Sistema
+## System Architecture
 
-### Componentes
+### Components
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Frontend Layer                             │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐   │
-│  │  Owner 1 App   │  │  Owner 2 App   │  │  Owner 3 App   │   │
-│  │                │  │                │  │                │   │
-│  │  Private Key 1 │  │  Private Key 2 │  │  Private Key 3 │   │
-│  │  Key Share 1   │  │  Key Share 2   │  │  Key Share 3   │   │
-│  └────────────────┘  └────────────────┘  └────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+
+                      Frontend Layer                             
+         
+    Owner 1 App       Owner 2 App       Owner 3 App      
+                                                         
+    Private Key 1     Private Key 2     Private Key 3    
+    Key Share 1       Key Share 2       Key Share 3      
+         
+
                               ↓
                     [Coordination Protocol]
                               ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                      Backend Layer                              │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  REST API + WebSocket                                   │   │
-│  │  - Propuesta de transacción                            │   │
-│  │  - Coordinación de firmas                              │   │
-│  │  - Agregación de firmas (threshold)                    │   │
-│  │  - Transmisión a Linera                                │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                     ↓ NO private keys                          │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  PostgreSQL + Redis                                     │   │
-│  │  - Propuestas pendientes                               │   │
-│  │  - Estado de firmas                                    │   │
-│  │  - Nonces                                              │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+
+                      Backend Layer                              
+     
+    REST API + WebSocket                                      
+    - Transaction proposals                                  
+    - Signature coordination                                 
+    - Signature aggregation (threshold)                      
+    - Transmission to Linera                                 
+     
+                     ↓ NO private keys                          
+     
+    PostgreSQL + Redis                                        
+    - Pending proposals                                      
+    - Signature state                                        
+    - Nonces                                                 
+     
+
                               ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    Linera Network                               │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  ThresholdMultisigContract (Wasm)                       │   │
-│  │  - Verifica threshold signature                        │   │
-│  │  - Ejecuta transfer                                    │   │
-│  │  - Mantiene nonce                                      │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+
+                    Linera Network                               
+     
+    ThresholdMultisigContract (Wasm)                          
+    - Verifies threshold signature                           
+    - Executes transfer                                      
+    - Maintains nonce                                        
+     
+
 ```
 
-### Self-Custodia Explícita
+### Explicit Self-Custody
 
 ```typescript
-// ❌ LO QUE EL BACKEND NO TIENE:
+// WHAT THE BACKEND DOES NOT HAVE:
 interface BackendState {
-  // NO tiene private keys
-  privateKeys: Map<UserId, Uint8Array]; // ❌ NUNCA
+  // NO private keys
+  privateKeys: Map<UserId, Uint8Array>; // NEVER
 
-  // NO tiene key shares de FROST
-  keyShares: Map<UserId, FrostShare>; // ❌ NUNCA
+  // NO FROST key shares
+  keyShares: Map<UserId, FrostShare>; // NEVER
 
-  // NO puede firmar por usuarios
-  signingService: ThresholdSigning; // ❌ NUNCA
+  // NO ability to sign for users
+  signingService: ThresholdSigning; // NEVER
 }
 
-// ✅ LO QUE EL BACKEND SÍ TIENE:
+// WHAT THE BACKEND DOES HAVE:
 interface BackendState {
-  // Solo metadata de propuestas
+  // Proposal metadata only
   proposals: Map<ProposalId, {
     id: string;
-    creator: string; // Solo public address
+    creator: string; // Public address only
     created_at: Date;
-    threshold_signatures: SignatureShare[]; // Solo shares públicas
+    threshold_signatures: SignatureShare[]; // Public shares only
     is_complete: boolean;
   }>;
 
-  // Coordinación, no custodia
-  websocket: WebSocket; // Para coordinar signers
+  // Coordination, not custody
+  websocket: WebSocket; // To coordinate signers
 }
 ```
 
 ---
 
-## Flujo Completo
+## Complete Flow
 
-### Fase 1: Setup (DKG - Distributed Key Generation)
+### Phase 1: Setup (DKG - Distributed Key Generation)
 
-Antes de crear el multisig, los owners ejecutan una fase de setup cooperativa:
+Before creating the multisig, owners execute a cooperative setup phase:
 
 ```typescript
-// Paso 1: Cada owner genera su key share
+// Step 1: Each owner generates their key share
 // Owner 1:
 const share1 = Frost.generateKeyShare();
 // -> { secret_share: s1, public_share: P1 }
@@ -143,22 +143,22 @@ const share2 = Frost.generateKeyShare();
 const share3 = Frost.generateKeyShare();
 // -> { secret_share: s3, public_share: P3 }
 
-// Paso 2: Cada owner comparte su public_share con los demás
-// Esto se puede hacer off-band (email, messaging, etc.)
+// Step 2: Each owner shares their public_share with others
+// This can be done off-band (email, messaging, etc.)
 
-// Paso 3: Cada owner calcula la aggregate public key
+// Step 3: Each owner calculates the aggregate public key
 const aggregatePublicKey = share1.public_share
   .add(share2.public_share)
   .add(share3.public_share);
 
-// NOTA: La aggregate public key es la misma para todos los owners
-// Esta es la key que se usará en el contrato Wasm
+// NOTE: The aggregate public key is the same for all owners
+// This is the key that will be used in the Wasm contract
 ```
 
-### Fase 2: Crear Multisig
+### Phase 2: Create Multisig
 
 ```typescript
-// Cualquier owner (o todos coordinados) crea el contrato
+// Any owner (or all coordinated) creates the contract
 const params = {
   owners: [address1, address2, address3],
   threshold: 2, // 2-of-3
@@ -168,10 +168,10 @@ const params = {
 await linera.publish("./contract", params);
 ```
 
-### Fase 3: Crear Proposal
+### Phase 3: Create Proposal
 
 ```typescript
-// Owner 1 crea propuesta de transferencia
+// Owner 1 creates transfer proposal
 const proposal = {
   to: "recipient_address",
   amount: 1000000,
@@ -184,41 +184,41 @@ const proposal = {
   }),
 };
 
-// Propuesta se guarda en backend (off-chain)
+// Proposal is saved in backend (off-chain)
 await backend.createProposal(proposal);
 ```
 
-### Fase 4: Recoger Firmas
+### Phase 4: Collect Signatures
 
 ```typescript
-// Owner 1 firma con su key share
+// Owner 1 signs with their key share
 const signature1 = Frost.sign(share1.secret_share, proposal.message);
 
-// Enviar signature al backend
+// Send signature to backend
 await backend.addSignature(proposalId, signature1);
 
-// Owner 2 firma
+// Owner 2 signs
 const signature2 = Frost.sign(share2.secret_share, proposal.message);
 
 await backend.addSignature(proposalId, signature2);
 
-// Backend detecta que se alcanzó el threshold
+// Backend detects that threshold was reached
 if (signatures.length >= threshold) {
-  // Agregar las firmas en una sola threshold signature
+  // Aggregate signatures into a single threshold signature
   const thresholdSignature = Frost.aggregate([
     signature1,
     signature2,
   ]);
 
-  // Ejecutar on-chain
+  // Execute on-chain
   await executeOnChain(proposal, thresholdSignature);
 }
 ```
 
-### Fase 5: Ejecutar On-Chain
+### Phase 5: Execute On-Chain
 
 ```typescript
-// Backend transmite la operación con threshold signature
+// Backend transmits the operation with threshold signature
 const operation = {
   ExecuteWithThresholdSignature: {
     to: proposal.to,
@@ -232,16 +232,16 @@ const operation = {
 await linera.executeOperation(contractAddress, operation);
 ```
 
-### Fase 6: Verificación On-Chain
+### Phase 6: On-Chain Verification
 
 ```rust
-// En el contrato Wasm
+// In the Wasm contract
 fn execute_operation(op: MultisigOperation) {
-    // 1. Verificar nonce
+    // 1. Verify nonce
     assert!(op.nonce == state.nonce(), "Invalid nonce");
 
-    // 2. Verificar threshold signature
-    // La aggregate public key está en el estado del contrato
+    // 2. Verify threshold signature
+    // The aggregate public key is in the contract state
     let is_valid = ed25519::verify(
         &state.aggregate_public_key,
         &op.message,
@@ -249,19 +249,19 @@ fn execute_operation(op: MultisigOperation) {
     );
     assert!(is_valid, "Invalid threshold signature");
 
-    // 3. Ejecutar transfer
+    // 3. Execute transfer
     runtime.transfer(from, op.to, op.amount);
 
-    // 4. Incrementar nonce
+    // 4. Increment nonce
     state.increment_nonce();
 }
 ```
 
 ---
 
-## Especificaciones Técnicas
+## Technical Specifications
 
-### Mensaje a Firmar
+### Message to Sign
 
 ```rust
 pub struct ThresholdMessage {
@@ -272,7 +272,7 @@ pub struct ThresholdMessage {
 
 impl ThresholdMessage {
     pub fn to_bytes(&self) -> Vec<u8> {
-        // Codificación simple para evitar complejidad
+        // Simple encoding to avoid complexity
         let mut bytes = Vec::new();
         bytes.extend_from_slice(&self.nonce.to_be_bytes());
         bytes.extend_from_slice(self.operation_type.as_bytes());
@@ -283,7 +283,7 @@ impl ThresholdMessage {
 }
 ```
 
-### Operación On-Chain
+### On-Chain Operation
 
 ```rust
 pub enum MultisigOperation {
@@ -291,42 +291,42 @@ pub enum MultisigOperation {
         to: Owner,
         amount: u64,
         nonce: u64,
-        threshold_signature: Vec<u8>, // 64 bytes para Ed25519
+        threshold_signature: Vec<u8>, // 64 bytes for Ed25519
         message: Vec<u8>,
     },
 }
 ```
 
-### Estado del Contrato
+### Contract State
 
 ```rust
 pub struct MultisigState {
-    pub owners: Vec<Owner>,           // Listado de owners (para info)
+    pub owners: Vec<Owner>,           // List of owners (for info)
     pub threshold: u64,                // m-of-n
-    pub aggregate_public_key: Vec<u8>, // 32 bytes para Ed25519
+    pub aggregate_public_key: Vec<u8>, // 32 bytes for Ed25519
     pub nonce: u64,                    // Replay protection
 }
 ```
 
 ---
 
-## Implementación FROST
+## FROST Implementation
 
-### Bibliotecas Rust Disponibles
+### Available Rust Libraries
 
 ```toml
 [dependencies]
-# Opción 1: frost-ed25519 (experimental)
+# Option 1: frost-ed25519 (experimental)
 frost-ed25519 = "0.1"
 
-# Opción 2: Implementar desde cero siguiendo RFC
-# Ver: https://datatracker.ietf.org/doc/html/rfc9591
+# Option 2: Implement from scratch following RFC
+# See: https://datatracker.ietf.org/doc/html/rfc9591
 
-# Opción 3: Usar libsodium bindings
+# Option 3: Use libsodium bindings
 libsodium-sys = "0.2"
 ```
 
-### Estructura Básica FROST
+### Basic FROST Structure
 
 ```rust
 use frost_ed25519::{
@@ -336,17 +336,17 @@ use frost_ed25519::{
     round2::{SignatureShare, AggregateSignature},
 };
 
-/// Fase de DKG (Distributed Key Generation)
+/// DKG Phase (Distributed Key Generation)
 async fn dkg_phase(
     participants: Vec<Participant>,
 ) -> (Vec<SecretShare>, PublicKeyPackage) {
-    // Cada participante genera su share
+    // Each participant generates their share
     let secret_shares: Vec<SecretShare> = participants
         .iter()
         .map(|p| KeyPackage::generate_participant_share(p.identifier))
         .collect();
 
-    // Compartir public shares
+    // Share public shares
     let public_package = PublicKeyPackage::aggregate_all(
         secret_shares.iter().map(|s| s.public_share()),
     );
@@ -354,40 +354,40 @@ async fn dkg_phase(
     (secret_shares, public_package)
 }
 
-/// Firmar con threshold scheme
+/// Sign with threshold scheme
 fn threshold_sign(
     secret_share: &SecretShare,
     message: &[u8],
     signer_identifier: Identifier,
 ) -> SignatureShare {
-    // Round 1: Generar commitment
+    // Round 1: Generate commitment
     let nonces = SigningNonces::generate(signer_identifier);
 
-    // Round 1: Compartir commitment
+    // Round 1: Share commitment
     let commitments = SigningCommitments::new(nonces.clone());
 
-    // Round 2: Recibir commitments de otros signers
+    // Round 2: Receive commitments from other signers
     // ...
 
-    // Round 2: Generar signature share
+    // Round 2: Generate signature share
     let signature_share = secret_share.sign(
         message,
         nonces,
         commitments,
-        // ... commitments de otros signers
+        // ... commitments from other signers
     );
 
     signature_share
 }
 
-/// Agregar firmas en threshold signature
+/// Aggregate signatures into threshold signature
 fn aggregate_signatures(
     signature_shares: Vec<SignatureShare>,
 ) -> AggregateSignature {
     AggregateSignature::aggregate(signature_shares)
 }
 
-/// Verificar threshold signature
+/// Verify threshold signature
 fn verify_threshold(
     public_key: &PublicKey,
     message: &[u8],
@@ -399,42 +399,42 @@ fn verify_threshold(
 
 ---
 
-## Seguridad y Validación
+## Security and Validation
 
-### Propiedades de Seguridad
+### Security Properties
 
-✅ **Self-Custodial**:
-- Private keys nunca dejan el frontend
-- Backend solo coordina, nunca firma
-- Fondos controlados por contrato Wasm
+**Self-Custodial**:
+- Private keys never leave the frontend
+- Backend only coordinates, never signs
+- Funds controlled by Wasm contract
 
-✅ **Threshold Enforcement**:
-- Criptográficamente imposible firmar sin m participantes
-- No hay backdoor o bypass posible
+**Threshold Enforcement**:
+- Cryptographically impossible to sign without m participants
+- No backdoor or bypass possible
 
-✅ **Replay Protection**:
-- Nonce incrementa con cada operación
-- Cada firma solo puede usarse una vez
+**Replay Protection**:
+- Nonce increments with each operation
+- Each signature can only be used once
 
-✅ **On-Chain Verification**:
-- Cualquiera puede verificar en blockchain
-- No se confía en servidor para validación
+**On-Chain Verification**:
+- Anyone can verify on blockchain
+- No trust in server for validation
 
-### Validaciones On-Chain
+### On-Chain Validations
 
 ```rust
 fn validate_operation(op: &MultisigOperation, state: &MultisigState) -> Result<(), Error> {
-    // 1. Validar nonce
+    // 1. Validate nonce
     if op.nonce != state.nonce {
         return Err(Error::InvalidNonce);
     }
 
-    // 2. Validar formato de firma
+    // 2. Validate signature format
     if op.threshold_signature.len() != 64 {
         return Err(Error::InvalidSignatureFormat);
     }
 
-    // 3. Validar firma threshold
+    // 3. Validate threshold signature
     let public_key = PublicKey::from_bytes(&state.aggregate_public_key)?;
     let signature = Signature::from_bytes(&op.threshold_signature)?;
 
@@ -442,7 +442,7 @@ fn validate_operation(op: &MultisigOperation, state: &MultisigState) -> Result<(
         return Err(Error::InvalidSignature);
     }
 
-    // 4. Validar monto (opcional: límites)
+    // 4. Validate amount (optional: limits)
     if op.amount > MAX_AMOUNT {
         return Err(Error::AmountTooHigh);
     }
@@ -451,7 +451,7 @@ fn validate_operation(op: &MultisigOperation, state: &MultisigState) -> Result<(
 }
 ```
 
-### Manejo de Errores
+### Error Handling
 
 ```rust
 pub enum MultisigError {
@@ -466,12 +466,12 @@ pub enum MultisigError {
 impl MultisigError {
     pub fn log_message(&self) -> &str {
         match self {
-            Self::InvalidNonce => "Nonce inválido: posible replay attack",
-            Self::InvalidSignature => "Firma threshold inválida",
-            Self::InvalidSignatureFormat => "Formato de firma incorrecto",
-            Self::AmountTooHigh => "Monto excede máximo permitido",
-            Self::InvalidRecipient => "Destinatario inválido",
-            Self::ContractPaused => "Contract en pausa de emergencia",
+            Self::InvalidNonce => "Invalid nonce: possible replay attack",
+            Self::InvalidSignature => "Invalid threshold signature",
+            Self::InvalidSignatureFormat => "Incorrect signature format",
+            Self::AmountTooHigh => "Amount exceeds maximum allowed",
+            Self::InvalidRecipient => "Invalid recipient",
+            Self::ContractPaused => "Contract in emergency pause",
         }
     }
 }
@@ -479,71 +479,71 @@ impl MultisigError {
 
 ---
 
-## Comparación con Otros Sistemas
+## Comparison with Other Systems
 
 ### vs Safe (Ethereum)
 
-| Aspecto | Safe (Ethereum) | Threshold (Linera) |
+| Aspect | Safe (Ethereum) | Threshold (Linera) |
 |---------|----------------|-------------------|
-| **Modelo** | m-of-n confirmaciones on-chain | m-of-n firma threshold off-chain |
+| **Model** | m-of-n confirmations on-chain | m-of-n threshold signature off-chain |
 | **Proposals** | On-chain | Off-chain (backend DB) |
-| **Gas Cost** | Crece con confirmaciones | Constante |
-| **Privacidad** | Pública (quién confirmó) | Privada (no revela signers) |
+| **Gas Cost** | Grows with confirmations | Constant |
+| **Privacy** | Public (who confirmed) | Private (does not reveal signers) |
 
 ### vs Gnosis Safe
 
-| Aspecto | Gnosis Safe | Threshold (Linera) |
+| Aspect | Gnosis Safe | Threshold (Linera) |
 |---------|-------------|-------------------|
-| **UX** | Muy similar | Diferente (menos transacciones on-chain) |
-| **Flexibilidad** | Alta (modular) | Media (fija en Wasm) |
-| **Seguridad** | Auditada | Por auditar |
+| **UX** | Very similar | Different (fewer on-chain transactions) |
+| **Flexibility** | High (modular) | Medium (fixed in Wasm) |
+| **Security** | Audited | To be audited |
 
 ---
 
-## Roadmap de Implementación
+## Implementation Roadmap
 
-### Fase 1: Prueba de Concepto ✅
-- [x] Diseño de arquitectura
-- [x] Contrato Wasm simplificado
-- [x] Documentación
+### Phase 1: Proof of Concept
+- [x] Architecture design
+- [x] Simplified Wasm contract
+- [x] Documentation
 
-### Fase 2: Implementación Básica ⏳
-- [ ] Compilar contrato Wasm
-- [ ] Verificar ausencia de opcode 252
-- [ ] Deploy a testnet
-- [ ] Prueba de transfer básica
+### Phase 2: Basic Implementation ⏳
+- [ ] Compile Wasm contract
+- [ ] Verify absence of opcode 252
+- [ ] Deploy to testnet
+- [ ] Basic transfer test
 
-### Fase 3: FROST Implementation ⏳
-- [ ] Integrar biblioteca FROST
-- [ ] Implementar DKG phase
-- [ ] Implementar signing phase
-- [ ] Probar threshold signatures
+### Phase 3: FROST Implementation ⏳
+- [ ] Integrate FROST library
+- [ ] Implement DKG phase
+- [ ] Implement signing phase
+- [ ] Test threshold signatures
 
-### Fase 4: Frontend Integration ⏳
-- [ ] Wallet con key shares
-- [ ] UI para propuestas
-- [ ] UI para firmas
-- [ ] Coordinación real-time
+### Phase 4: Frontend Integration ⏳
+- [ ] Wallet with key shares
+- [ ] UI for proposals
+- [ ] UI for signatures
+- [ ] Real-time coordination
 
-### Fase 5: Backend Integration ⏳
+### Phase 5: Backend Integration ⏳
 - [ ] REST API
-- [ ] WebSocket para coordinación
-- [ ] PostgreSQL para propuestas
-- [ ] Integración con @linera/client
+- [ ] WebSocket for coordination
+- [ ] PostgreSQL for proposals
+- [ ] Integration with @linera/client
 
 ---
 
-## Conclusión
+## Conclusion
 
-La arquitectura de threshold signatures ofrece un camino viable para implementar multisig self-custodial en Linera mientras se resuelve el problema del opcode 252.
+The threshold signatures architecture offers a viable path to implement self-custodial multisig on Linera while the opcode 252 problem is resolved.
 
-**Próximos pasos**:
-1. Compilar y verificar opcode 252 ausente
-2. Deploy a testnet
-3. Probar funcionalidad básica
-4. Evaluar si requiere FROST o basta con placeholder
+**Next steps**:
+1. Compile and verify opcode 252 is absent
+2. Deploy to testnet
+3. Test basic functionality
+4. Evaluate if FROST is required or placeholder is sufficient
 
 ---
 
-**Última actualización**: 2026-02-04
-**Autor**: Experimento alternativo para linera.dev
+**Last updated**: 2026-02-04
+**Author**: Alternative experiment for linera.dev

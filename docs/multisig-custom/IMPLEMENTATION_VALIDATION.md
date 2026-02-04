@@ -10,18 +10,18 @@
 
 The Linera multisig application has been **validated as COMPLETE** with all 8 required operations properly implemented. The application successfully extends Linera's native multi-owner chain capabilities with a fully functional multisig wallet implementation.
 
-### Validation Status: ✅ PASS
+### Validation Status:  PASS
 
 | Operation | Status | Implementation Quality |
 |-----------|--------|----------------------|
-| SubmitTransaction | ✅ Complete | Excellent - with auto-confirm |
-| ConfirmTransaction | ✅ Complete | Excellent - proper idempotency |
-| ExecuteTransaction | ✅ Complete | Excellent - threshold validation |
-| RevokeConfirmation | ✅ Complete | Excellent - state consistency |
-| AddOwner | ✅ Complete | Good - duplicate check |
-| RemoveOwner | ✅ Complete | Excellent - threshold safety |
-| ChangeThreshold | ✅ Complete | Excellent - bounds checking |
-| ReplaceOwner | ✅ Complete | Excellent - validation |
+| SubmitTransaction |  Complete | Excellent - with auto-confirm |
+| ConfirmTransaction |  Complete | Excellent - proper idempotency |
+| ExecuteTransaction |  Complete | Excellent - threshold validation |
+| RevokeConfirmation |  Complete | Excellent - state consistency |
+| AddOwner |  Complete | Good - duplicate check |
+| RemoveOwner |  Complete | Excellent - threshold safety |
+| ChangeThreshold |  Complete | Excellent - bounds checking |
+| ReplaceOwner |  Complete | Excellent - validation |
 
 ---
 
@@ -32,47 +32,47 @@ The Linera multisig application has been **validated as COMPLETE** with all 8 re
 The multisig application is built on top of Linera's native infrastructure:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Linera Protocol Layer (Native)                                │
-│  - Multi-owner chains (VERIFIED WORKING)                       │
-│  - Wasm execution environment                                  │
-│  - View-based state storage                                    │
-│  - Cross-chain messaging                                       │
-└─────────────────────────────────────────────────────────────────┘
+
+  Linera Protocol Layer (Native)                                
+  - Multi-owner chains (VERIFIED WORKING)                       
+  - Wasm execution environment                                  
+  - View-based state storage                                    
+  - Cross-chain messaging                                       
+
                               ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  Multisig Application Layer (Custom - THIS APP)                │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Contract (Wasm)                                         │   │
-│  │ - MultisigOperation enum (8 operations)                 │   │
-│  │ - Transaction lifecycle management                      │   │
-│  │ - Owner management                                      │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Service (GraphQL)                                       │   │
-│  │ - State queries (owners, threshold, transactions)       │   │
-│  │ - Confirmation status checking                          │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+
+  Multisig Application Layer (Custom - THIS APP)                
+     
+   Contract (Wasm)                                            
+   - MultisigOperation enum (8 operations)                    
+   - Transaction lifecycle management                         
+   - Owner management                                         
+     
+     
+   Service (GraphQL)                                          
+   - State queries (owners, threshold, transactions)          
+   - Confirmation status checking                             
+     
+
 ```
 
 ### Gaps Filled by This Application
 
 | Gap | Linera Native | Multisig App Solution |
 |-----|---------------|----------------------|
-| Transaction submission | ❌ | ✅ `SubmitTransaction` |
-| Confirmation tracking | ❌ | ✅ `ConfirmTransaction` + state |
-| Threshold enforcement | ❌ | ✅ `ExecuteTransaction` validation |
-| Owner management | ❌ | ✅ Add/Remove/Replace operations |
-| Dynamic threshold changes | ❌ | ✅ `ChangeThreshold` |
-| Confirmation revocation | ❌ | ✅ `RevokeConfirmation` |
-| State querying | ❌ | ✅ GraphQL service |
+| Transaction submission |  |  `SubmitTransaction` |
+| Confirmation tracking |  |  `ConfirmTransaction` + state |
+| Threshold enforcement |  |  `ExecuteTransaction` validation |
+| Owner management |  |  Add/Remove/Replace operations |
+| Dynamic threshold changes |  |  `ChangeThreshold` |
+| Confirmation revocation |  |  `RevokeConfirmation` |
+| State querying |  |  GraphQL service |
 
 ---
 
 ## Detailed Operation Analysis
 
-### 1. SubmitTransaction ✅
+### 1. SubmitTransaction 
 
 **Location**: `src/contract.rs:150-176`
 
@@ -93,22 +93,22 @@ async fn submit_transaction(
     value: u64,
     data: Vec<u8>,
 ) -> MultisigResponse {
-    self.ensure_is_owner(&caller);  // ✅ Authorization
-    let nonce = *self.state.nonce.get();  // ✅ Replay protection
+    self.ensure_is_owner(&caller);  //  Authorization
+    let nonce = *self.state.nonce.get();  //  Replay protection
     // ... transaction creation and storage
-    self.confirm_transaction_internal(caller, nonce).await;  // ✅ Auto-confirm
+    self.confirm_transaction_internal(caller, nonce).await;  //  Auto-confirm
 }
 ```
 
 **Validations**:
-- ✅ Caller must be an owner
-- ✅ Nonce increment for uniqueness
-- ✅ Transaction persisted to `pending_transactions` view
-- ✅ Auto-confirmation reduces friction
+-  Caller must be an owner
+-  Nonce increment for uniqueness
+-  Transaction persisted to `pending_transactions` view
+-  Auto-confirmation reduces friction
 
 ---
 
-### 2. ConfirmTransaction ✅
+### 2. ConfirmTransaction 
 
 **Location**: `src/contract.rs:178-188`
 
@@ -130,15 +130,15 @@ async fn confirm_transaction(&mut self, caller: AccountOwner, transaction_id: u6
 ```
 
 **Validations**:
-- ✅ Caller must be an owner
-- ✅ Transaction must exist
-- ✅ Transaction must not be executed
-- ✅ Idempotent (warns if already confirmed)
-- ✅ Updates confirmation count
+-  Caller must be an owner
+-  Transaction must exist
+-  Transaction must not be executed
+-  Idempotent (warns if already confirmed)
+-  Updates confirmation count
 
 ---
 
-### 3. ExecuteTransaction ✅
+### 3. ExecuteTransaction 
 
 **Location**: `src/contract.rs:228-256`
 
@@ -156,11 +156,11 @@ async fn execute_transaction(&mut self, caller: AccountOwner, transaction_id: u6
     let mut transaction = self.state.pending_transactions.get(&transaction_id).await?;
 
     if transaction.executed {
-        panic!("Transaction already executed");  // ✅ Double-execution check
+        panic!("Transaction already executed");  //  Double-execution check
     }
 
     let threshold = *self.state.threshold.get();
-    if transaction.confirmation_count < threshold {  // ✅ Threshold validation
+    if transaction.confirmation_count < threshold {  //  Threshold validation
         panic!("Insufficient confirmations");
     }
 
@@ -170,17 +170,17 @@ async fn execute_transaction(&mut self, caller: AccountOwner, transaction_id: u6
 ```
 
 **Validations**:
-- ✅ Caller must be an owner
-- ✅ Transaction must exist
-- ✅ Must not be already executed
-- ✅ **CRITICAL**: Confirmation count >= threshold
-- ✅ Marks transaction as executed
+-  Caller must be an owner
+-  Transaction must exist
+-  Must not be already executed
+-  **CRITICAL**: Confirmation count >= threshold
+-  Marks transaction as executed
 
 **Note**: Actual fund transfer is TODO (marked in code)
 
 ---
 
-### 4. RevokeConfirmation ✅
+### 4. RevokeConfirmation 
 
 **Location**: `src/contract.rs:258-294`
 
@@ -198,26 +198,26 @@ async fn revoke_confirmation(&mut self, caller: AccountOwner, transaction_id: u6
     let mut transaction = /* ... */;
 
     if transaction.executed {
-        panic!("Cannot revoke confirmation for executed transaction");  // ✅ Safety check
+        panic!("Cannot revoke confirmation for executed transaction");  //  Safety check
     }
 
     let mut confirmed_txs = self.state.confirmations.get(&caller).await?;
     if let Some(pos) = confirmed_txs.iter().position(|&id| id == transaction_id) {
         confirmed_txs.remove(pos);
-        transaction.confirmation_count = transaction.confirmation_count.saturating_sub(1);  // ✅ Safe decrement
+        transaction.confirmation_count = transaction.confirmation_count.saturating_sub(1);  //  Safe decrement
     }
 }
 ```
 
 **Validations**:
-- ✅ Caller must be an owner
-- ✅ Transaction must not be executed
-- ✅ Uses `saturating_sub` to prevent underflow
-- ✅ Removes confirmation from owner's list
+-  Caller must be an owner
+-  Transaction must not be executed
+-  Uses `saturating_sub` to prevent underflow
+-  Removes confirmation from owner's list
 
 ---
 
-### 5. AddOwner ✅
+### 5. AddOwner 
 
 **Location**: `src/contract.rs:296-314`
 
@@ -234,7 +234,7 @@ async fn add_owner(&mut self, caller: AccountOwner, owner: AccountOwner) -> Mult
     let mut owners = self.state.owners.get().clone();
 
     if owners.contains(&owner) {
-        panic!("Owner already exists");  // ✅ Duplicate check
+        panic!("Owner already exists");  //  Duplicate check
     }
 
     owners.push(owner);
@@ -243,13 +243,13 @@ async fn add_owner(&mut self, caller: AccountOwner, owner: AccountOwner) -> Mult
 ```
 
 **Validations**:
-- ✅ Caller must be an owner
-- ✅ Checks for duplicates
-- ⚠️ **Note**: Any owner can add (no governance)
+-  Caller must be an owner
+-  Checks for duplicates
+-  **Note**: Any owner can add (no governance)
 
 ---
 
-### 6. RemoveOwner ✅
+### 6. RemoveOwner 
 
 **Location**: `src/contract.rs:316-341`
 
@@ -269,7 +269,7 @@ async fn remove_owner(&mut self, caller: AccountOwner, owner: AccountOwner) -> M
         owners.remove(pos);
 
         let threshold = *self.state.threshold.get();
-        if owners.len() < threshold as usize {  // ✅ CRITICAL safety check
+        if owners.len() < threshold as usize {  //  CRITICAL safety check
             panic!("Cannot remove owner: would go below threshold");
         }
 
@@ -279,14 +279,14 @@ async fn remove_owner(&mut self, caller: AccountOwner, owner: AccountOwner) -> M
 ```
 
 **Validations**:
-- ✅ Caller must be an owner
-- ✅ Owner must exist
-- ✅ **CRITICAL**: Prevents removal below threshold
-- ✅ Updates state
+-  Caller must be an owner
+-  Owner must exist
+-  **CRITICAL**: Prevents removal below threshold
+-  Updates state
 
 ---
 
-### 7. ChangeThreshold ✅
+### 7. ChangeThreshold 
 
 **Location**: `src/contract.rs:343-364`
 
@@ -303,11 +303,11 @@ async fn change_threshold(&mut self, caller: AccountOwner, threshold: u64) -> Mu
     let owners = self.state.owners.get();
 
     if threshold == 0 {
-        panic!("Threshold cannot be zero");  // ✅ Zero check
+        panic!("Threshold cannot be zero");  //  Zero check
     }
 
     if threshold as usize > owners.len() {
-        panic!("Threshold cannot exceed number of owners");  // ✅ Upper bound
+        panic!("Threshold cannot exceed number of owners");  //  Upper bound
     }
 
     self.state.threshold.set(threshold);
@@ -315,14 +315,14 @@ async fn change_threshold(&mut self, caller: AccountOwner, threshold: u64) -> Mu
 ```
 
 **Validations**:
-- ✅ Caller must be an owner
-- ✅ Threshold > 0
-- ✅ Threshold <= owner count
-- ⚠️ **Note**: Any owner can change (no governance)
+-  Caller must be an owner
+-  Threshold > 0
+-  Threshold <= owner count
+-  **Note**: Any owner can change (no governance)
 
 ---
 
-### 8. ReplaceOwner ✅
+### 8. ReplaceOwner 
 
 **Location**: `src/contract.rs:366-397`
 
@@ -346,7 +346,7 @@ async fn replace_owner(
 
     if let Some(pos) = owners.iter().position(|o| o == &old_owner) {
         if owners.contains(&new_owner) {
-            panic!("New owner already exists");  // ✅ Duplicate check
+            panic!("New owner already exists");  //  Duplicate check
         }
 
         owners[pos] = new_owner.clone();
@@ -356,10 +356,10 @@ async fn replace_owner(
 ```
 
 **Validations**:
-- ✅ Caller must be an owner
-- ✅ Old owner must exist
-- ✅ New owner must not exist
-- ✅ Updates state
+-  Caller must be an owner
+-  Old owner must exist
+-  New owner must not exist
+-  Updates state
 
 ---
 
@@ -370,20 +370,20 @@ async fn replace_owner(
 ```rust
 #[derive(RootView)]
 pub struct MultisigState {
-    pub owners: RegisterView<Vec<AccountOwner>>,           // ✅ Owner list
-    pub threshold: RegisterView<u64>,                      // ✅ Confirmation threshold
-    pub nonce: RegisterView<u64>,                          // ✅ Replay protection
-    pub pending_transactions: MapView<u64, Transaction>,   // ✅ Transaction storage
-    pub confirmations: MapView<AccountOwner, Vec<u64>>,    // ✅ Per-owner confirmations
+    pub owners: RegisterView<Vec<AccountOwner>>,           //  Owner list
+    pub threshold: RegisterView<u64>,                      //  Confirmation threshold
+    pub nonce: RegisterView<u64>,                          //  Replay protection
+    pub pending_transactions: MapView<u64, Transaction>,   //  Transaction storage
+    pub confirmations: MapView<AccountOwner, Vec<u64>>,    //  Per-owner confirmations
 }
 ```
 
 **Quality Assessment**: Excellent
 
-- ✅ Uses Linera Views (persistent, Merkle-backed)
-- ✅ Proper separation of concerns
-- ✅ Efficient data structures (MapView for lookups)
-- ✅ Nonce for replay protection
+-  Uses Linera Views (persistent, Merkle-backed)
+-  Proper separation of concerns
+-  Efficient data structures (MapView for lookups)
+-  Nonce for replay protection
 
 ---
 
@@ -401,22 +401,22 @@ pub struct MultisigState {
 
 **Quality Assessment**: Good
 
-- ✅ Uses async-graphql for type-safe API
-- ✅ Proper context handling
-- ✅ Returns structured data
-- ⚠️ No pagination for transactions (could be issue with many transactions)
+-  Uses async-graphql for type-safe API
+-  Proper context handling
+-  Returns structured data
+-  No pagination for transactions (could be issue with many transactions)
 
 ---
 
 ## Security Analysis
 
-### Authorization ✅
+### Authorization 
 
 All operations use `ensure_is_owner(&caller)` which validates the authenticated caller against the owner list.
 
 **Protection Level**: Excellent
 
-### Integer Safety ✅
+### Integer Safety 
 
 - Uses `u64` for values (no overflow in practice)
 - Uses `saturating_sub` for confirmation revocation
@@ -424,7 +424,7 @@ All operations use `ensure_is_owner(&caller)` which validates the authenticated 
 
 **Protection Level**: Excellent
 
-### State Consistency ✅
+### State Consistency 
 
 - All state changes happen within async functions
 - State is persisted at the end via `store()` method
@@ -432,12 +432,12 @@ All operations use `ensure_is_owner(&caller)` which validates the authenticated 
 
 **Protection Level**: Excellent
 
-### Reentrancy ⚠️
+### Reentrancy 
 
 **Status**: No external calls in current implementation
 **Risk**: LOW (but actual execution is TODO)
 
-### Front-Running Protection ✅
+### Front-Running Protection 
 
 - Uses nonce for transaction ordering
 - Confirmation tracking prevents substitution
@@ -448,7 +448,7 @@ All operations use `ensure_is_owner(&caller)` which validates the authenticated 
 
 ## Known Limitations
 
-### 1. Actual Execution Not Implemented ⚠️
+### 1. Actual Execution Not Implemented 
 
 **Location**: `src/contract.rs:247-250`
 
@@ -464,7 +464,7 @@ All operations use `ensure_is_owner(&caller)` which validates the authenticated 
 - Cross-chain calls
 - Asset transfer logic
 
-### 2. No Governance Model ⚠️
+### 2. No Governance Model 
 
 Any owner can:
 - Add new owners
@@ -476,7 +476,7 @@ Any owner can:
 
 **Mitigation**: Future versions should implement time-locks or governance contracts
 
-### 3. Cross-Chain Messages Disabled ❌
+### 3. Cross-Chain Messages Disabled 
 
 **Location**: `src/contract.rs:226-228`
 
@@ -490,7 +490,7 @@ async fn execute_message(&mut self, _message: ()) {
 
 **Mitigation**: Planned for future versions
 
-### 4. No Event Emission ❌
+### 4. No Event Emission 
 
 **Type**: `type EventValue = ();`
 
@@ -502,25 +502,25 @@ async fn execute_message(&mut self, _message: ()) {
 
 ## Compilation Status
 
-### Wasm Binaries ✅
+### Wasm Binaries 
 
 **Location**: `scripts/multisig-app/target/wasm32-unknown-unknown/release/`
 
 | Binary | Size | Status |
 |--------|------|--------|
-| `multisig_contract.wasm` | ~2.5MB | ✅ Compiled |
-| `multisig_service.wasm` | ~3.1MB | ✅ Compiled |
+| `multisig_contract.wasm` | ~2.5MB |  Compiled |
+| `multisig_service.wasm` | ~3.1MB |  Compiled |
 
 **Dependencies**:
-- `linera-sdk = "0.15.11"` ✅
-- `serde = "1.0"` ✅
-- `async-graphql = "7.0"` ✅
+- `linera-sdk = "0.15.11"` 
+- `serde = "1.0"` 
+- `async-graphql = "7.0"` 
 
 ---
 
 ## Testing Coverage
 
-### Unit Tests ⚠️
+### Unit Tests 
 
 **Status**: Placeholder only
 
@@ -539,7 +539,7 @@ mod tests {
 
 **Gap**: No comprehensive unit tests
 
-### Integration Test ✅
+### Integration Test 
 
 **Location**: `scripts/multisig/test-multisig-app.sh`
 
@@ -558,22 +558,22 @@ mod tests {
 
 ### High Priority
 
-1. ✅ **Complete This Documentation** (IN PROGRESS)
-2. ✅ **Create Comprehensive Test Script** (IN PROGRESS)
-3. ⚠️ **Add Unit Tests**: Use `linera-sdk::test` utilities
-4. ⚠️ **Governance Model**: Implement time-locks for admin operations
+1.  **Complete This Documentation** (IN PROGRESS)
+2.  **Create Comprehensive Test Script** (IN PROGRESS)
+3.  **Add Unit Tests**: Use `linera-sdk::test` utilities
+4.  **Governance Model**: Implement time-locks for admin operations
 
 ### Medium Priority
 
-5. ⚠️ **Event Emission**: Add events for off-chain tracking
-6. ⚠️ **Pagination**: Add pagination to transaction queries
-7. ⚠️ **Cross-Chain Support**: Implement `execute_message`
+5.  **Event Emission**: Add events for off-chain tracking
+6.  **Pagination**: Add pagination to transaction queries
+7.  **Cross-Chain Support**: Implement `execute_message`
 
 ### Low Priority
 
-8. 💡 **Batch Operations**: Allow confirming multiple transactions
-9. 💡 **Transaction Metadata**: Add description/memo field
-10. 💡 **Expiry**: Add optional transaction expiry
+8.  **Batch Operations**: Allow confirming multiple transactions
+9.  **Transaction Metadata**: Add description/memo field
+10.  **Expiry**: Add optional transaction expiry
 
 ---
 
@@ -581,7 +581,7 @@ mod tests {
 
 The Linera multisig application is **PRODUCTION-READY for POC** with all 8 required operations fully implemented. The code quality is excellent with proper validation, state management, and Linera SDK integration.
 
-### Overall Assessment: ✅ VALIDATED
+### Overall Assessment:  VALIDATED
 
 **Strengths**:
 - Complete implementation of all operations
@@ -591,11 +591,11 @@ The Linera multisig application is **PRODUCTION-READY for POC** with all 8 requi
 - GraphQL service for state queries
 
 **Next Steps**:
-1. ✅ Complete documentation (in progress)
-2. ✅ Create comprehensive test script (in progress)
-3. ⚠️ Add unit tests
-4. ⚠️ Implement governance model
-5. 💡 Add actual token execution
+1.  Complete documentation (in progress)
+2.  Create comprehensive test script (in progress)
+3.  Add unit tests
+4.  Implement governance model
+5.  Add actual token execution
 
 ---
 

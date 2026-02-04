@@ -14,7 +14,7 @@ The Wasm opcode `0xFC 0x0A` is `memory.copy`, part of the **Bulk Memory Operatio
 
 ### What Triggers It in Our Code?
 
-#### 1. **Serde Serialization/Deserialization** ⚠️ PRIMARY SOURCE
+#### 1. **Serde Serialization/Deserialization**  PRIMARY SOURCE
 
 ```rust
 // In state.rs - every View operation uses serde
@@ -42,7 +42,7 @@ pub struct Proposal {
 
 ---
 
-#### 2. **ViewStorageContext Operations** ⚠️ LINERA SDK DEPENDENCY
+#### 2. **ViewStorageContext Operations**  LINERA SDK DEPENDENCY
 
 ```rust
 // In contract.rs
@@ -58,7 +58,7 @@ let state = MultisigState::load(runtime.root_view_storage_context()).await;
 
 ---
 
-#### 3. **Async/Await Runtime** ⚠️ COMPILER GENERATION
+#### 3. **Async/Await Runtime**  COMPILER GENERATION
 
 ```rust
 async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: ProposalType) {
@@ -76,7 +76,7 @@ async fn submit_proposal(&mut self, caller: AccountOwner, proposal_type: Proposa
 
 ---
 
-#### 4. **Collection Operations** ⚠️ MINOR SOURCE
+#### 4. **Collection Operations**  MINOR SOURCE
 
 ```rust
 let mut owners = self.state.owners.get().clone();
@@ -110,7 +110,7 @@ let owners = self.state.owners.get();
 
 ```rust
 let mut owners = self.state.owners.get(); // &Vec<AccountOwner>
-owners.push(new_owner); // ❌ ERROR: cannot borrow as mutable
+owners.push(new_owner); //  ERROR: cannot borrow as mutable
 ```
 
 **To mutate owners**, we must either:
@@ -210,9 +210,9 @@ unsafe extern "C" fn custom_copy(dst: *mut u8, src: *const u8, len: usize) {
 
 ```
 linera-sdk 0.15.11
-  └─ async-graphql = "=7.0.17" (pinned)
-      └─ requires Rust 1.87+ (let-chains stabilized in 1.87)
-          └─ Rust 1.87+ generates memory.copy
+   async-graphql = "=7.0.17" (pinned)
+       requires Rust 1.87+ (let-chains stabilized in 1.87)
+           Rust 1.87+ generates memory.copy
 ```
 
 ### Attempt: Pin async-graphql to 7.0.16
@@ -222,7 +222,7 @@ linera-sdk 0.15.11
 async-graphql = "=7.0.16"  # Rust 1.86 compatible
 ```
 
-**Result**: ❌ COMPILATION ERROR
+**Result**:  COMPILATION ERROR
 
 ```
 error: package `async-graphql v7.0.16` cannot be built
@@ -240,7 +240,7 @@ rustup default 1.86.0
 cargo build --release
 ```
 
-**Result**: ❌ COMPILATION ERROR
+**Result**:  COMPILATION ERROR
 
 ```
 error[E0658]: `let` expressions in this position are unstable
@@ -309,10 +309,10 @@ This is a **runtime limitation**, not a code issue.
 
 ```
 linera-sdk 0.15.11
-  ├─ Requires async-graphql 7.0.17
-  │   └─ Requires Rust 1.87+ (let-chains)
-  │       └─ Generates memory.copy
-  │           └─ Linera runtime doesn't support ❌
+   Requires async-graphql 7.0.17
+      Requires Rust 1.87+ (let-chains)
+          Generates memory.copy
+              Linera runtime doesn't support 
 
 Impossible triangle:
 1. Use linera-sdk 0.15.11 (required)
@@ -330,11 +330,11 @@ Impossible triangle:
 
 | Approach | Feasibility | Reason |
 |----------|------------|--------|
-| Remove `.clone()` | ❌ Impossible | Requires mutability through references |
-| Simplify data structures | ⚠️ Partial | Reduces but doesn't eliminate opcodes |
-| Hand-written assembly | ❌ Unsafe | Not acceptable for production |
-| Downgrade dependencies | ❌ Impossible | Conflicting requirements |
-| Replace serde/async | ❌ Impossible | Linera SDK requirements |
+| Remove `.clone()` |  Impossible | Requires mutability through references |
+| Simplify data structures |  Partial | Reduces but doesn't eliminate opcodes |
+| Hand-written assembly |  Unsafe | Not acceptable for production |
+| Downgrade dependencies |  Impossible | Conflicting requirements |
+| Replace serde/async |  Impossible | Linera SDK requirements |
 
 ---
 
@@ -371,7 +371,7 @@ Reduced to ~85 opcodes (12% reduction), but still deploy-blocked.
 
 ### For Production Deployment
 
-1. **Document the blocker** in all relevant places ✅ (DONE)
+1. **Document the blocker** in all relevant places  (DONE)
 2. **Track issue #4742** for official fix
 3. **Consider multi-owner chains** for simple use cases
 4. **Engage Linera team** on the issue

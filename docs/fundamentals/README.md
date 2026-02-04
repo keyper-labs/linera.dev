@@ -18,34 +18,34 @@ Linera is a multi-chain blockchain platform designed for web-scale applications.
 ## Architecture Principles
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    LINERA ARCHITECTURE                           │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  PRINCIPLE 1: MULTI-CHAIN OVER SINGLE-CHAIN                     │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐               │
-│  │ Chain 1 │ │ Chain 2 │ │ Chain 3 │ │ Chain N │               │
-│  │ (User)  │ │ (User)  │ │ (App)   │ │ (App)   │               │
-│  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘               │
-│       └───────────┴───────────┴───────────┘                     │
-│                   │                                             │
-│                   ▼                                             │
-│         ┌─────────────────┐                                     │
-│         │ Shared Validator│  One validator set secures all      │
-│         │ Network         │                                     │
-│         └─────────────────┘                                     │
-│                                                                  │
-│  PRINCIPLE 2: USER-CHAIN AFFINITY                               │
-│  • Each user typically owns their own chain                      │
-│  • Low latency for user operations                               │
-│  • No global contention (unlike single-chain)                    │
-│                                                                  │
-│  PRINCIPLE 3: ASYNC CROSS-CHAIN MESSAGING                       │
-│  • Messages between chains are asynchronous                      │
-│  • Inbox/outbox model for reliability                            │
-│  • Applications can compose across chains                        │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+
+                    LINERA ARCHITECTURE                           
+
+                                                                  
+  PRINCIPLE 1: MULTI-CHAIN OVER SINGLE-CHAIN                     
+                    
+   Chain 1   Chain 2   Chain 3   Chain N                
+   (User)    (User)    (App)     (App)                  
+                    
+                            
+                                                                
+                                                                
+                                              
+          Shared Validator  One validator set secures all      
+          Network                                              
+                                              
+                                                                  
+  PRINCIPLE 2: USER-CHAIN AFFINITY                               
+  • Each user typically owns their own chain                      
+  • Low latency for user operations                               
+  • No global contention (unlike single-chain)                    
+                                                                  
+  PRINCIPLE 3: ASYNC CROSS-CHAIN MESSAGING                       
+  • Messages between chains are asynchronous                      
+  • Inbox/outbox model for reliability                            
+  • Applications can compose across chains                        
+                                                                  
+
 ```
 
 ## Quick Start

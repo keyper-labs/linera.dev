@@ -3,7 +3,7 @@
 **Validation Date**: February 2, 2026
 **Linera Version**: v0.15.8
 **Testnet**: Conway (Epoch 30)
-**Status**: ✅ SUCCESSFUL
+**Status**:  SUCCESSFUL
 
 ---
 
@@ -25,8 +25,8 @@ Successfully validated Linera's protocol-level multisig functionality through **
 
 | Chain | Chain ID | Balance | Status |
 |-------|----------|---------|--------|
-| **Multi-Owner Chain** | `4888610445c3f2e65fd23f0deceaecff469c9c9149fa6453545a3ca167bde4c7` | **10 tokens** | ✅ Active |
-| **Source Chain** | `3c357e77e0be145519909833fa384724e5750a443aa29500d9dd226a541eb3dc` | **89.9999689 tokens** | ✅ Active |
+| **Multi-Owner Chain** | `4888610445c3f2e65fd23f0deceaecff469c9c9149fa6453545a3ca167bde4c7` | **10 tokens** |  Active |
+| **Source Chain** | `3c357e77e0be145519909833fa384724e5750a443aa29500d9dd226a541eb3dc` | **89.9999689 tokens** |  Active |
 
 ### Balance Calculation
 
@@ -34,7 +34,7 @@ Successfully validated Linera's protocol-level multisig functionality through **
 Source Chain Initial:  100.0000000 tokens
 Multi-Owner Transfer: -10.0000000 tokens
 Transaction Fees:      -0.0000311 tokens
-─────────────────────────────────────────
+
 Source Chain Final:    89.9999689 tokens
 ```
 
@@ -131,12 +131,12 @@ The complete automated workflow is available at:
 
 ### Script Features
 
-- ✅ Automatic wallet initialization from faucet
-- ✅ Multi-owner chain creation with 2 owners
-- ✅ Balance validation at each step
-- ✅ Synchronization time measurement
-- ✅ On-chain verification commands
-- ✅ Error handling with `set -e`
+-  Automatic wallet initialization from faucet
+-  Multi-owner chain creation with 2 owners
+-  Balance validation at each step
+-  Synchronization time measurement
+-  On-chain verification commands
+-  Error handling with `set -e`
 
 ### Usage
 
@@ -159,7 +159,7 @@ cd /Users/alfredolopez/Documents/GitHub/PalmeraDAO/linera.dev/scripts/multisig
 
 ## Next Steps
 
-### Phase 1: Basic Multi-Owner ✅ COMPLETE
+### Phase 1: Basic Multi-Owner  COMPLETE
 - [x] Create multi-owner chain with 2 owners
 - [x] Transfer tokens to multi-owner chain
 - [x] Validate on-chain state

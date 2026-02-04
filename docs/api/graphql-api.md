@@ -12,10 +12,10 @@ The GraphQL API is exposed by the **Service** component of Linera applications. 
 
 | Aspect | Status | Notes |
 |--------|--------|-------|
-| Schema Introspection | ⚠️ Limited | Testnet Conway schema loading issues reported |
-| Query Execution | ✅ Working | Basic queries functional |
-| Subscriptions | ❌ Not Available | Use polling instead |
-| Mutations | ❌ Not Available | Use operations via Contract |
+| Schema Introspection |  Limited | Testnet Conway schema loading issues reported |
+| Query Execution |  Working | Basic queries functional |
+| Subscriptions |  Not Available | Use polling instead |
+| Mutations |  Not Available | Use operations via Contract |
 
 ## Starting the GraphQL Service
 

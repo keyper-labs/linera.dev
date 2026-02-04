@@ -1,29 +1,29 @@
-// Estado simplificado para evitar opcode 252
+// Simplified state to avoid opcode 252
 
 use linera_sdk::{
     linera_base_types::AccountOwner,
     views::{RegisterView, RootView, ViewStorageContext},
 };
 
-/// Estructura principal del estado del contrato
+/// Main contract state structure
 #[derive(RootView)]
 #[view(context = ViewStorageContext)]
 pub struct MultisigState {
-    /// Lista de owners (direcciones públicas)
+    /// List of owners (public addresses)
     pub owners: RegisterView<Vec<AccountOwner>>,
 
-    /// Threshold requerido (m-of-n)
+    /// Required threshold (m-of-n)
     pub threshold: RegisterView<u64>,
 
-    /// Public key del contrato para verificar threshold signatures
+    /// Contract public key for verifying threshold signatures
     pub aggregate_public_key: RegisterView<Vec<u8>>,
 
-    /// Counter para nonce (evita replay attacks)
+    /// Counter for nonce (prevents replay attacks)
     pub nonce: RegisterView<u64>,
 }
 
 impl MultisigState {
-    /// Inicializar el estado con los parámetros
+    /// Initialize state with parameters
     pub fn initialize(&mut self, owners: Vec<AccountOwner>, threshold: u64, aggregate_key: Vec<u8>) {
         self.owners.set(owners);
         self.threshold.set(threshold);
@@ -31,7 +31,7 @@ impl MultisigState {
         self.nonce.set(0);
     }
 
-    /// Actualizar configuración
+    /// Update configuration
     pub fn update_config(&mut self, owners: Vec<AccountOwner>, threshold: u64, aggregate_key: Vec<u8>) {
         self.owners.set(owners);
         self.threshold.set(threshold);
@@ -39,28 +39,28 @@ impl MultisigState {
         self.increment_nonce();
     }
 
-    /// Obtener aggregate public key
+    /// Get aggregate public key
     pub fn aggregate_public_key(&self) -> Vec<u8> {
         self.aggregate_public_key.get().clone()
     }
 
-    /// Obtener nonce actual
+    /// Get current nonce
     pub fn nonce(&self) -> u64 {
         *self.nonce.get()
     }
 
-    /// Incrementar nonce
+    /// Increment nonce
     pub fn increment_nonce(&mut self) {
         let current = *self.nonce.get();
         self.nonce.set(current + 1);
     }
 
-    /// Verificar si una address es owner
+    /// Verify if an address is an owner
     pub fn is_owner(&self, address: &AccountOwner) -> bool {
         self.owners.get().contains(address)
     }
 
-    /// Obtener threshold actual
+    /// Get current threshold
     pub fn threshold(&self) -> u64 {
         *self.threshold.get()
     }

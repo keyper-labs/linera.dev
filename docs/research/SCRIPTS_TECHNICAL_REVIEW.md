@@ -5,7 +5,7 @@
 **Scope**: `scripts/multisig/`, `scripts/multisig-test-cli.sh`, `scripts/multisig-test-rust.sh`
 **Purpose**: Validate scripts for **testnet development and capability exploration**
 
-> **📋 CONTEXT: Desarrollo y Testnet**
+> ** CONTEXT: Desarrollo y Testnet**
 >
 > Este es un análisis **técnico** de scripts usados para explorar Linera blockchain en testnet.
 > - Scripts are for **aprendizaje y validación de capacidades**
@@ -13,15 +13,15 @@
 > - En producción se usaría **different architecture** con claves en ENV seguras
 >
 > **Enfoque de este análisis:**
-> - ✅ Validación técnica de comandos Linera CLI
-> - ✅ Verificación de script logic
-> - ✅ Identificación de mejoras para desarrollador
-> - ✅ Documentación de patrones observados
+> -  Validación técnica de comandos Linera CLI
+> -  Verificación de script logic
+> -  Identificación de mejoras para desarrollador
+> -  Documentación de patrones observados
 >
 > **Fuera de alcance:**
-> - ❌ Hardening de seguridad para producción (fuera de alcance)
-> - ❌ Gestión de claves empresarial (different architecture)
-> - ❌ Preocupaciones de seguridad multi-usuario (desarrollo local)
+> -  Hardening de seguridad para producción (fuera de alcance)
+> -  Gestión de claves empresarial (different architecture)
+> -  Preocupaciones de seguridad multi-usuario (desarrollo local)
 
 ---
 
@@ -35,20 +35,20 @@ Se realizó una revisión técnica exhaustiva de los scripts de multisig de Line
 
 ## Validación de Scripts
 
-### ✅ Scripts Validados para Testnet
+###  Scripts Validados para Testnet
 
 | Script | Propósito | Estado | Notas |
 |--------|-----------|--------|-------|
-| `create_multisig.sh` | Demo multi-owner chain | ✅ Validado | Funciona correctamente |
-| `test_conway.sh` | Validación rápida | ✅ Funciona | Simple and effective |
-| `multisig-test-cli.sh` | Workflow CLI | ✅ Funciona | Simplified version |
-| `multisig-test-rust.sh` | Setup SDK | ⚠️ Requiere update | SDK v0.16.0 cambios breaking |
+| `create_multisig.sh` | Demo multi-owner chain |  Validado | Funciona correctamente |
+| `test_conway.sh` | Validación rápida |  Funciona | Simple and effective |
+| `multisig-test-cli.sh` | Workflow CLI |  Funciona | Simplified version |
+| `multisig-test-rust.sh` | Setup SDK |  Requiere update | SDK v0.16.0 cambios breaking |
 
 ---
 
 ## Observaciones Técnicas
 
-### 🔧 1. Uso de `/tmp` para Archivos Temporales
+###  1. Uso de `/tmp` para Archivos Temporales
 
 **Contexto**: Scripts usan `/tmp` para conveniencia en desarrollo
 
@@ -62,7 +62,7 @@ mkdir -p "$WORK_DIR"
 
 **Producción** (referencia): Usaría AWS Secrets Manager, HashiCorp Vault, o similar para gestionar claves.
 
-### 🔧 2. URL de Faucet de Testnet
+###  2. URL de Faucet de Testnet
 
 **Contexto**: Scripts usan faucet oficial de testnet
 
@@ -72,7 +72,7 @@ FAUCET_URL="https://faucet.testnet-conway.linera.net"
 
 **Nota**: Apropiado para **testnet** - es el endpoint oficial de pruebas.
 
-### 🔧 3. Manejo de Output
+###  3. Manejo de Output
 
 **Contexto**: Algunos comandos usan `> /dev/null 2>&1`
 
@@ -96,20 +96,20 @@ fi
 
 ## Recomendaciones (Desarrollo)
 
-### ✅ Para Mejorar Experiencia
+###  Para Mejorar Experiencia
 
 1. **Mantener output visible** para debugging
 2. **Agregar cleanup trap** para directorios temporales
 3. **Documentar requisitos** (Linera CLI v0.15.8+)
 4. **Agregar ejemplos de output esperado**
 
-### ❌ No Necesario (Fuera de Alcance)
+###  No Necesario (Fuera de Alcance)
 
-1. ❌ Sanitización extrema de inputs (Linera CLI es confiable)
-2. ❌ Validación de SSL de faucet (testnet es seguro)
-3. ❌ Permisos estrictos de archivos (/tmp es apropiado)
-4. ❌ Audit logging (no necesario para testnet)
-5. ❌ Rate limiting (testnet faucet ya tiene límites)
+1.  Sanitización extrema de inputs (Linera CLI es confiable)
+2.  Validación de SSL de faucet (testnet es seguro)
+3.  Permisos estrictos de archivos (/tmp es apropiado)
+4.  Audit logging (no necesario para testnet)
+5.  Rate limiting (testnet faucet ya tiene límites)
 
 ---
 
@@ -126,7 +126,7 @@ export LINERA_STORAGE="rocksdb:$WORK_DIR/client.db:runtime:default"
 linera wallet init --faucet "$FAUCET_URL"
 ```
 
-**Validación**: ✅ Funciona correctamente
+**Validación**:  Funciona correctamente
 
 ### Patrón 2: Extracción de Chain ID
 
@@ -147,7 +147,7 @@ linera open-multi-owner-chain \
     --initial-balance 10
 ```
 
-**Validación**: ✅ Comando correcto para v0.15.8+
+**Validación**:  Comando correcto para v0.15.8+
 
 ---
 
@@ -157,18 +157,18 @@ linera open-multi-owner-chain \
 
 | Script | Estado Testnet | Estado Desarrollo | Recomendación |
 |--------|----------------|-------------------|----------------|
-| `create_multisig.sh` | ✅ Funcional | ✅ Aprobado | Usar para demo |
-| `test_conway.sh` | ✅ Funcional | ✅ Aprobado | Usar para test rápido |
-| `multisig-test-cli.sh` | ✅ Funcional | ✅ Aprobado | Usar para workflow |
-| `multisig-test-rust.sh` | ⚠️ SDK update | ⚠️ Requiere update | Esperar actualización |
+| `create_multisig.sh` |  Funcional |  Aprobado | Usar para demo |
+| `test_conway.sh` |  Funcional |  Aprobado | Usar para test rápido |
+| `multisig-test-cli.sh` |  Funcional |  Aprobado | Usar para workflow |
+| `multisig-test-rust.sh` |  SDK update |  Requiere update | Esperar actualización |
 
 ### Código de Aplicación
 
 | Componente | Estado | Notas |
 |-----------|--------|-------|
-| `multisig-app/contract.rs` | ⚠️ Obsoleto | API v0.12.0 → v0.16.0 |
-| `multisig-app/service.rs` | ⚠️ Obsoleto | API v0.12.0 → v0.16.0 |
-| `Cargo.toml` | ✅ Actualizado | v0.15.11 |
+| `multisig-app/contract.rs` |  Obsoleto | API v0.12.0 → v0.16.0 |
+| `multisig-app/service.rs` |  Obsoleto | API v0.12.0 → v0.16.0 |
+| `Cargo.toml` |  Actualizado | v0.15.11 |
 
 ---
 
@@ -182,10 +182,10 @@ Los scripts son **appropriate for su propósito** de exploración de testnet y a
 - Realizar audit de seguridad profesional
 
 **Para desarrollo/testnet**:
-- ✅ Scripts actuales son apropiados
-- ✅ Enfocarse en aprender capacidades
-- ✅ Experimentar con comandos CLI
-- ✅ Validar funcionalidades técnicas
+-  Scripts actuales son apropiados
+-  Enfocarse en aprender capacidades
+-  Experimentar con comandos CLI
+-  Validar funcionalidades técnicas
 
 ---
 
@@ -200,5 +200,5 @@ Los scripts son **appropriate for su propósito** de exploración de testnet y a
 
 **Revisión Completada**: February 3, 2026
 **Contexto**: Desarrollo y Exploración de Testnet
-**Estado**: ✅ Scripts validados para testnet development
+**Estado**:  Scripts validados para testnet development
 **Próximos Pasos**: Continuar exploración de capacidades de Linera blockchain

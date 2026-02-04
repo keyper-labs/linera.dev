@@ -42,62 +42,62 @@ flowchart TB
 ## Component Layers
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                         APPLICATION LAYER                               │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│  │   Wallets   │  │    dApps    │  │    DEX      │  │  Identity   │   │
-│  │  (CLI/Web)  │  │  (Browser)  │  │  Contracts  │  │  Services   │   │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘   │
-└─────────┼────────────────┼────────────────┼────────────────┼──────────┘
-          │                │                │                │
-          ▼                ▼                ▼                ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                          SERVICE LAYER                                  │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │  Application Services (Non-metered, read-only, GraphQL queries)  │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-└────────────────────────────────────────────────────────────────────────┘
-          │
-          ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                         CONTRACT LAYER                                  │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │  Application Contracts (Gas-metered, state changes, operations)  │  │
-│  └─────────────────────────────────────────────────────────────────┘  │
-└────────────────────────────────────────────────────────────────────────┘
-          │
-          ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                          PROTOCOL LAYER                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│  │   Chain     │  │   Message   │  │   Block     │  │   Cross-    │   │
-│  │  Creation   │  │   Passing   │  │  Formation  │  │   Chain     │   │
-│  │             │  │             │  │             │  │   Sync      │   │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
-└────────────────────────────────────────────────────────────────────────┘
-          │
-          ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                        VALIDATOR LAYER                                  │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│  │   Worker    │  │   Worker    │  │   Worker    │  │   Worker    │   │
-│  │   (Shard)   │  │   (Shard)   │  │   (Shard)   │  │   (Shard)   │   │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘   │
-│         └────────────────┴────────────────┴────────────────┘          │
-│                              │                                        │
-│                         ┌────┴────┐                                   │
-│                         │ Consensus │                                  │
-│                         └────┬────┘                                   │
-└──────────────────────────────┼────────────────────────────────────────┘
-                               │
-                               ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                         STORAGE LAYER                                   │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│  │   RocksDB   │  │   State     │  │   Chain     │  │   Block     │   │
-│  │   (Local)   │  │   Cache     │  │   Storage   │  │   Archive   │   │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
-└────────────────────────────────────────────────────────────────────────┘
+
+                         APPLICATION LAYER                               
+           
+     Wallets         dApps          DEX          Identity      
+    (CLI/Web)      (Browser)      Contracts      Services      
+           
+
+                                                          
+                                                          
+
+                          SERVICE LAYER                                  
+    
+    Application Services (Non-metered, read-only, GraphQL queries)    
+    
+
+          
+          
+
+                         CONTRACT LAYER                                  
+    
+    Application Contracts (Gas-metered, state changes, operations)    
+    
+
+          
+          
+
+                          PROTOCOL LAYER                                 
+           
+     Chain          Message        Block          Cross-       
+    Creation        Passing       Formation       Chain        
+                                                  Sync         
+           
+
+          
+          
+
+                        VALIDATOR LAYER                                  
+           
+     Worker         Worker         Worker         Worker       
+     (Shard)        (Shard)        (Shard)        (Shard)      
+           
+                   
+                                                                      
+                                                            
+                          Consensus                                   
+                                                            
+
+                               
+                               
+
+                         STORAGE LAYER                                   
+           
+     RocksDB        State          Chain          Block        
+     (Local)        Cache          Storage        Archive      
+           
+
 ```
 
 ## Data Flow
@@ -105,85 +105,85 @@ flowchart TB
 ### User Transaction Flow
 
 ```
-User ──────┐
-           │
-           ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Client App    │────▶│  Prepare Tx     │────▶│   Sign with     │
-│  (Browser/CLI)  │     │  (Operations)   │     │   Owner Key     │
-└────────┬────────┘     └─────────────────┘     └────────┬────────┘
-         │                                               │
-         │                                               ▼
-         │                                      ┌─────────────────┐
-         │                                      │  Signed Block   │
-         │                                      │  Proposal       │
-         │                                      └────────┬────────┘
-         │                                               │
-         ▼                                               ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Await Response │◀────│ Validator Node  │◀────│  Submit to      │
-│  (Confirmation) │     │  (Validation +  │     │  Validator      │
-│                 │     │   Execution)    │     │  Network        │
-└────────┬────────┘     └─────────────────┘     └─────────────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Transaction    │
-│  Confirmed!     │
-└─────────────────┘
+User 
+           
+           
+          
+   Client App      Prepare Tx        Sign with     
+  (Browser/CLI)         (Operations)           Owner Key     
+          
+                                                        
+                                                        
+                                               
+                                                 Signed Block   
+                                                 Proposal       
+                                               
+                                                        
+                                                        
+          
+  Await Response  Validator Node    Submit to      
+  (Confirmation)        (Validation +         Validator      
+                         Execution)           Network        
+          
+         
+         
+
+  Transaction    
+  Confirmed!     
+
 ```
 
 ### Cross-Chain Message Flow
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                           Cross-Chain Messaging                       │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│   Chain A                                        Chain B              │
-│   ┌─────────────┐                                ┌─────────────┐     │
-│   │  Create     │                                │             │     │
-│   │  Operation  │                                │             │     │
-│   └──────┬──────┘                                │             │     │
-│          │                                        │             │     │
-│          ▼                                        │             │     │
-│   ┌─────────────┐     ┌─────────────┐            │             │     │
-│   │   Execute   │────▶│   Emit      │            │             │     │
-│   │   Locally   │     │   Message   │            │             │     │
-│   └─────────────┘     └──────┬──────┘            │             │     │
-│                              │                    │             │     │
-│                              │  (1) Send          │             │     │
-│                              ▼                    │             │     │
-│   ┌─────────────────────────────────────────┐    │             │     │
-│   │        VALIDATOR NETWORK                │    │             │     │
-│   │   ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐   │    │             │     │
-│   │   │  V1 │  │  V2 │  │  V3 │  │  V4 │   │    │             │     │
-│   │   └──┬──┘  └──┬──┘  └──┬──┘  └──┬──┘   │    │             │     │
-│   └──────┼────────┼────────┼────────┼──────┘    │             │     │
-│          │        │        │        │           │             │     │
-│          └────────┴────────┴────────┘           │             │     │
-│                              │                    │             │     │
-│                              │  (2) Deliver       │             │     │
-│                              ▼                    │             │     │
-│                           ┌─────────────┐        │             │     │
-│                           │ Chain B     │        │             │     │
-│                           │ Inbox       │        │             │     │
-│                           └──────┬──────┘        │             │     │
-│                                  │                │             │     │
-│                                  │  (3) Pick      │             │     │
-│                                  ▼                │             │     │
-│                              ┌─────────────┐      │             │     │
-│                              │   Next      │      │             │     │
-│                              │   Block     │      │             │     │
-│                              └──────┬──────┘      │             │     │
-│                                     │             │             │     │
-│                                     ▼             │             │     │
-│                              ┌─────────────┐      │             │     │
-│                              │   Process   │      │             │     │
-│                              │   Message   │      │             │     │
-│                              └─────────────┘      │             │     │
-│                                                   └─────────────┘     │
-└──────────────────────────────────────────────────────────────────────┘
+
+                           Cross-Chain Messaging                       
+
+                                                                       
+   Chain A                                        Chain B              
+                                        
+     Create                                                       
+     Operation                                                    
+                                                     
+                                                                    
+                                                                    
+                                      
+      Execute      Emit                                    
+      Locally           Message                                 
+                                      
+                                                                    
+                                (1) Send                            
+                                                                    
+                         
+           VALIDATOR NETWORK                                      
+                                     
+        V1     V2     V3     V4                          
+                                     
+                         
+                                                               
+                                       
+                                                                    
+                                (2) Deliver                         
+                                                                    
+                                                     
+                            Chain B                               
+                            Inbox                                 
+                                                     
+                                                                    
+                                    (3) Pick                        
+                                                                    
+                                                      
+                                 Next                              
+                                 Block                             
+                                                      
+                                                                    
+                                                                    
+                                                      
+                                 Process                           
+                                 Message                           
+                                                      
+                                                        
+
 ```
 
 ## Key Design Decisions

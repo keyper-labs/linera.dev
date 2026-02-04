@@ -16,12 +16,12 @@ pnpm add @linera/client
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Wallet Management | ✅ Available | Key generation, storage |
-| Chain Queries | ✅ Available | Balance, state |
-| Operations | ✅ Available | Submit transactions |
-| Multi-Owner Chains | ✅ Available | Create and manage |
-| Cross-Chain Messages | ✅ Available | Send/receive |
-| Backend Usage | ❌ Not Supported | Frontend only |
+| Wallet Management |  Available | Key generation, storage |
+| Chain Queries |  Available | Balance, state |
+| Operations |  Available | Submit transactions |
+| Multi-Owner Chains |  Available | Create and manage |
+| Cross-Chain Messages |  Available | Send/receive |
+| Backend Usage |  Not Supported | Frontend only |
 
 > **Important**: @linera/client is a **frontend-only** SDK. It cannot be used in Node.js backend applications.
 
@@ -437,10 +437,10 @@ import type {
 
 | Browser | Status | Notes |
 |---------|--------|-------|
-| Chrome 90+ | ✅ Supported | Full support |
-| Firefox 88+ | ✅ Supported | Full support |
-| Safari 14+ | ✅ Supported | Full support |
-| Edge 90+ | ✅ Supported | Full support |
+| Chrome 90+ |  Supported | Full support |
+| Firefox 88+ |  Supported | Full support |
+| Safari 14+ |  Supported | Full support |
+| Edge 90+ |  Supported | Full support |
 
 ## Limitations
 

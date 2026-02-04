@@ -649,48 +649,48 @@ assert!(ownership.verify_owner(&owner), "Not an owner");
 
 ## Security Checklist
 
-- ✅ Always check `authenticated_owner()` for state changes
-- ✅ Use `check_account_permission()` for authorization
-- ✅ Validate all external inputs
-- ✅ Use `with_tracking()` for important messages
-- ✅ Handle message bouncing properly
-- ✅ Check proposal expiry
-- ✅ Verify threshold before execution
-- ✅ Use time assertions carefully (not in fast blocks)
-- ✅ Be cautious with HTTP oracles (deterministic only)
+-  Always check `authenticated_owner()` for state changes
+-  Use `check_account_permission()` for authorization
+-  Validate all external inputs
+-  Use `with_tracking()` for important messages
+-  Handle message bouncing properly
+-  Check proposal expiry
+-  Verify threshold before execution
+-  Use time assertions carefully (not in fast blocks)
+-  Be cautious with HTTP oracles (deterministic only)
 
 ---
 
 ## Quick Reference Card
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Contract Runtime                        │
-├─────────────────────────────────────────────────────────────┤
-│ State:     runtime.key_value_store()                        │
-│ Chain:     runtime.chain_id(), balance, ownership           │
-│ Auth:      runtime.authenticated_owner()                   │
-│ Message:   runtime.prepare_message(msg).send_to(chain)     │
-│ Call:      runtime.call_application(auth, app, op)         │
-│ Oracle:    runtime.http_request(req)                       │
-│ Events:    runtime.emit(name, value)                       │
-│ Chain:     runtime.open_chain(ownership, perm, bal)        │
-│ App:       runtime.create_application(...)                 │
-└─────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────┐
-│                      View System                            │
-├─────────────────────────────────────────────────────────────┤
-│ Register:  value.get(), value.set(x)                        │
-│ Map:       map.get(&k), map.insert(&k, &v)                  │
-│ Set:       set.insert(&k), set.remove(&k)                   │
-│ Log:       log.push(&v), log.get(i)                         │
-│ Queue:     queue.push_back(&v), queue.pop_front()           │
-│ Collection: col.get(&k), col.get_mut(&k)                    │
-└─────────────────────────────────────────────────────────────┘
+                     Contract Runtime                        
+
+ State:     runtime.key_value_store()                        
+ Chain:     runtime.chain_id(), balance, ownership           
+ Auth:      runtime.authenticated_owner()                   
+ Message:   runtime.prepare_message(msg).send_to(chain)     
+ Call:      runtime.call_application(auth, app, op)         
+ Oracle:    runtime.http_request(req)                       
+ Events:    runtime.emit(name, value)                       
+ Chain:     runtime.open_chain(ownership, perm, bal)        
+ App:       runtime.create_application(...)                 
+
+
+
+                      View System                            
+
+ Register:  value.get(), value.set(x)                        
+ Map:       map.get(&k), map.insert(&k, &v)                  
+ Set:       set.insert(&k), set.remove(&k)                   
+ Log:       log.push(&v), log.get(i)                         
+ Queue:     queue.push_back(&v), queue.pop_front()           
+ Collection: col.get(&k), col.get_mut(&k)                    
+
 ```
 
 ---
 
-**Status**: ✅ Complete
+**Status**:  Complete
 **Purpose**: Quick API reference for developers

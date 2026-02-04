@@ -2,24 +2,24 @@
 
 This directory contains comprehensive research and analysis of the Linera SDK for building a multisig platform on Linera blockchain.
 
-## 📚 Document Index
+##  Document Index
 
-### 🔴 CRITICAL: Opcode 252 Issue (Read First!)
+###  CRITICAL: Opcode 252 Issue (Read First!)
 
-#### 1. **Opcode 252 Investigation Log** ⭐ **NEW**
+#### 1. **Opcode 252 Investigation Log**  **NEW**
 **File**: [OPCODE_252_INVESTIGATION_LOG.md](./OPCODE_252_INVESTIGATION_LOG.md)
 
 **Overview**: Complete test log with ALL commands, results, and findings from the investigation.
 
 **Contents**:
-- ✅ 27 test commands executed with full output
-- ✅ Dependency tree analysis (ruzstd, async-graphql, linera-sdk)
-- ✅ Rust version testing (1.86.0 vs 1.92.0)
-- ✅ Wasm binary analysis (hexdump, wasm-tools)
-- ✅ PR #4894 investigation (ruzstd 0.8.1 fix)
-- ✅ async-graphql version research
-- ✅ Error message appendix
-- ✅ Complete dependency chain visualization
+-  27 test commands executed with full output
+-  Dependency tree analysis (ruzstd, async-graphql, linera-sdk)
+-  Rust version testing (1.86.0 vs 1.92.0)
+-  Wasm binary analysis (hexdump, wasm-tools)
+-  PR #4894 investigation (ruzstd 0.8.1 fix)
+-  async-graphql version research
+-  Error message appendix
+-  Complete dependency chain visualization
 
 **Test Results**:
 | Test Category | Tests Run | Passed | Failed |
@@ -46,7 +46,7 @@ This directory contains comprehensive research and analysis of the Linera SDK fo
 - Possible solutions and workarounds
 - Recommended actions
 
-**Status**: 🔴 CRITICAL BLOCKER - SDK ecosystem issue
+**Status**:  CRITICAL BLOCKER - SDK ecosystem issue
 
 **Read This First**: YES - For understanding the blocker.
 
@@ -58,8 +58,8 @@ This directory contains comprehensive research and analysis of the Linera SDK fo
 **Overview**: Complete analysis of what you CAN and CANNOT do with the Linera SDK.
 
 **Contents**:
-- ✅ 15+ capabilities with code examples
-- ❌ 14+ limitations with workarounds
+-  15+ capabilities with code examples
+-  14+ limitations with workarounds
 - Multisig-specific capabilities
 - Storage and state management
 - Cross-chain communication patterns
@@ -152,23 +152,23 @@ This directory contains comprehensive research and analysis of the Linera SDK fo
 
 ---
 
-## 📊 Executive Summary
+##  Executive Summary
 
 ### TL;DR
 
 The **Linera SDK is highly capable** for building a multisig platform. Key findings:
 
-✅ **Native Multi-Owner Support**: Built-in at chain level
-✅ **Flexible Application-Level Multisig**: Can build any N-of-M configuration
-✅ **Cross-Chain Messaging**: Secure, tracked, authenticated
-✅ **Rich State Management**: View system for efficient storage
-✅ **Composable Applications**: Cross-application calls on same chain
-✅ **GraphQL Queries**: Rich read-only API
+ **Native Multi-Owner Support**: Built-in at chain level
+ **Flexible Application-Level Multisig**: Can build any N-of-M configuration
+ **Cross-Chain Messaging**: Secure, tracked, authenticated
+ **Rich State Management**: View system for efficient storage
+ **Composable Applications**: Cross-application calls on same chain
+ **GraphQL Queries**: Rich read-only API
 
-❌ **No Built-in Multisig App**: Must build custom
-❌ **Cross-Application Calls Same-Chain Only**: Use messaging for cross-chain
-❌ **GraphQL Read-Only**: Must use operations for writes
-❌ **Fast Block Restrictions**: Oracle/time assertions not available
+ **No Built-in Multisig App**: Must build custom
+ **Cross-Application Calls Same-Chain Only**: Use messaging for cross-chain
+ **GraphQL Read-Only**: Must use operations for writes
+ **Fast Block Restrictions**: Oracle/time assertions not available
 
 ### Recommendation
 
@@ -179,7 +179,7 @@ The **Linera SDK is highly capable** for building a multisig platform. Key findi
 3. **TypeScript SDK** for frontend/backend integration
 4. **View system** for efficient state management
 
-**Feasibility**: ✅ **HIGHLY FEASIBLE**
+**Feasibility**:  **HIGHLY FEASIBLE**
 
 **Estimated Complexity**: Medium to High (custom development required)
 
@@ -189,7 +189,7 @@ The **Linera SDK is highly capable** for building a multisig platform. Key findi
 
 ## Key Capabilities for Multisig
 
-### 1. Multi-Owner Chains ✅
+### 1. Multi-Owner Chains 
 ```rust
 let ownership = ChainOwnership::multiple(
     vec![(owner1, 1), (owner2, 1), (owner3, 1), (owner4, 1), (owner5, 1)],
@@ -200,7 +200,7 @@ let ownership = ChainOwnership::multiple(
 let chain_id = runtime.open_chain(ownership, permissions, balance);
 ```
 
-### 2. Proposal Management ✅
+### 2. Proposal Management 
 ```rust
 struct Proposal {
     id: ProposalId,
@@ -211,7 +211,7 @@ struct Proposal {
 }
 ```
 
-### 3. Threshold Validation ✅
+### 3. Threshold Validation 
 ```rust
 let approval_count = self.count_approvals(&proposal_id).await;
 if approval_count >= threshold {
@@ -219,7 +219,7 @@ if approval_count >= threshold {
 }
 ```
 
-### 4. Cross-Chain Approvals ✅
+### 4. Cross-Chain Approvals 
 ```rust
 runtime.prepare_message(MultisigMessage::RemoteApproval {
     proposal_id,
@@ -229,7 +229,7 @@ runtime.prepare_message(MultisigMessage::RemoteApproval {
 .send_to(multisig_chain);
 ```
 
-### 5. Timelocks ✅
+### 5. Timelocks 
 ```rust
 runtime.assert_before(execution_deadline);
 ```
@@ -260,11 +260,11 @@ runtime.assert_before(execution_deadline);
 
 ```
 docs/research/
-├── README.md (this file)
-├── linera-sdk-capabilities-and-limitations-comprehensive-analysis.md
-├── linera-sdk-multisig-implementation-guide.md
-├── linera-sdk-architecture-decision-records.md
-└── linera-sdk-quick-reference.md
+ README.md (this file)
+ linera-sdk-capabilities-and-limitations-comprehensive-analysis.md
+ linera-sdk-multisig-implementation-guide.md
+ linera-sdk-architecture-decision-records.md
+ linera-sdk-quick-reference.md
 ```
 
 ---
@@ -288,24 +288,24 @@ docs/research/
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Research | ✅ Complete | All capabilities analyzed |
-| Documentation | ✅ Complete | All documents created |
-| Validation | ✅ Complete | 74/74 tests passing, 0 warnings |
-| Multisig Contract | ✅ Complete | Safe standard implemented |
-| **Testnet Deployment** | 🔴 **BLOCKED** | See [Opcode 252 Issue](./LINERA_OPCODE_252_ISSUE.md) |
-| Implementation | ⏳ Not Started | Blocked by SDK ecosystem issue |
+| Research |  Complete | All capabilities analyzed |
+| Documentation |  Complete | All documents created |
+| Validation |  Complete | 74/74 tests passing, 0 warnings |
+| Multisig Contract |  Complete | Safe standard implemented |
+| **Testnet Deployment** |  **BLOCKED** | See [Opcode 252 Issue](./LINERA_OPCODE_252_ISSUE.md) |
+| Implementation |  Not Started | Blocked by SDK ecosystem issue |
 
-### 🔴 Current Blocker
+###  Current Blocker
 
 **Issue**: Cannot deploy to Linera testnet due to SDK dependency conflict.
 
 **Root Cause**:
 ```
 linera-sdk 0.15.11
-    └─ async-graphql 7.0.17 (exact version)
-        └─ requires Rust 1.87+ (for let-chains)
-            └─ generates memory.copy (opcode 252)
-                └─ Linera runtime doesn't support it
+     async-graphql 7.0.17 (exact version)
+         requires Rust 1.87+ (for let-chains)
+             generates memory.copy (opcode 252)
+                 Linera runtime doesn't support it
 ```
 
 **Status**: Waiting for Linera team action (issue #4742)
@@ -336,12 +336,12 @@ If you find errors or have suggestions:
 
 ## Next Steps
 
-1. ✅ **Review**: Read Comprehensive Capabilities Analysis
-2. ✅ **Understand**: Read Architecture Decision Records
-3. ⏳ **Validate**: Run testnet validation scripts
-4. ⏳ **Implement**: Follow Multisig Implementation Guide
-5. ⏳ **Test**: Use testing patterns from guide
-6. ⏳ **Deploy**: Follow deployment patterns
+1.  **Review**: Read Comprehensive Capabilities Analysis
+2.  **Understand**: Read Architecture Decision Records
+3.  **Validate**: Run testnet validation scripts
+4.  **Implement**: Follow Multisig Implementation Guide
+5.  **Test**: Use testing patterns from guide
+6.  **Deploy**: Follow deployment patterns
 
 ---
 

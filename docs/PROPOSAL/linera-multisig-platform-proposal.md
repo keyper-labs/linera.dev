@@ -1,6 +1,6 @@
 # Linera Multisig Platform - Project Proposal
 
-**Status**: 🔴 BLOCKED - Safe-like multisig NOT possible (SDK opcode 252)
+**Status**:  BLOCKED - Safe-like multisig NOT possible (SDK opcode 252)
 
 ---
 
@@ -26,19 +26,19 @@ Frontend (React + @linera/client)
 Backend (Node.js/TypeScript + @linera/client)
     ↓
 Linera Network
-├── Multi-owner chains (1-of-N, works)
-└── Wasm multisig (m-of-n, BLOCKED)
+ Multi-owner chains (1-of-N, works)
+ Wasm multisig (m-of-n, BLOCKED)
 ```
 
 ### 2.2 Technology Stack
 
 | Layer | Technology | Status |
 |-------|-----------|--------|
-| Frontend | React + @linera/client | ✅ Viable |
-| Backend | Node.js + @linera/client | ✅ Viable |
-| Smart Contract | Rust → Wasm | 🔴 BLOCKED (opcode 252) |
-| Database | PostgreSQL + Redis | ✅ Works |
-| API | REST (Express/Fastify) | ✅ Custom required |
+| Frontend | React + @linera/client |  Viable |
+| Backend | Node.js + @linera/client |  Viable |
+| Smart Contract | Rust → Wasm |  BLOCKED (opcode 252) |
+| Database | PostgreSQL + Redis |  Works |
+| API | REST (Express/Fastify) |  Custom required |
 
 ---
 
@@ -51,23 +51,23 @@ Linera Network
 **Root Cause**:
 ```
 linera-sdk 0.15.11
-    └─ async-graphql = "=7.0.17"
-        └─ Rust 1.87+ required
-            └─ generates memory.copy (opcode 252)
-                └─ Linera runtime rejects it
+     async-graphql = "=7.0.17"
+         Rust 1.87+ required
+             generates memory.copy (opcode 252)
+                 Linera runtime rejects it
 ```
 
 **Failed Workarounds**:
 
 | Attempt | Result |
 |---------|--------|
-| Remove .clone() | ❌ Breaks mutability |
-| Remove proposal history | ❌ Still 85 opcodes |
-| Remove GraphQL | ❌ Still 82 opcodes |
-| Rust 1.86.0 | ❌ async-graphql won't compile |
-| Patch async-graphql | ❌ Exact pin can't override |
-| Replace async-graphql | ❌ 6.x/7.x incompatible |
-| Combined all | ❌ Still 67 opcodes |
+| Remove .clone() |  Breaks mutability |
+| Remove proposal history |  Still 85 opcodes |
+| Remove GraphQL |  Still 82 opcodes |
+| Rust 1.86.0 |  async-graphql won't compile |
+| Patch async-graphql |  Exact pin can't override |
+| Replace async-graphql |  6.x/7.x incompatible |
+| Combined all |  Still 67 opcodes |
 
 ### 3.2 Threshold Signatures Experiment (Feb 2026)
 
@@ -75,7 +75,7 @@ linera-sdk 0.15.11
 
 **Test**: Contract with NO ed25519-dalek, NO proposal history, NO GraphQL ops
 
-**Result**: ❌ Still 73 `memory.copy` opcodes
+**Result**:  Still 73 `memory.copy` opcodes
 
 **Conclusion**: Blocker is in `linera-sdk` dependencies, not contract code. No workaround possible.
 
@@ -85,14 +85,14 @@ linera-sdk 0.15.11
 
 | Milestone | Hours | Status |
 |-----------|-------|--------|
-| M1: Project Setup | 40h | ✅ Ready |
-| M2: Multisig Contract | 170h | 🔴 BLOCKED |
-| M3: Backend Core | 120h | ⏳ Not started |
-| M4: Frontend Core | 120h | ⏳ Not started |
-| M5: Integration | 80h | ⏳ Not started |
-| M6: Observability | 40h | ⏳ Not started |
-| M7: QA & UAT | 50h | ⏳ Not started |
-| M8: Handoff | 20h | ⏳ Not started |
+| M1: Project Setup | 40h |  Ready |
+| M2: Multisig Contract | 170h |  BLOCKED |
+| M3: Backend Core | 120h |  Not started |
+| M4: Frontend Core | 120h |  Not started |
+| M5: Integration | 80h |  Not started |
+| M6: Observability | 40h |  Not started |
+| M7: QA & UAT | 50h |  Not started |
+| M8: Handoff | 20h |  Not started |
 
 **Total**: ~640h (original), ~300h (simplified)
 
@@ -100,13 +100,13 @@ linera-sdk 0.15.11
 
 ## 5. What Works / Doesn't Work
 
-**Works** ✅:
+**Works** :
 - Frontend with @linera/client SDK
 - Backend with @linera/client SDK
 - Multi-owner chains (verified on testnet)
 - Ed25519 key management
 
-**Doesn't Work** ❌:
+**Doesn't Work** :
 - Custom Wasm multisig contract (opcode 252)
 - Threshold m-of-n logic (requires Wasm)
 - Safe-like proposal/approve/execute UX
@@ -138,7 +138,7 @@ linera-sdk 0.15.11
 
 ## 7. Recommendation
 
-🔴 **DO NOT PROCEED** with full Safe-like multisig platform.
+ **DO NOT PROCEED** with full Safe-like multisig platform.
 
 **Reason**: Wasm contract cannot deploy due to SDK ecosystem blocker. No workaround exists.
 

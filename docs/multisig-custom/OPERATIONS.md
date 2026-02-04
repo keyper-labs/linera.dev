@@ -29,32 +29,32 @@ The Linera Multisig Application supports **8 core operations** divided into thre
 ### Operation Flow Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Transaction Lifecycle                                          │
-│                                                                 │
-│  SubmitTransaction ──► ConfirmTransaction ──► ExecuteTransaction │
-│         │                   │                       │            │
-│         │                   │                       │            │
-│         ▼                   ▼                       ▼            │
-│   [nonce assigned]    [confirmations++]       [executed flag]   │
-│   [auto-confirm]      [check threshold]       [actual transfer]│
-│                                                                 │
-│   RevokeConfirmation (can be called before execution)           │
-└─────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────┐
-│  Owner Management (Admin Operations)                            │
-│                                                                 │
-│  AddOwner ──► adds new participant                             │
-│  RemoveOwner ──► removes participant (threshold safe)           │
-│  ReplaceOwner ──► swaps one participant for another             │
-└─────────────────────────────────────────────────────────────────┘
+  Transaction Lifecycle                                          
+                                                                 
+  SubmitTransaction  ConfirmTransaction  ExecuteTransaction 
+                                                               
+                                                               
+                                                               
+   [nonce assigned]    [confirmations++]       [executed flag]   
+   [auto-confirm]      [check threshold]       [actual transfer]
+                                                                 
+   RevokeConfirmation (can be called before execution)           
 
-┌─────────────────────────────────────────────────────────────────┐
-│  Threshold Management                                           │
-│                                                                 │
-│  ChangeThreshold ──► modify M-of-N requirement                  │
-└─────────────────────────────────────────────────────────────────┘
+
+
+  Owner Management (Admin Operations)                            
+                                                                 
+  AddOwner  adds new participant                             
+  RemoveOwner  removes participant (threshold safe)           
+  ReplaceOwner  swaps one participant for another             
+
+
+
+  Threshold Management                                           
+                                                                 
+  ChangeThreshold  modify M-of-N requirement                  
+
 ```
 
 ---
@@ -133,10 +133,10 @@ linera operation \
 ```
 
 **Key Features**:
-- ✅ Nonce-based uniqueness (no replay attacks)
-- ✅ Auto-confirmation from submitter (reduces friction)
-- ✅ Immediate persistence to state
-- ✅ Returns unique transaction ID
+-  Nonce-based uniqueness (no replay attacks)
+-  Auto-confirmation from submitter (reduces friction)
+-  Immediate persistence to state
+-  Returns unique transaction ID
 
 **Validation**:
 - Caller must be an owner
@@ -220,10 +220,10 @@ linera operation \
 ```
 
 **Key Features**:
-- ✅ Idempotent (safe to call multiple times)
-- ✅ Per-owner confirmation tracking
-- ✅ Returns current confirmation count
-- ✅ Prevents double-counting
+-  Idempotent (safe to call multiple times)
+-  Per-owner confirmation tracking
+-  Returns current confirmation count
+-  Prevents double-counting
 
 ---
 
@@ -295,10 +295,10 @@ linera operation \
 ```
 
 **Key Features**:
-- ✅ **CRITICAL**: Threshold enforcement
-- ✅ Double-execution prevention
-- ✅ Any owner can execute (not just submitter)
-- ⚠️ Actual token transfer is TODO
+-  **CRITICAL**: Threshold enforcement
+-  Double-execution prevention
+-  Any owner can execute (not just submitter)
+-  Actual token transfer is TODO
 
 **Validation**:
 - Caller must be an owner
@@ -376,10 +376,10 @@ linera operation \
 ```
 
 **Key Features**:
-- ✅ Execution-time safety (cannot revoke executed txs)
-- ✅ Safe decrement (saturating_sub prevents underflow)
-- ✅ Per-owner revocation
-- ✅ Allows dynamic confirmation changes
+-  Execution-time safety (cannot revoke executed txs)
+-  Safe decrement (saturating_sub prevents underflow)
+-  Per-owner revocation
+-  Allows dynamic confirmation changes
 
 **Use Cases**:
 - Owner discovered transaction issue
@@ -450,10 +450,10 @@ linera operation \
 ```
 
 **Key Features**:
-- ✅ Duplicate prevention
-- ✅ Immediate effect
-- ⚠️ Any owner can add (no governance)
-- 💡 Consider increasing threshold after adding
+-  Duplicate prevention
+-  Immediate effect
+-  Any owner can add (no governance)
+-  Consider increasing threshold after adding
 
 **Considerations**:
 - New owner can participate immediately
@@ -515,7 +515,7 @@ owners: [owner1, owner2, owner3, owner4, owner5]
 threshold: 3
 
 // After (remove owner5)
-owners: [owner1, owner2, owner3, owner4]  // 4 >= 3 ✓
+owners: [owner1, owner2, owner3, owner4]  // 4 >= 3 
 threshold: 3  (still valid)
 ```
 
@@ -528,20 +528,20 @@ linera operation \
 ```
 
 **Key Features**:
-- ✅ **CRITICAL**: Threshold safety check
-- ✅ Owner existence validation
-- ✅ Prevents bricking the multisig
-- 💡 May want to decrease threshold first
+-  **CRITICAL**: Threshold safety check
+-  Owner existence validation
+-  Prevents bricking the multisig
+-  May want to decrease threshold first
 
 **Safety Scenarios**:
 ```
 Scenario 1 (SAFE):
   owners: 5, threshold: 3
-  Remove owner → 4 owners, threshold still 3 ✓
+  Remove owner → 4 owners, threshold still 3 
 
 Scenario 2 (BLOCKED):
   owners: 3, threshold: 3
-  Remove owner → 2 owners < threshold 3 ✗ (PANIC)
+  Remove owner → 2 owners < threshold 3  (PANIC)
 ```
 
 ---
@@ -617,10 +617,10 @@ linera operation \
 ```
 
 **Key Features**:
-- ✅ Preserves owner count (threshold unaffected)
-- ✅ Duplicate prevention (new owner)
-- ✅ Existence validation (old owner)
-- ✅ In-place replacement (atomic)
+-  Preserves owner count (threshold unaffected)
+-  Duplicate prevention (new owner)
+-  Existence validation (old owner)
+-  In-place replacement (atomic)
 
 **Use Cases**:
 - Key rotation (security)
@@ -698,10 +698,10 @@ linera operation \
 ```
 
 **Key Features**:
-- ✅ Zero threshold prevention
-- ✅ Upper bound validation (<= owner count)
-- ✅ Immediate effect
-- ⚠️ Any owner can change (no governance)
+-  Zero threshold prevention
+-  Upper bound validation (<= owner count)
+-  Immediate effect
+-  Any owner can change (no governance)
 
 **Scenarios**:
 ```
@@ -949,14 +949,14 @@ query OwnerConfirmations($txId: UInt64!, $owners: [AccountOwner!]!) {
 
 | Operation | Auth | State Change | Threshold Check |
 |-----------|------|--------------|-----------------|
-| SubmitTransaction | ✓ Yes | nonce++, tx new | No |
-| ConfirmTransaction | ✓ Yes | confirmations++ | No |
-| ExecuteTransaction | ✓ Yes | executed=true | **Yes (CRITICAL)** |
-| RevokeConfirmation | ✓ Yes | confirmations-- | No |
-| AddOwner | ✓ Yes | owners++ | No |
-| RemoveOwner | ✓ Yes | owners-- | **Yes (safety)** |
-| ReplaceOwner | ✓ Yes | owners swap | No |
-| ChangeThreshold | ✓ Yes | threshold new | **Yes (bounds)** |
+| SubmitTransaction |  Yes | nonce++, tx new | No |
+| ConfirmTransaction |  Yes | confirmations++ | No |
+| ExecuteTransaction |  Yes | executed=true | **Yes (CRITICAL)** |
+| RevokeConfirmation |  Yes | confirmations-- | No |
+| AddOwner |  Yes | owners++ | No |
+| RemoveOwner |  Yes | owners-- | **Yes (safety)** |
+| ReplaceOwner |  Yes | owners swap | No |
+| ChangeThreshold |  Yes | threshold new | **Yes (bounds)** |
 
 ### Best Practices
 

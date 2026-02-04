@@ -154,16 +154,16 @@ async-graphql = "=7.0.17"  # Note the "=" sign
 **async-graphql 6.x vs 7.x structural differences**:
 ```
 6.x structure:
-├── async-graphql-derive
-├── async-graphql-parser
-├── async-graphql-value
-└── async-graphql
+ async-graphql-derive
+ async-graphql-parser
+ async-graphql-value
+ async-graphql
 
 7.x structure:
-├── async-graphql-derive (7.0.17)
-├── async-graphql-parser (7.2.1)  ← Different version!
-├── async-graphql-value (7.2.1)   ← Different version!
-└── async-graphql (7.0.17)
+ async-graphql-derive (7.0.17)
+ async-graphql-parser (7.2.1)  ← Different version!
+ async-graphql-value (7.2.1)   ← Different version!
+ async-graphql (7.0.17)
 ```
 
 The `[replace]` directive tries to find `async-graphql@7.0.17` in the 6.x codebase, which doesn't exist.
@@ -190,10 +190,10 @@ linera-sdk = { git = "https://github.com/PalmeraDAO/linera-protocol", branch = "
 ```
 
 **Problems**:
-- ❌ Massive maintenance burden
-- ❌ API incompatibilities between 6.x and 7.x
-- ❌ Will diverge from official SDK
-- ❌ May break when Linera network updates
+-  Massive maintenance burden
+-  API incompatibilities between 6.x and 7.x
+-  Will diverge from official SDK
+-  May break when Linera network updates
 
 ### 2. Wait for Linera SDK Update (RECOMMENDED)
 

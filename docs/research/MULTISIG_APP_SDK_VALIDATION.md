@@ -1,7 +1,7 @@
 # Linera Multisig Application - SDK v0.15.11 Validation Complete
 
 **Date**: February 3, 2026
-**Status**: ✅ **SUCCESSFULLY COMPILED AND VALIDATED**
+**Status**:  **SUCCESSFULLY COMPILED AND VALIDATED**
 **Linera SDK**: v0.15.11
 **Linera CLI**: v0.15.8
 **Testnet**: Conway (https://faucet.testnet-conway.linera.net)
@@ -12,7 +12,7 @@
 
 The Linera multisig application has been **successfully migrated and compiled** with linera-sdk v0.15.11. All Wasm binaries are generated, validated, and ready for testnet deployment.
 
-### ✅ Key Achievements
+###  Key Achievements
 
 1. **Code Migrated**: Updated from obsolete SDK v0.12.0 patterns to v0.15.11
 2. **Compilation Success**: Both contract and service compile without errors
@@ -31,7 +31,7 @@ The migration required adapting to several breaking changes:
 | Old Pattern (v0.12.0) | New Pattern (v0.15.11) |
 |----------------------|----------------------|
 | `Service::load()` | `Service::new()` |
-| `Service::store()` | ❌ Removed (no manual store needed) |
+| `Service::store()` |  Removed (no manual store needed) |
 | `map.get(&key).expect()` | `map.get(&key).await.unwrap().unwrap_or_default()` |
 | `map.insert(&key, &value)` | `map.insert(&key, value).expect()` |
 | Direct `Owner` re-export | `pub type Owner = AccountOwner;` |
@@ -50,17 +50,17 @@ The migration required adapting to several breaking changes:
 
 ```
 target/wasm32-unknown-unknown/release/
-├── linera_multisig.wasm      (20KB - library)
-├── multisig_contract.wasm    (340KB - contract)
-└── multisig_service.wasm     (2MB - GraphQL service)
+ linera_multisig.wasm      (20KB - library)
+ multisig_contract.wasm    (340KB - contract)
+ multisig_service.wasm     (2MB - GraphQL service)
 ```
 
 **Wasm Validation:**
-- ✅ Valid magic number (0x00 0x61 0x73 0x6D)
-- ✅ Proper section structure (Type, Import, Function, Code, Data, Custom)
-- ✅ wit-bindgen v0.24.0 metadata
-- ✅ Contract: 599 functions
-- ✅ Service: 1,960 functions (includes GraphQL runtime)
+-  Valid magic number (0x00 0x61 0x73 0x6D)
+-  Proper section structure (Type, Import, Function, Code, Data, Custom)
+-  wit-bindgen v0.24.0 metadata
+-  Contract: 599 functions
+-  Service: 1,960 functions (includes GraphQL runtime)
 
 ---
 
@@ -118,19 +118,19 @@ query HasConfirmed(owner: "...", transactionId: 0) {
 ### Environment Setup
 
 ```
-✅ Linera CLI v0.15.8 installed
-✅ Testnet Conway faucet reachable
-✅ Wallet initialization successful
-✅ Chain ID obtained: 8fd4233c...
+ Linera CLI v0.15.8 installed
+ Testnet Conway faucet reachable
+ Wallet initialization successful
+ Chain ID obtained: 8fd4233c...
 ```
 
 ### Scripts Validated
 
 | Script | Status | Purpose |
 |--------|--------|---------|
-| `test-wasm-binaries.sh` | ✅ Working | Validates Wasm binaries |
-| `test-multisig-app.sh` | ✅ Working | Testnet deployment setup |
-| `multisig-test-rust.sh` | ✅ Updated | SDK v0.15.11 compatible |
+| `test-wasm-binaries.sh` |  Working | Validates Wasm binaries |
+| `test-multisig-app.sh` |  Working | Testnet deployment setup |
+| `multisig-test-rust.sh` |  Updated | SDK v0.15.11 compatible |
 
 ---
 
@@ -160,10 +160,10 @@ linera publish \
 ### Current Linera CLI (v0.15.8)
 
 The CLI currently supports:
-- ✅ Multi-owner chains (protocol level)
-- ✅ Wallet operations
-- ✅ Chain queries
-- ⏳ Application publishing (evolving)
+-  Multi-owner chains (protocol level)
+-  Wallet operations
+-  Chain queries
+-  Application publishing (evolving)
 
 **Note**: Application publishing via CLI is still evolving. The compiled binaries are ready when the CLI fully supports publishing user applications with custom Wasm contracts.
 
@@ -201,12 +201,12 @@ This provides native multi-owner control **without** a custom contract.
 
 ## Next Steps
 
-1. ✅ **DONE**: Compile with SDK v0.15.11
-2. ✅ **DONE**: Validate Wasm binaries
-3. ✅ **DONE**: Testnet environment setup
-4. ⏳ **TODO**: Await full CLI support for application publishing
-5. ⏳ **TODO**: Deploy to testnet when available
-6. ⏳ **TODO**: Execute operations end-to-end
+1.  **DONE**: Compile with SDK v0.15.11
+2.  **DONE**: Validate Wasm binaries
+3.  **DONE**: Testnet environment setup
+4.  **TODO**: Await full CLI support for application publishing
+5.  **TODO**: Deploy to testnet when available
+6.  **TODO**: Execute operations end-to-end
 
 ---
 
@@ -214,13 +214,13 @@ This provides native multi-owner control **without** a custom contract.
 
 ```
 scripts/
-├── test-wasm-binaries.sh         # Wasm validation script
-├── multisig/test-multisig-app.sh # Testnet deployment test
-└── multisig-app/
-    ├── target/wasm32-unknown-unknown/release/
-    │   ├── multisig_contract.wasm  # ✅ Ready
-    │   └── multisig_service.wasm   # ✅ Ready
-    └── WASM_VALIDATION.md          # Validation report
+ test-wasm-binaries.sh         # Wasm validation script
+ multisig/test-multisig-app.sh # Testnet deployment test
+ multisig-app/
+     target/wasm32-unknown-unknown/release/
+        multisig_contract.wasm  #  Ready
+        multisig_service.wasm   #  Ready
+     WASM_VALIDATION.md          # Validation report
 ```
 
 ---
@@ -229,7 +229,7 @@ scripts/
 
 The Linera multisig application has been **successfully updated** to compile with SDK v0.15.11. All binaries are validated and ready for testnet deployment when the CLI fully supports application publishing.
 
-**Status**: ✅ **READY FOR TESTNET DEPLOYMENT**
+**Status**:  **READY FOR TESTNET DEPLOYMENT**
 
 ---
 

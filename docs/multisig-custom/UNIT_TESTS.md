@@ -23,25 +23,25 @@
 
 This document describes how to work with the Linera multisig contract unit test suite. The tests are designed to validate:
 
-- ✅ **Instantiation**: Valid multisig wallet creation
-- ✅ **Proposals**: Proposal submission and validation
-- ✅ **Confirmations**: Owner confirmation system
-- ✅ **Execution**: Proposal execution when threshold is met
-- ✅ **Governance**: Governance operations (add/remove/replace owner, change threshold)
-- ✅ **State Management**: Proper contract state management
+-  **Instantiation**: Valid multisig wallet creation
+-  **Proposals**: Proposal submission and validation
+-  **Confirmations**: Owner confirmation system
+-  **Execution**: Proposal execution when threshold is met
+-  **Governance**: Governance operations (add/remove/replace owner, change threshold)
+-  **State Management**: Proper contract state management
 
 ### Code Location
 
 ```
 scripts/multisig-app/
-├── Cargo.toml              # Project configuration
-├── src/
-│   ├── lib.rs             # Main ABI and types
-│   ├── state.rs           # State structure
-│   ├── contract.rs        # Contract logic
-│   └── service.rs         # GraphQL service
-└── tests/
-    └── multisig_tests.rs  # Unit test suite
+ Cargo.toml              # Project configuration
+ src/
+    lib.rs             # Main ABI and types
+    state.rs           # State structure
+    contract.rs        # Contract logic
+    service.rs         # GraphQL service
+ tests/
+     multisig_tests.rs  # Unit test suite
 ```
 
 ---
@@ -140,9 +140,9 @@ cargo test -- --test-threads=1
 | `-- --ignored` | Run tests marked with `#[ignore]` |
 | `-- --exact` | Exact test name match |
 
-★ Insight ─────────────────────────────────────
+ Insight 
 The `--release` mode in `cargo test` can significantly reduce execution time (up to 10x faster) because it compiles with optimizations. However, it may hide certain bugs that only appear in debug mode (like race conditions).
-─────────────────────────────────────────────────
+
 
 ---
 
@@ -327,9 +327,9 @@ cargo test integration_tests
 | `test_full_governance_flow` | Complete governance flow |
 | `test_revoke_prevents_execution` | Revocation prevents execution |
 
-★ Insight ─────────────────────────────────────
+ Insight 
 Integration tests (`integration_tests`) are especially valuable because they test the complete user flow, while unit tests focus on individual components. Maintain a balance between both types for complete coverage.
-─────────────────────────────────────────────────
+
 
 ---
 
@@ -412,10 +412,10 @@ mod expiration_tests {
 
 1. **Descriptive names**: Use names that describe what is being tested
    ```rust
-   // ✅ Good
+   //  Good
    fn test_add_owner_with_invalid_address_fails()
 
-   // ❌ Bad
+   //  Bad
    fn test_add_owner()
    ```
 
@@ -436,14 +436,14 @@ mod expiration_tests {
 
 3. **One assertion per test** (when possible)
    ```rust
-   // ✅ Good: One test per assertion
+   //  Good: One test per assertion
    #[test]
    fn test_threshold_must_be_positive() { }
 
    #[test]
    fn test_threshold_cannot_exceed_owners() { }
 
-   // ❌ Less ideal: Multiple assertions
+   //  Less ideal: Multiple assertions
    #[test]
    fn test_threshold_validation() {
        // test positive
@@ -493,9 +493,9 @@ cargo tarpaulin --manifest-path multisig-app/Cargo.toml --out Json
 | Governance operations | 80% | 90% |
 | **Total** | **86%** | **93%** |
 
-★ Insight ─────────────────────────────────────
+ Insight 
 100% coverage is not always realistic or necessary. Error handling and edge case code may have lower priority. Focus on covering the "happy path" and most common use cases first.
-─────────────────────────────────────────────────
+
 
 ---
 
@@ -571,11 +571,11 @@ echo "Running tests before commit..."
 cd scripts/multisig-app
 
 if ! cargo test --quiet; then
-    echo "❌ Tests failed. Commit aborted."
+    echo " Tests failed. Commit aborted."
     exit 1
 fi
 
-echo "✅ All tests passed. Proceeding with commit."
+echo " All tests passed. Proceeding with commit."
 ```
 
 ---
@@ -659,12 +659,12 @@ error[E0382]: use of moved value
 
 **Solution**: Clone values explicitly in tests:
 ```rust
-// ❌ Error
+//  Error
 let owners = mock_owners(3);
 let result1 = function1(owners); // owners moved
 let result2 = function2(owners); // Error: owners no longer exists
 
-// ✅ Fixed
+//  Fixed
 let owners = mock_owners(3);
 let result1 = function1(owners.clone());
 let result2 = function2(owners);

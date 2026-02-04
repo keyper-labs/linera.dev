@@ -726,13 +726,13 @@ scalar!(Parameters);
 
 ```
 multisig/
-├── Cargo.toml
-├── src/
-│   ├── lib.rs           # ABI definition
-│   ├── contract.rs      # State-changing logic
-│   ├── service.rs       # Query handlers
-│   ├── state.rs         # State with Views
-│   └── operations.rs    # Operation types
+ Cargo.toml
+ src/
+    lib.rs           # ABI definition
+    contract.rs      # State-changing logic
+    service.rs       # Query handlers
+    state.rs         # State with Views
+    operations.rs    # Operation types
 ```
 
 ### 12.2 Minimal Multisig ABI

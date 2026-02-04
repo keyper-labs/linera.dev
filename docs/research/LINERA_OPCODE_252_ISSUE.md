@@ -1,6 +1,6 @@
 # Linera Opcode 252 Issue - Bulk Memory Operations
 
-**Status**: 🔴 **COMPLEX BLOCKER** - Dependency conflict with official solution
+**Status**: CRITICAL BLOCKER - Dependency conflict with official solution
 **Date**: 2026-02-03
 **Affected**: Linera Multisig Application deployment
 **Severity**: High - SDK dependency conflict
@@ -8,7 +8,7 @@
 
 ---
 
-## ⚠️ CRITICAL UPDATE: Dependency Conflict Discovered
+## CRITICAL UPDATE: Dependency Conflict Discovered
 
 ### The Real Problem
 
@@ -16,13 +16,13 @@
 
 ```
 linera-sdk 0.15.11
-    └─ async-graphql = "=7.0.17"
-        └─ requires Rust 1.87+ (for `let` expressions in `&&`)
+     async-graphql = "=7.0.17"
+         requires Rust 1.87+ (for `let` expressions in `&&`)
 
 But:
 Rust 1.87+
-    └─ generates memory.copy (opcode 252)
-        └─ Linera runtime doesn't support it
+     generates memory.copy (opcode 252)
+         Linera runtime doesn't support it
 ```
 
 ### Dependency Conflict Details
@@ -42,8 +42,8 @@ value.get(X) && let Some(y) = other_function()
 **The Trade-off**:
 | Rust Version | Wasm Compatible | async-graphql 7.x | Linera SDK 0.15.11 |
 |--------------|-----------------|-------------------|---------------------|
-| **1.86** | ✅ Yes | ❌ No compile error | ❌ No |
-| **1.87+** | ❌ No (opcode 252) | ✅ Yes | ✅ Yes |
+| **1.86** |  Yes |  No compile error |  No |
+| **1.87+** |  No (opcode 252) |  Yes |  Yes |
 
 ---
 
@@ -75,10 +75,10 @@ value.get(X) && let Some(y) = other_function()
 The Linera Multisig application is **fully implemented and validated** (74/74 tests passing), but deployment to Conway testnet fails due to a Wasm compatibility issue. The Rust compiler generates **`memory.copy` instructions** (opcode 252 / 0xFC 0x0A) that **Linera's runtime does not support**.
 
 ### Impact
-- ✅ **Source code**: Complete and validated
-- ✅ **Unit tests**: 74/74 passing
-- ✅ **Wasm compilation**: Successful
-- ❌ **Testnet deployment**: Fails with "Unknown opcode 252"
+-  **Source code**: Complete and validated
+-  **Unit tests**: 74/74 passing
+-  **Wasm compilation**: Successful
+-  **Testnet deployment**: Fails with "Unknown opcode 252"
 
 ---
 
@@ -124,11 +124,11 @@ All failed to eliminate `memory.copy`:
 
 | Attempt | Configuration | Result |
 |---------|--------------|--------|
-| Default | `opt-level = 3`, `lto = false` | ❌ memory.copy present |
-| Size opt | `opt-level = "z"`, `lto = false` | ❌ memory.copy present |
-| No LTO | `opt-level = 2`, `lto = false` | ❌ memory.copy present |
-| Feature flag | `-C target-feature=-bulk-memory` | ❌ Flag not effective |
-| Old Rust | v1.75.0 (too old for deps) | ❌ Build failed |
+| Default | `opt-level = 3`, `lto = false` |  memory.copy present |
+| Size opt | `opt-level = "z"`, `lto = false` |  memory.copy present |
+| No LTO | `opt-level = 2`, `lto = false` |  memory.copy present |
+| Feature flag | `-C target-feature=-bulk-memory` |  Flag not effective |
+| Old Rust | v1.75.0 (too old for deps) |  Build failed |
 
 ### 2. Wasm Transformation Attempts
 
@@ -190,27 +190,27 @@ rustup target add wasm32-unknown-unknown
 
 ## Workarounds Attempted
 
-### ❌ Post-processing with wasm-opt
+###  Post-processing with wasm-opt
 ```bash
 wasm-opt input.wasm -O4 --llvm-memory-copy-fill-lowering -o output.wasm
 ```
 **Problem**: Validates before transforming
 
-### ❌ Cargo config features
+###  Cargo config features
 ```toml
 [target.wasm32-unknown-unknown]
 rustflags = ["-C", "target-feature=-bulk-memory"]
 ```
 **Problem**: Rust compiler ignores this flag
 
-### ❌ Downgrade Rust toolchain
+###  Downgrade Rust toolchain
 **Problem**: Dependencies require newer Rust (edition2024)
 
 ---
 
 ## Possible Solutions (Updated)
 
-### Option A: Wait for Linera SDK Update ⭐ (RECOMMENDED)
+### Option A: Wait for Linera SDK Update  (RECOMMENDED)
 
 **Rationale**: This is a Linera SDK issue, not a project issue.
 
@@ -259,9 +259,9 @@ linera-sdk = { version = "0.12.0", features = ["contract", "service"] }
 3. Access state directly via Linera CLI
 
 **Trade-offs**:
-- ❌ No GraphQL API for querying
-- ❌ Must use CLI for all interactions
-- ✅ Wasm compilation works with Rust 1.86
+-  No GraphQL API for querying
+-  Must use CLI for all interactions
+-  Wasm compilation works with Rust 1.86
 
 **Code changes required**:
 ```toml
@@ -423,16 +423,16 @@ Create a post-processor that:
 ## Current State
 
 ### Completed
-- ✅ Multisig contract fully implemented (Safe standard)
-- ✅ 74/74 unit tests passing
-- ✅ Validation script updated (0 warnings)
-- ✅ Wallet initialized on Conway testnet
-- ✅ Wasm module published successfully
+-  Multisig contract fully implemented (Safe standard)
+-  74/74 unit tests passing
+-  Validation script updated (0 warnings)
+-  Wallet initialized on Conway testnet
+-  Wasm module published successfully
 
 ### Blocked
-- ❌ Application creation fails with opcode 252
-- ❌ Cannot test contract functionality on testnet
-- ❌ Cannot validate end-to-end operations
+-  Application creation fails with opcode 252
+-  Cannot test contract functionality on testnet
+-  Cannot validate end-to-end operations
 
 ---
 
@@ -462,7 +462,7 @@ All contract files remain **unchanged** and correctly implemented:
 
 ## Next Steps
 
-### Immediate (✅ SOLUTION KNOWN)
+### Immediate ( SOLUTION KNOWN)
 
 1. **Apply Official Fix**:
    ```bash
@@ -579,12 +579,12 @@ None successfully eliminated `memory.copy`.
 
 ```
 linera-sdk 0.15.11
-  └─ requires async-graphql = "=7.0.17"
-      └─ requires Rust 1.87+ (for `let` expressions in `&&` position)
+   requires async-graphql = "=7.0.17"
+       requires Rust 1.87+ (for `let` expressions in `&&` position)
 
 Rust 1.87+
-  └─ generates memory.copy (opcode 252)
-      └─ Linera runtime doesn't support it
+   generates memory.copy (opcode 252)
+       Linera runtime doesn't support it
 ```
 
 ### This is a Linera SDK Problem
@@ -604,7 +604,7 @@ The dependency chain is:
 
 ### For Immediate Action
 
-1. **Document the issue** in project README ✅ DONE
+1. **Document the issue** in project README  DONE
 2. **Add comment to issue #4742** about the SDK dependency problem
 3. **Monitor** issue #4742 for official Linera response
 
@@ -619,8 +619,8 @@ linera-sdk 0.15.11 requires async-graphql = "=7.0.17"
 async-graphql 7.0.17 requires Rust 1.87+ (for let-chains in && position)
 
 This creates an impossible situation:
-- Rust 1.86 = Wasm compatible ✅ but async-graphql doesn't compile ❌
-- Rust 1.87+ = async-graphql compiles ✅ but generates opcode 252 ❌
+- Rust 1.86 = Wasm compatible  but async-graphql doesn't compile 
+- Rust 1.87+ = async-graphql compiles  but generates opcode 252 
 
 Can you please clarify:
 1. Is there a linera-sdk version compatible with Rust 1.86?
@@ -659,7 +659,7 @@ Thank you!
 ---
 
 **Last Updated**: 2026-02-03 22:30 UTC
-**Status**: 🔴 BLOCKED - Waiting for Linera SDK update
+**Status**:  BLOCKED - Waiting for Linera SDK update
 
 ---
 
@@ -673,10 +673,10 @@ After thorough investigation, we discovered that **issue #4742's suggested solut
 
 ```
 linera-sdk 0.15.11
-    └─ async-graphql = "=7.0.17" (exact version pinned)
-        └─ requires Rust 1.87+ (for let-chains: `&& let` syntax)
-            └─ generates memory.copy (opcode 252)
-                └─ Linera runtime doesn't support it
+     async-graphql = "=7.0.17" (exact version pinned)
+         requires Rust 1.87+ (for let-chains: `&& let` syntax)
+             generates memory.copy (opcode 252)
+                 Linera runtime doesn't support it
 ```
 
 ### Verification Results
@@ -698,9 +698,9 @@ linera-sdk 0.15.11
 ### Conclusion
 
 **There is NO working combination of:**
-- ✅ linera-sdk (current version)
-- ✅ async-graphql (required dependency)
-- ✅ Rust 1.86 (Wasm compatible)
+-  linera-sdk (current version)
+-  async-graphql (required dependency)
+-  Rust 1.86 (Wasm compatible)
 
 ### Possible Solutions (Requires Linera Team Action)
 
@@ -752,7 +752,7 @@ Can you please clarify the planned resolution path?
 ---
 
 **Last Updated**: 2026-02-04 10:45 UTC
-**Status**: 🔴 CRITICAL - SDK ecosystem issue, requires Linera team action
+**Status**:  CRITICAL - SDK ecosystem issue, requires Linera team action
 **Investigation by**: PalmeraDAO Development Team
 
 ---
@@ -800,7 +800,7 @@ wasm-tools parse target/wasm32-unknown-unknown/release/multisig.wasm | grep -c "
 
 **Attempted**: Compile with Rust 1.86.0 to verify if it avoids opcode 252
 
-**Result**: ❌ **FAILED** - async-graphql 7.0.17 doesn't compile with Rust 1.86.0
+**Result**:  **FAILED** - async-graphql 7.0.17 doesn't compile with Rust 1.86.0
 
 **Error**:
 ```
@@ -823,38 +823,38 @@ error[E0658]: `let` expressions in this position are unstable
 ### Complete Dependency Analysis (Final)
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    DEPENDENCY CHAIN CONFLICT                       │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  Our Project                                                        │
-│      ↓                                                              │
-│  linera-sdk 0.15.11                                                 │
-│      ↓                                                              │
-│  async-graphql = "=7.0.17"  (exact version pinned)                 │
-│      ↓                                                              │
-│  async-graphql-value 7.2.1                                          │
-│      ↓                                                              │
-│  REQUIRES: Rust 1.87+ (for let-chains: `&& let`)                   │
-│      ↓                                                              │
-│  Rust 1.87+ generates memory.copy (opcode 252)                      │
-│      ↓                                                              │
-│  Linera runtime (linera-kywasmtime) doesn't support it              │
-│      ↓                                                              │
-│  ❌ DEPLOYMENT FAILS                                                │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────┐
-│                    ALTERNATIVE PATH (BLOCKED)                      │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  Use Rust 1.86.0 instead                                           │
-│      ↓                                                              │
-│  ❌ async-graphql 7.0.17 DOESN'T COMPILE                            │
-│     (uses let-chains stabilized in 1.87)                            │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+                    DEPENDENCY CHAIN CONFLICT                       
+
+                                                                      
+  Our Project                                                        
+      ↓                                                              
+  linera-sdk 0.15.11                                                 
+      ↓                                                              
+  async-graphql = "=7.0.17"  (exact version pinned)                 
+      ↓                                                              
+  async-graphql-value 7.2.1                                          
+      ↓                                                              
+  REQUIRES: Rust 1.87+ (for let-chains: `&& let`)                   
+      ↓                                                              
+  Rust 1.87+ generates memory.copy (opcode 252)                      
+      ↓                                                              
+  Linera runtime (linera-kywasmtime) doesn't support it              
+      ↓                                                              
+   DEPLOYMENT FAILS                                                
+                                                                      
+
+
+
+                    ALTERNATIVE PATH (BLOCKED)                      
+
+                                                                      
+  Use Rust 1.86.0 instead                                           
+      ↓                                                              
+   async-graphql 7.0.17 DOESN'T COMPILE                            
+     (uses let-chains stabilized in 1.87)                            
+                                                                      
+
 ```
 
 ---
@@ -883,11 +883,11 @@ async-graphql = { version = "7.0.16", git = "..." }
 
 | Component | Version | Status |
 |-----------|---------|--------|
-| **linera-sdk** | 0.15.11 | ✅ Includes ruzstd 0.8.1 fix |
-| **async-graphql** | 7.0.17 | ❌ Requires Rust 1.87+ |
-| **Rust stable** | 1.92.0 | ✅ Compiles, ❌ Generates opcode 252 |
-| **Rust 1.86.0** | 1.86.0 | ❌ async-graphql doesn't compile |
-| **Linera runtime** | kywasmtime 0.1.0 | ❌ No bulk memory support |
+| **linera-sdk** | 0.15.11 |  Includes ruzstd 0.8.1 fix |
+| **async-graphql** | 7.0.17 |  Requires Rust 1.87+ |
+| **Rust stable** | 1.92.0 |  Compiles,  Generates opcode 252 |
+| **Rust 1.86.0** | 1.86.0 |  async-graphql doesn't compile |
+| **Linera runtime** | kywasmtime 0.1.0 |  No bulk memory support |
 
 ---
 
@@ -970,7 +970,7 @@ Thank you for your work on Linera!
 
 **Investigation Complete**: 2026-02-04 10:45 UTC
 **Total Investigation Time**: ~2 days
-**Final Verdict**: 🔴 CRITICAL BLOCKER - Requires Linera team action
+**Final Verdict**:  CRITICAL BLOCKER - Requires Linera team action
 
 ---
 
@@ -978,17 +978,17 @@ Thank you for your work on Linera!
 
 **All tests, commands, and detailed results** have been documented in:
 
-📄 **[`OPCODE_252_INVESTIGATION_LOG.md`](OPCODE_252_INVESTIGATION_LOG.md)**
+ **[`OPCODE_252_INVESTIGATION_LOG.md`](OPCODE_252_INVESTIGATION_LOG.md)**
 
 This comprehensive log includes:
-- ✅ Complete dependency tree analysis
-- ✅ All Rust version compilation tests
-- ✅ Wasm binary analysis with hexdump output
-- ✅ PR #4894 investigation results
-- ✅ async-graphql version research
-- ✅ 27 test commands with full output
-- ✅ Error message appendix
-- ✅ Dependency chain visualization
+-  Complete dependency tree analysis
+-  All Rust version compilation tests
+-  Wasm binary analysis with hexdump output
+-  PR #4894 investigation results
+-  async-graphql version research
+-  27 test commands with full output
+-  Error message appendix
+-  Dependency chain visualization
 
 **Test Summary from Log**:
 | Test Category | Tests Run | Passed | Failed |
@@ -1000,10 +1000,10 @@ This comprehensive log includes:
 | **TOTAL** | **8** | **7** | **1** |
 
 **Key Findings**:
-1. ✅ ruzstd 0.8.1 verified in linera-sdk 0.15.11
-2. ❌ async-graphql 7.0.17 fails with Rust 1.86.0
-3. ❌ async-graphql 7.0.17 has incorrect rust-version metadata
-4. ✅ Wasm contains 3 memory.copy opcodes with Rust 1.92.0
-5. ✅ 74/74 validation tests pass
+1.  ruzstd 0.8.1 verified in linera-sdk 0.15.11
+2.  async-graphql 7.0.17 fails with Rust 1.86.0
+3.  async-graphql 7.0.17 has incorrect rust-version metadata
+4.  Wasm contains 3 memory.copy opcodes with Rust 1.92.0
+5.  74/74 validation tests pass
 
 See [`OPCODE_252_INVESTIGATION_LOG.md`](OPCODE_252_INVESTIGATION_LOG.md) for complete details.

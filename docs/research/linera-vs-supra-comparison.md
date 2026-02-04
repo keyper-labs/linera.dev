@@ -22,11 +22,11 @@
 
 | Feature | Supra | Linera |
 |---------|-------|--------|
-| Protocol-level multisig | ✅ Yes | ❌ No |
-| Custom threshold logic | ❌ Fixed | ✅ Flexible |
-| Cross-chain messaging | ❌ No | ✅ Yes (native) |
-| Official backend SDK | ✅ Python | ❌ None |
-| Rust required | ❌ No | ✅ Yes |
+| Protocol-level multisig |  Yes |  No |
+| Custom threshold logic |  Fixed |  Flexible |
+| Cross-chain messaging |  No |  Yes (native) |
+| Official backend SDK |  Python |  None |
+| Rust required |  No |  Yes |
 
 ---
 
@@ -34,11 +34,11 @@
 
 | Feature | Supra | Linera MVP |
 |---------|-------|------------|
-| Create multisig | ✅ Built-in | ✅ Custom Wasm |
-| Propose transaction | ✅ SDK | ✅ Custom |
-| Collect approvals | ✅ Off-chain | ✅ On-chain |
-| Execute | ✅ Single tx | ✅ Multi-tx |
-| Safe-style UI | ✅ Possible | ✅ Possible |
+| Create multisig |  Built-in |  Custom Wasm |
+| Propose transaction |  SDK |  Custom |
+| Collect approvals |  Off-chain |  On-chain |
+| Execute |  Single tx |  Multi-tx |
+| Safe-style UI |  Possible |  Possible |
 
 ---
 
@@ -46,9 +46,9 @@
 
 | Criterion | Supra | Linera |
 |-----------|-------|--------|
-| Time-to-market | ✅ Fast | ⚠️ Slow |
-| Development risk | ✅ Low | ⚠️ High |
-| Flexibility | ❌ Limited | ✅ High |
+| Time-to-market |  Fast |  Slow |
+| Development risk |  Low |  High |
+| Flexibility |  Limited |  High |
 | **Effort** | **446h** | **730h** |
 
 **Linera requires +64% more time** due to custom Wasm contract + Rust backend.

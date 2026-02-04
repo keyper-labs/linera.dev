@@ -12,11 +12,11 @@ The `validate-multisig-complete.sh` script performs **autonomous validation** of
 
 ### Purpose
 
-- ✅ Verify all 8 operations are implemented
-- ✅ Check security properties (authorization, validation)
-- ✅ Validate Linera SDK integration
-- ✅ Test compilation and Wasm generation
-- ✅ Generate detailed validation reports
+-  Verify all 8 operations are implemented
+-  Check security properties (authorization, validation)
+-  Validate Linera SDK integration
+-  Test compilation and Wasm generation
+-  Generate detailed validation reports
 
 ### Quick Start
 
@@ -108,7 +108,7 @@ for op in SubmitTransaction ConfirmTransaction ExecuteTransaction \
 done
 ```
 
-**Expected Result**: All 8 operations found ✅
+**Expected Result**: All 8 operations found 
 
 #### 2b. Implementation Check
 
@@ -119,7 +119,7 @@ done
 grep -E "async fn submit_transaction\(" src/contract.rs
 ```
 
-**Expected Result**: All 8 functions found ✅
+**Expected Result**: All 8 functions found 
 
 #### 2c. State Structure Check
 
@@ -131,7 +131,7 @@ grep -q "pub pending_transactions: MapView<u64, Transaction>" src/state.rs
 grep -q "pub confirmations: MapView<AccountOwner, Vec<u64>>" src/state.rs
 ```
 
-**Expected Result**: All 4 state fields found ✅
+**Expected Result**: All 4 state fields found 
 
 #### 2d. GraphQL Service Check
 
@@ -143,7 +143,7 @@ grep -q "async fn transaction" src/service.rs
 # ... etc
 ```
 
-**Expected Result**: All 5 queries found ✅
+**Expected Result**: All 5 queries found 
 
 ---
 
@@ -165,7 +165,7 @@ grep -A 5 "async fn confirm_transaction" src/contract.rs | grep -q "ensure_is_ow
 # ... etc
 ```
 
-**Expected Result**: All operations check ownership ✅
+**Expected Result**: All operations check ownership 
 
 #### 3b. Threshold Validation
 
@@ -175,7 +175,7 @@ grep -A 30 "async fn execute_transaction" src/contract.rs | \
     grep -q "transaction.confirmation_count < threshold"
 ```
 
-**Expected Result**: Threshold check present ✅
+**Expected Result**: Threshold check present 
 
 #### 3c. Double-Execution Prevention
 
@@ -185,7 +185,7 @@ grep -A 30 "async fn execute_transaction" src/contract.rs | \
     grep -q "transaction.executed"
 ```
 
-**Expected Result**: Double-execution check present ✅
+**Expected Result**: Double-execution check present 
 
 #### 3d. Integer Safety
 
@@ -194,7 +194,7 @@ grep -A 30 "async fn execute_transaction" src/contract.rs | \
 grep -q "saturating_sub" src/contract.rs
 ```
 
-**Expected Result**: Using saturating_sub ✅
+**Expected Result**: Using saturating_sub 
 
 ---
 
@@ -211,7 +211,7 @@ grep -q "saturating_sub" src/contract.rs
 grep "linera-sdk =" Cargo.toml | head -1
 ```
 
-**Expected Result**: `linera-sdk = "0.15.11"` ✅
+**Expected Result**: `linera-sdk = "0.15.11"` 
 
 #### 4b. Wasm Compatibility
 
@@ -220,7 +220,7 @@ grep "linera-sdk =" Cargo.toml | head -1
 grep -q 'crate-type = \["cdylib", "rlib"\]' Cargo.toml
 ```
 
-**Expected Result**: cdylib enabled ✅
+**Expected Result**: cdylib enabled 
 
 #### 4c. View Usage
 
@@ -229,7 +229,7 @@ grep -q 'crate-type = \["cdylib", "rlib"\]' Cargo.toml
 grep -q "#\[derive(RootView)\]" src/state.rs
 ```
 
-**Expected Result**: RootView macro used ✅
+**Expected Result**: RootView macro used 
 
 ---
 
@@ -271,7 +271,7 @@ grep -A 20 "async fn submit_transaction" src/contract.rs | \
     grep -q "confirm_transaction_internal"
 ```
 
-**Expected Result**: Uses nonce + auto-confirms ✅
+**Expected Result**: Uses nonce + auto-confirms 
 
 #### Scenario 2: Confirm Transaction (Multiple Owners)
 
@@ -281,7 +281,7 @@ grep -A 10 "async fn confirm_transaction_internal" src/contract.rs | \
     grep -q "already confirmed"
 ```
 
-**Expected Result**: Handles duplicates ✅
+**Expected Result**: Handles duplicates 
 
 #### Scenario 3: Execute Transaction (Threshold Enforcement)
 
@@ -295,7 +295,7 @@ grep -A 30 "async fn execute_transaction" src/contract.rs | \
     grep -q "transaction.executed = true"
 ```
 
-**Expected Result**: Enforces threshold + marks executed ✅
+**Expected Result**: Enforces threshold + marks executed 
 
 #### Scenario 4: Revoke Confirmation
 
@@ -305,7 +305,7 @@ grep -A 20 "async fn revoke_confirmation" src/contract.rs | \
     grep -q "already executed"
 ```
 
-**Expected Result**: Prevents revoking executed txs ✅
+**Expected Result**: Prevents revoking executed txs 
 
 #### Scenario 5: Add/Remove/Replace Owner
 
@@ -319,7 +319,7 @@ grep -A 25 "async fn remove_owner" src/contract.rs | \
     grep -q "owners.len() < threshold"
 ```
 
-**Expected Result**: Threshold-safe removal ✅
+**Expected Result**: Threshold-safe removal 
 
 #### Scenario 6: Change Threshold
 
@@ -333,7 +333,7 @@ grep -A 20 "async fn change_threshold" src/contract.rs | \
     grep -q "cannot exceed number of owners"
 ```
 
-**Expected Result**: Bounds validated ✅
+**Expected Result**: Bounds validated 
 
 ---
 
@@ -355,12 +355,12 @@ grep -A 20 "async fn change_threshold" src/contract.rs | \
 - Success Rate: 87.8%
 
 ## Test Results by Phase
-### Phase 1: Compilation ✅
-### Phase 2: Source Code Validation ✅
-### Phase 3: Security Validation ✅
-### Phase 4: Linera SDK Integration ✅
-### Phase 5: Test Environment ✅
-### Phase 6: Operation Scenarios ✅
+### Phase 1: Compilation 
+### Phase 2: Source Code Validation 
+### Phase 3: Security Validation 
+### Phase 4: Linera SDK Integration 
+### Phase 5: Test Environment 
+### Phase 6: Operation Scenarios 
 
 ## Security Assessment
 [Authorization, Replay Protection, Integer Safety, etc.]
@@ -394,14 +394,14 @@ grep -A 20 "async fn change_threshold" src/contract.rs | \
 
 | Operation | ABI | Impl | Auth | Logic | Total |
 |-----------|-----|------|------|-------|-------|
-| SubmitTransaction | ✅ | ✅ | ✅ | ✅ | 4 |
-| ConfirmTransaction | ✅ | ✅ | ✅ | ✅ | 4 |
-| ExecuteTransaction | ✅ | ✅ | ✅ | ✅ | 4 |
-| RevokeConfirmation | ✅ | ✅ | ✅ | ✅ | 4 |
-| AddOwner | ✅ | ✅ | ✅ | - | 3 |
-| RemoveOwner | ✅ | ✅ | ✅ | ✅ | 4 |
-| ReplaceOwner | ✅ | ✅ | ✅ | - | 3 |
-| ChangeThreshold | ✅ | ✅ | ✅ | ✅ | 4 |
+| SubmitTransaction |  |  |  |  | 4 |
+| ConfirmTransaction |  |  |  |  | 4 |
+| ExecuteTransaction |  |  |  |  | 4 |
+| RevokeConfirmation |  |  |  |  | 4 |
+| AddOwner |  |  |  | - | 3 |
+| RemoveOwner |  |  |  |  | 4 |
+| ReplaceOwner |  |  |  | - | 3 |
+| ChangeThreshold |  |  |  |  | 4 |
 | **TOTAL** | **8** | **8** | **8** | **6** | **30** |
 
 ---
@@ -411,26 +411,26 @@ grep -A 20 "async fn change_threshold" src/contract.rs | \
 ### Console Output
 
 ```
-╔══════════════════════════════════════════════════════════════╗
-║  Linera Multisig Application - Comprehensive Validation      ║
-║  Version: 0.1.0                                              ║
-║  Testnet: Conway                                             ║
-╚══════════════════════════════════════════════════════════════╝
+
+  Linera Multisig Application - Comprehensive Validation      
+  Version: 0.1.0                                              
+  Testnet: Conway                                             
+
 
 [STEP] Phase 1: Compiling Wasm Binaries
-─────────────────────────────────────────────────────────
+
 [SUCCESS] Contract Wasm: 340K
 [SUCCESS] Service Wasm: 1.9M
 
 [STEP] Phase 2: Source Code Validation
-─────────────────────────────────────────────────────────
-  ▸ Checking operation implementations in lib.rs...
-[SUCCESS] ✓ SubmitTransaction defined in ABI
-[SUCCESS] ✓ ConfirmTransaction defined in ABI
+
+   Checking operation implementations in lib.rs...
+[SUCCESS]  SubmitTransaction defined in ABI
+[SUCCESS]  ConfirmTransaction defined in ABI
 ...
 
 [STEP] Validation Complete
-═══════════════════════════════════════════════════════════
+
 
 Test Summary:
   Total Tests:  49
@@ -438,9 +438,9 @@ Test Summary:
   Failed:       0
   Warnings:     6
 
-╔══════════════════════════════════════════════════════════════╗
-║                    ✅ VALIDATION PASSED                      ║
-╚══════════════════════════════════════════════════════════════╝
+
+                     VALIDATION PASSED                      
+
 
 [SUCCESS] All multisig operations are properly implemented!
 ```
@@ -464,12 +464,12 @@ Test Summary:
 **Contents**:
 ```
 /tmp/linera-multisig-validation-1234567890/
-├── wallet.json              # Test wallet
-├── keystore.json            # Test keystore
-├── client.db/               # Linera client DB
-├── owners.txt               # Generated owner addresses
-├── chain_id.txt             # Test chain ID
-└── compile.log              # Compilation output (if not skipped)
+ wallet.json              # Test wallet
+ keystore.json            # Test keystore
+ client.db/               # Linera client DB
+ owners.txt               # Generated owner addresses
+ chain_id.txt             # Test chain ID
+ compile.log              # Compilation output (if not skipped)
 ```
 
 **Cleanup**:
@@ -550,7 +550,7 @@ curl https://faucet.testnet-conway.linera.net
 
 **Symptom**:
 ```
-[ERROR] ✗ SubmitTransaction NOT implemented
+[ERROR]  SubmitTransaction NOT implemented
 ```
 
 **Cause**: CamelCase to snake_case conversion issue
@@ -608,15 +608,15 @@ To add a new test phase:
 ```bash
 # Add after Phase 6
 log_step "Phase 7: Custom Validation"
-echo "─────────────────────────────────────────────────────────"
+echo ""
 
 # Define test
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 if [[ condition ]]; then
-    log_success "✓ Custom test passed"
+    log_success " Custom test passed"
     PASSED_TESTS=$((PASSED_TESTS + 1))
 else
-    log_error "✗ Custom test failed"
+    log_error " Custom test failed"
     FAILED_TESTS=$((FAILED_TESTS + 1))
 fi
 
@@ -634,10 +634,10 @@ log_substep "Checking custom condition..."
 
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 if grep -q "pattern" "$MULTISIG_APP_DIR/src/file.rs"; then
-    log_success "✓ Pattern found"
+    log_success " Pattern found"
     PASSED_TESTS=$((PASSED_TESTS + 1))
 else
-    log_warning "⚠ Pattern not found"
+    log_warning " Pattern not found"
     WARNINGS=$((WARNINGS + 1))
 fi
 ```
@@ -684,30 +684,30 @@ jobs:
 
 ### What the Script Validates
 
-✅ All 8 operations implemented
-✅ Authorization checks present
-✅ Security properties enforced
-✅ Linera SDK properly integrated
-✅ Wasm binaries compile
-✅ GraphQL service defined
-✅ State structure correct
-✅ Integer safety maintained
+ All 8 operations implemented
+ Authorization checks present
+ Security properties enforced
+ Linera SDK properly integrated
+ Wasm binaries compile
+ GraphQL service defined
+ State structure correct
+ Integer safety maintained
 
 ### What the Script Does NOT Validate
 
-❌ Actual transaction execution (TODO in code)
-❌ Cross-chain messaging (disabled)
-❌ Event emission (not implemented)
-❌ Governance model (not implemented)
-❌ Unit test coverage (placeholder tests)
+ Actual transaction execution (TODO in code)
+ Cross-chain messaging (disabled)
+ Event emission (not implemented)
+ Governance model (not implemented)
+ Unit test coverage (placeholder tests)
 
 ### Next Steps After Validation
 
-1. ✅ Review validation report
-2. ✅ Address any failures
-3. ⚠️ Implement actual execution logic
-4. ⚠️ Add comprehensive unit tests
-5. 💡 Deploy to testnet for integration testing
+1.  Review validation report
+2.  Address any failures
+3.  Implement actual execution logic
+4.  Add comprehensive unit tests
+5.  Deploy to testnet for integration testing
 
 ---
 

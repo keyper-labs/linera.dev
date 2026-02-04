@@ -8,12 +8,12 @@ Linera provides multiple interfaces for interacting with the network:
 
 | API Type | Purpose | Status | Documentation |
 |----------|---------|--------|---------------|
-| **GraphQL** | Read-only queries via Service | ✅ Available | [GraphQL API](./graphql-api.md) |
-| **gRPC** | Low-level validator communication | ✅ Available | [gRPC API](./grpc-api.md) |
-| **CLI** | Command-line wallet operations | ✅ Available | [CLI Reference](./cli-reference.md) |
-| **SDK (Rust)** | Application development | ✅ Available | [SDK API](./sdk-api.md) |
-| **@linera/client** | Frontend TypeScript SDK | ✅ Available | [TypeScript SDK](./typescript-sdk.md) |
-| **REST** | HTTP REST interface | ⚠️ Custom Required | Build your own |
+| **GraphQL** | Read-only queries via Service |  Available | [GraphQL API](./graphql-api.md) |
+| **gRPC** | Low-level validator communication |  Available | [gRPC API](./grpc-api.md) |
+| **CLI** | Command-line wallet operations |  Available | [CLI Reference](./cli-reference.md) |
+| **SDK (Rust)** | Application development |  Available | [SDK API](./sdk-api.md) |
+| **@linera/client** | Frontend TypeScript SDK |  Available | [TypeScript SDK](./typescript-sdk.md) |
+| **REST** | HTTP REST interface |  Custom Required | Build your own |
 
 ---
 
@@ -90,24 +90,24 @@ Frontend SDK for browser-based applications.
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Client Layer                          │
-├─────────────┬─────────────┬─────────────┬───────────────────┤
-│   GraphQL   │    gRPC     │     CLI     │  @linera/client   │
-│   (Read)    │  (Low-level)│ (Interactive)│  (Frontend)      │
-└──────┬──────┴──────┬──────┴──────┬──────┴────────┬──────────┘
-│              │              │               │
-└──────────────┴──────────────┴───────────────┘
-                      │
-          ┌───────────▼───────────┐
-          │   Validator Node      │
-          │   (linera-service)    │
-          └───────────┬───────────┘
-                      │
-          ┌───────────▼───────────┐
-          │   Linera Network      │
-          │   (Microchains)       │
-          └───────────────────────┘
+
+                        Client Layer                          
+
+   GraphQL       gRPC          CLI       @linera/client   
+   (Read)      (Low-level) (Interactive)  (Frontend)      
+
+                                           
+
+                      
+          
+             Validator Node      
+             (linera-service)    
+          
+                      
+          
+             Linera Network      
+             (Microchains)       
+          
 ```
 
 ---

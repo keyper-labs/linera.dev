@@ -5,7 +5,7 @@
 **Scope**: Technical review of multisig development scripts for testnet exploration
 **Purpose**: Validate scripts work correctly for **development and testnet research**
 
-> **📋 CONTEXT: Testnet Development and Exploration**
+> ** CONTEXT: Testnet Development and Exploration**
 >
 > This is a **technical** analysis of scripts used to **explore Linera blockchain capabilities** on testnet.
 > - All scripts are for **development/research purposes only**
@@ -14,15 +14,15 @@
 > - Production private keys would be stored in **secure ENV variables** (vaults, secrets managers)
 >
 > **This analysis focuses on:**
-> - ✅ Technical correctness of Linera CLI usage
-> - ✅ Validation of script logic
-> - ✅ Testnet compatibility
-> - ✅ Developer experience improvements
+> -  Technical correctness of Linera CLI usage
+> -  Validation of script logic
+> -  Testnet compatibility
+> -  Developer experience improvements
 >
 > **This analysis does NOT address:**
-> - ❌ Production security hardening (out of scope)
-> - ❌ Enterprise key management (different architecture)
-> - ❌ Regulatory compliance (not applicable)
+> -  Production security hardening (out of scope)
+> -  Enterprise key management (different architecture)
+> -  Regulatory compliance (not applicable)
 
 ---
 
@@ -36,16 +36,16 @@ A technical analysis was performed on Linera multisig scripts used for **testnet
 
 ## Technical Validation
 
-### ✅ Scripts Functional on Testnet
+###  Scripts Functional on Testnet
 
 | Script | Purpose | Status on Testnet Conway | Notes |
 |--------|-----------|--------------------------|-------|
-| `create_multisig.sh` | Demo multi-owner chain | ✅ Validated | Creates chains correctly |
-| `test_conway.sh` | Quick validation | ✅ Works | Simple and effective test |
-| `multisig-test-cli.sh` | CLI Workflow | ✅ Works | Simplified version |
-| `multisig-test-rust.sh` | SDK Setup | ⚠️ Requires update | SDK v0.16.0 has breaking changes |
+| `create_multisig.sh` | Demo multi-owner chain |  Validated | Creates chains correctly |
+| `test_conway.sh` | Quick validation |  Works | Simple and effective test |
+| `multisig-test-cli.sh` | CLI Workflow |  Works | Simplified version |
+| `multisig-test-rust.sh` | SDK Setup |  Requires update | SDK v0.16.0 has breaking changes |
 
-### ✅ Verified Linera CLI Commands
+###  Verified Linera CLI Commands
 
 ```bash
 # Commands verified on Testnet Conway (v0.15.8+)
@@ -61,7 +61,7 @@ linera query-balance <CHAIN_ID>
 
 ## Technical Observations
 
-### 🔧 1. Temporary Files in /tmp
+###  1. Temporary Files in /tmp
 
 **Current context**: Scripts use `/tmp` for development convenience
 
@@ -75,7 +75,7 @@ mkdir -p "$WORK_DIR"
 
 **Production** (architectural reference): Would use AWS Secrets Manager, HashiCorp Vault, or similar to manage private keys without touching the filesystem.
 
-### 🔧 2. Hardcoded Faucet URL
+###  2. Hardcoded Faucet URL
 
 **Current context**: Scripts use testnet faucet
 
@@ -87,7 +87,7 @@ FAUCET_URL="https://faucet.testnet-conway.linera.net"
 
 **Production**: Would use different endpoint and funding mechanism.
 
-### 🔧 3. Error Handling
+###  3. Error Handling
 
 **Current context**: Some commands use `> /dev/null 2>&1`
 
@@ -105,7 +105,7 @@ if ! OUTPUT=$(linera wallet init --faucet "$FAUCET_URL" 2>&1); then
 fi
 ```
 
-### 🔧 4. Validation de Chain IDs
+###  4. Validation de Chain IDs
 
 **Current context**: Scripts extract chain IDs from CLI output
 
@@ -121,7 +121,7 @@ CHAIN_ID=$(linera wallet show | grep 'Chain ID:' | awk '{print $3}')
 
 ## Recommendations de Development
 
-### ✅ Para Improvementr Developer Experience
+###  Para Improvementr Developer Experience
 
 1. **Mantener output visible** (remover `> /dev/null 2>&1` donde sea útil)
 2. **Agregar cleanup trap** para directorios temporales
@@ -129,13 +129,13 @@ CHAIN_ID=$(linera wallet show | grep 'Chain ID:' | awk '{print $3}')
 4. **Documentar requisitos** (Linera CLI v0.15.8+, Rust toolchain)
 5. **Agregar ejemplos de output esperado**
 
-### ❌ No Required (Out of Scope)
+###  No Required (Out of Scope)
 
-1. ❌ Sanitización extrema de inputs (Linera CLI es confiable)
-2. ❌ Validation de SSL/TLS de faucet (testnet es seguro para exploración)
-3. ❌ Strict file permissions (/tmp is appropriate for development)
-4. ❌ Audit logging (no necesario para testnet)
-5. ❌ Rate limiting (testnet faucet ya tiene límites)
+1.  Sanitización extrema de inputs (Linera CLI es confiable)
+2.  Validation de SSL/TLS de faucet (testnet es seguro para exploración)
+3.  Strict file permissions (/tmp is appropriate for development)
+4.  Audit logging (no necesario para testnet)
+5.  Rate limiting (testnet faucet ya tiene límites)
 
 ---
 
@@ -144,15 +144,15 @@ CHAIN_ID=$(linera wallet show | grep 'Chain ID:' | awk '{print $3}')
 For production implementation, the architecture would be different:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Production Architecture (NOT these scripts)              │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ Private Keys: AWS Secrets Manager / HashiCorp Vault  │  │
-│  │ Backend Service: Custom Rust service                 │  │
-│  │ API Layer: REST with authentication                  │  │
-│  │ Database: PostgreSQL for metadata                    │  │
-│  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+
+  Production Architecture (NOT these scripts)              
+    
+   Private Keys: AWS Secrets Manager / HashiCorp Vault    
+   Backend Service: Custom Rust service                   
+   API Layer: REST with authentication                    
+   Database: PostgreSQL for metadata                      
+    
+
 ```
 
 **Diferencias clave vs scripts actuales**:
@@ -166,10 +166,10 @@ For production implementation, the architecture would be different:
 
 | Script | Purpose | Testnet | Development | Notas |
 |--------|-----------|---------|-------------|--------|
-| `create_multisig.sh` | Multi-owner demo | ✅ | ✅ | Validado |
-| `test_conway.sh` | Validation rápida | ✅ | ✅ | Simple y efectivo |
-| `multisig-test-cli.sh` | Workflow CLI | ✅ | ✅ | Simplificado |
-| `multisig-test-rust.sh` | Setup SDK | ⚠️ | ⚠️ | Requiere update |
+| `create_multisig.sh` | Multi-owner demo |  |  | Validado |
+| `test_conway.sh` | Validation rápida |  |  | Simple y efectivo |
+| `multisig-test-cli.sh` | Workflow CLI |  |  | Simplificado |
+| `multisig-test-rust.sh` | Setup SDK |  |  | Requiere update |
 
 ---
 
@@ -184,10 +184,10 @@ Los scripts son **apropiados para su propósito** de exploración de testnet y d
 - Seguir best practices de hardening
 
 **Para desarrollo/testnet**:
-- ✅ Scripts actuales son apropiados
-- ✅ Enfocarse en validar capacidades técnicas
-- ✅ Aprender sobre multi-owner chains
-- ✅ Experimentar con CLI commands
+-  Scripts actuales son apropiados
+-  Enfocarse en validar capacidades técnicas
+-  Aprender sobre multi-owner chains
+-  Experimentar con CLI commands
 
 ---
 

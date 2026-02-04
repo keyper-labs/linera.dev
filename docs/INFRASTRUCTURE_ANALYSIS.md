@@ -1,6 +1,6 @@
 # Linera Infrastructure Analysis
 
-**Status**: 🔴 BLOCKED - Safe-like multisig NOT possible (opcode 252)
+**Status**:  BLOCKED - Safe-like multisig NOT possible (opcode 252)
 
 **Date**: February 3, 2026
 **Network**: Testnet Conway (operational)
@@ -25,10 +25,10 @@
 **Root Cause**:
 ```
 linera-sdk 0.15.11
-    └─ async-graphql = "=7.0.17"
-        └─ Rust 1.87+ required
-            └─ generates memory.copy (opcode 252)
-                └─ Linera runtime rejects it
+     async-graphql = "=7.0.17"
+         Rust 1.87+ required
+             generates memory.copy (opcode 252)
+                 Linera runtime rejects it
 ```
 
 **All workarounds failed**. See section 2.2 for details.
@@ -39,7 +39,7 @@ linera-sdk 0.15.11
 
 ### 1.1 Rust SDK (linera-sdk)
 
-**Status**: ✅ Exists (Wasm compilation only)
+**Status**:  Exists (Wasm compilation only)
 
 **Purpose**: Build Wasm applications (smart contracts)
 
@@ -55,14 +55,14 @@ linera-sdk 0.15.11
 
 ### 1.2 Backend SDK Availability
 
-**Status**: ✅ Rust only, ❌ TypeScript/Python/Go
+**Status**:  Rust only,  TypeScript/Python/Go
 
 | Language | SDK | Status |
 |----------|-----|--------|
-| Rust | `linera-client` + `linera-core` | ✅ Available |
-| TypeScript | `@linera/client` npm package | ✅ Available |
-| Python | - | ❌ Not available |
-| Go | - | ❌ Not available |
+| Rust | `linera-client` + `linera-core` |  Available |
+| TypeScript | `@linera/client` npm package |  Available |
+| Python | - |  Not available |
+| Go | - |  Not available |
 
 **Finding**: Use TypeScript for backend.
 
@@ -88,38 +88,38 @@ const balance = await client.queryBalance(chainId);
 
 **Workaround**: Build custom REST API in backend.
 
-### 2.2 🔴 CRITICAL: Wasm Opcode 252 Issue
+### 2.2  CRITICAL: Wasm Opcode 252 Issue
 
-**Status**: 🔴 BLOCKER - SDK ecosystem issue
+**Status**:  BLOCKER - SDK ecosystem issue
 
 **Problem**: Cannot deploy complex Wasm contracts to Linera testnet.
 
 **Root Cause**:
 ```
 linera-sdk 0.15.11
-    └─ async-graphql = "=7.0.17" (exact pin)
-        └─ requires Rust 1.87+
-            └─ generates memory.copy (opcode 252)
-                └─ Linera runtime doesn't support
+     async-graphql = "=7.0.17" (exact pin)
+         requires Rust 1.87+
+             generates memory.copy (opcode 252)
+                 Linera runtime doesn't support
 ```
 
 **Failed Workarounds**:
 
 | Attempt | Result |
 |---------|--------|
-| Remove .clone() | ❌ Breaks mutability |
-| Remove proposal history | ❌ Still 85 opcodes |
-| Remove GraphQL service | ❌ Still 82 opcodes |
-| Rust 1.86.0 | ❌ async-graphql won't compile |
-| Patch async-graphql | ❌ Can't override exact pin |
-| Replace async-graphql | ❌ 6.x/7.x incompatible |
-| Combined all | ❌ Still 67 opcodes |
+| Remove .clone() |  Breaks mutability |
+| Remove proposal history |  Still 85 opcodes |
+| Remove GraphQL service |  Still 82 opcodes |
+| Rust 1.86.0 |  async-graphql won't compile |
+| Patch async-graphql |  Can't override exact pin |
+| Replace async-graphql |  6.x/7.x incompatible |
+| Combined all |  Still 67 opcodes |
 
 **Evidence**:
 - [`docs/research/LINERA_OPCODE_252_ISSUE.md`](LINERA_OPCODE_252_ISSUE.md)
 - [`docs/research/OPCODE_252_CODE_ANALYSIS.md`](OPCODE_252_CODE_ANALYSIS.md)
 
-#### ❌ Threshold Signatures Experiment (February 4, 2026)
+####  Threshold Signatures Experiment (February 4, 2026)
 
 **Hypothesis**: Minimal contract using threshold signatures might avoid opcode 252.
 
@@ -134,7 +134,7 @@ pub struct MultisigState {
 // NO ed25519-dalek, NO proposal history, NO GraphQL operations
 ```
 
-**Result**: ❌ Still contains 73 `memory.copy` opcodes
+**Result**:  Still contains 73 `memory.copy` opcodes
 
 ```bash
 wasm-objdump -d contract.wasm | grep "memory.copy"
@@ -151,7 +151,7 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 
 ### Option A: Rust Backend + TypeScript Frontend
 
-**Status**: ❌ BLOCKED (same SDK issue)
+**Status**:  BLOCKED (same SDK issue)
 
 **Components**:
 - Frontend: React + @linera/client
@@ -160,7 +160,7 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 
 ### Option B: TypeScript Full-Stack
 
-**Status**: ✅ VIABLE for Frontend + Backend, ❌ BLOCKED for Wasm contract
+**Status**:  VIABLE for Frontend + Backend,  BLOCKED for Wasm contract
 
 **Components**:
 - Frontend: React + @linera/client
@@ -171,7 +171,7 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 
 ### Option C: Multi-Owner Chains Only
 
-**Status**: ✅ WORKS (but limited)
+**Status**:  WORKS (but limited)
 
 **What you get**:
 - Shared wallet with multiple owners
@@ -189,7 +189,7 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 
 ### Current Status
 
-🔴 **PROJECT BLOCKED** - Cannot deliver Safe-like multisig platform.
+ **PROJECT BLOCKED** - Cannot deliver Safe-like multisig platform.
 
 ### Options
 
@@ -208,12 +208,12 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 
 | Layer | Technology | Status |
 |-------|-----------|--------|
-| Smart Contracts | Rust → Wasm (linera-sdk) | ✅ Required |
-| Backend | Node.js/TypeScript + @linera/client | ✅ Works |
-| Frontend | TypeScript/React + @linera/client | ✅ Works |
-| Database | PostgreSQL + Prisma/TypeORM | ✅ Works |
-| API | REST (Express/Fastify) | ✅ Custom |
-| Wallet | @linera/client (built-in) | ✅ Works |
+| Smart Contracts | Rust → Wasm (linera-sdk) |  Required |
+| Backend | Node.js/TypeScript + @linera/client |  Works |
+| Frontend | TypeScript/React + @linera/client |  Works |
+| Database | PostgreSQL + Prisma/TypeORM |  Works |
+| API | REST (Express/Fastify) |  Custom |
+| Wallet | @linera/client (built-in) |  Works |
 
 ---
 

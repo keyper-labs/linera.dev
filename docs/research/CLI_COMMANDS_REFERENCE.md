@@ -31,9 +31,9 @@ export LINERA_STORAGE="/path/to/client.db"  # RocksDB storage
 
 ```
 /tmp/linera-conway-<timestamp>/
-├── wallet.json          # Wallet with chain IDs and keys
-├── keystore.json        # Encrypted key storage
-└── client.db/           # RocksDB local storage
+ wallet.json          # Wallet with chain IDs and keys
+ keystore.json        # Encrypted key storage
+ client.db/           # RocksDB local storage
 ```
 
 ---

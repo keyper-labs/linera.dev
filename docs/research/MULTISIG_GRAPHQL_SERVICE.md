@@ -1,6 +1,6 @@
 # Multisig GraphQL Service - Reference Documentation
 
-**Status**: 🟡 **TEMPORARILY DISABLED** - Removed to allow Rust 1.86 compilation
+**Status**:  **TEMPORARILY DISABLED** - Removed to allow Rust 1.86 compilation
 **Backup**: `multisig_service_backup.rs`
 **Reason**: async-graphql 7.0.17 requires Rust 1.87+, but Rust 1.87+ generates opcode 252
 **When**: 2026-02-03

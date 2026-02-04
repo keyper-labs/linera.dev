@@ -55,128 +55,128 @@ flowchart TB
 ## Node Structure
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      VALIDATOR NODE ARCHITECTURE                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                     API LAYER (Incoming)                         │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │   │
-│  │  │   gRPC      │  │   HTTP      │  │    P2P      │             │   │
-│  │  │   (Client   │  │   (Node     │  │   (Other    │             │   │
-│  │  │    ops)     │  │   Service)  │  │   Validators)│             │   │
-│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘             │   │
-│  │         └────────────────┴────────────────┘                     │   │
-│  └────────────────────────────┬────────────────────────────────────┘   │
-│                               │                                         │
-│                               ▼                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                    CONSENSUS LAYER                               │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │   │
-│  │  │   Block     │  │   Leader    │  │   Vote      │             │   │
-│  │  │   Formation │  │   Election  │  │   Collection│             │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘             │   │
-│  │                                                                  │   │
-│  │  ┌─────────────────────────────────────────────────────────┐   │   │
-│  │  │  Consensus: Simplified (no complex PoW/PoS)             │   │   │
-│  │  │  • Chain owners propose blocks                          │   │   │
-│  │  │  • Validators validate and vote                         │   │   │
-│  │  │  • Fast finality for single-owner chains                │   │   │
-│  │  └─────────────────────────────────────────────────────────┘   │   │
-│  └────────────────────────────┬────────────────────────────────────┘   │
-│                               │                                         │
-│                               ▼                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                   EXECUTION LAYER                                │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │   │
-│  │  │   Wasm      │  │   Gas       │  │   State     │             │   │
-│  │  │   Runtime   │  │   Metering  │  │   Updates   │             │   │
-│  │  │             │  │             │  │             │             │   │
-│  │  │  Sandboxed  │  │  Track      │  │  Apply      │             │   │
-│  │  │  Execution  │  │  Resource   │  │  Changes    │             │   │
-│  │  │             │  │  Usage      │  │             │             │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘             │   │
-│  └────────────────────────────┬────────────────────────────────────┘   │
-│                               │                                         │
-│                               ▼                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                    STORAGE LAYER                                 │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │   │
-│  │  │   Chain     │  │   Inbox/    │  │   Block     │             │   │
-│  │  │   States    │  │   Outbox    │  │   Store     │             │   │
-│  │  │   (RocksDB) │  │   Queues    │  │   (History) │             │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘             │   │
-│  │                                                                  │   │
-│  │  ┌─────────────────────────────────────────────────────────┐   │   │
-│  │  │  Sharding: Each validator worker handles subset of      │   │   │
-│  │  │  chains. Multiple workers per validator for scalability │   │   │
-│  │  └─────────────────────────────────────────────────────────┘   │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+
+                      VALIDATOR NODE ARCHITECTURE                        
+
+                                                                         
+     
+                       API LAYER (Incoming)                            
+                        
+       gRPC           HTTP            P2P                      
+       (Client        (Node          (Other                    
+        ops)          Service)       Validators)                
+                        
+                                   
+     
+                                                                        
+                                                                        
+     
+                      CONSENSUS LAYER                                  
+                        
+       Block          Leader         Vote                      
+       Formation      Election       Collection                
+                        
+                                                                       
+          
+      Consensus: Simplified (no complex PoW/PoS)                   
+      • Chain owners propose blocks                                
+      • Validators validate and vote                               
+      • Fast finality for single-owner chains                      
+          
+     
+                                                                        
+                                                                        
+     
+                     EXECUTION LAYER                                   
+                        
+       Wasm           Gas            State                     
+       Runtime        Metering       Updates                   
+                                                               
+      Sandboxed      Track          Apply                      
+      Execution      Resource       Changes                    
+                     Usage                                     
+                        
+     
+                                                                        
+                                                                        
+     
+                      STORAGE LAYER                                    
+                        
+       Chain          Inbox/         Block                     
+       States         Outbox         Store                     
+       (RocksDB)      Queues         (History)                 
+                        
+                                                                       
+          
+      Sharding: Each validator worker handles subset of            
+      chains. Multiple workers per validator for scalability       
+          
+     
+                                                                         
+
 ```
 
 ## Consensus Mechanism
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      LINERA CONSENSUS                                   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  Unlike traditional BFT/PoS consensus, Linera uses a simplified model:  │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  1. BLOCK PROPOSAL                                               │   │
-│  │                                                                  │   │
-│  │     Owner/Leader creates block proposal:                         │   │
-│  │     • List of operations to execute                              │   │
-│  │     • Messages to process from inbox                             │   │
-│  │     • Previous block hash (chain integrity)                      │   │
-│  │                                                                  │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  2. VALIDATION                                                   │   │
-│  │                                                                  │   │
-│  │     Validators check:                                            │   │
-│  │     ✓ Signatures are valid                                       │   │
-│  │     ✓ Operations don't exceed gas limit                          │   │
-│  │     ✓ State transitions are valid                                │   │
-│  │     ✓ Messages processed in order                                │   │
-│  │                                                                  │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  3. AGREEMENT                                                    │   │
-│  │                                                                  │   │
-│  │     For single-owner chains:                                     │   │
-│  │     • Owner proposes → Validators validate → Execute             │   │
-│  │     • No voting needed (owner is authority)                      │   │
-│  │                                                                  │   │
-│  │     For multi-owner chains:                                      │   │
-│  │     • Multiple owners can propose                                │   │
-│  │     • Validators track which block gets quorum                   │   │
-│  │     • Fallback to single-leader if contention                    │   │
-│  │                                                                  │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  4. EXECUTION                                                    │   │
-│  │                                                                  │   │
-│  │     Once validated:                                              │   │
-│  │     • Execute operations in Wasm runtime                         │   │
-│  │     • Update chain state                                         │   │
-│  │     • Emit outgoing messages                                     │   │
-│  │     • Store block in history                                     │   │
-│  │                                                                  │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│  KEY PROPERTIES:                                                        │
-│  • Safety: Validators guarantee no double-spending, no invalid state   │
-│  • Liveness: Chain owners guarantee progress (can always propose)      │
-│  • No PoW/PoS: Consensus among validators, not for block production    │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+
+                      LINERA CONSENSUS                                   
+
+                                                                         
+  Unlike traditional BFT/PoS consensus, Linera uses a simplified model:  
+                                                                         
+     
+    1. BLOCK PROPOSAL                                                  
+                                                                       
+       Owner/Leader creates block proposal:                            
+       • List of operations to execute                                 
+       • Messages to process from inbox                                
+       • Previous block hash (chain integrity)                         
+                                                                       
+     
+                                                                         
+     
+    2. VALIDATION                                                      
+                                                                       
+       Validators check:                                               
+        Signatures are valid                                          
+        Operations don't exceed gas limit                             
+        State transitions are valid                                   
+        Messages processed in order                                   
+                                                                       
+     
+                                                                         
+     
+    3. AGREEMENT                                                       
+                                                                       
+       For single-owner chains:                                        
+       • Owner proposes → Validators validate → Execute                
+       • No voting needed (owner is authority)                         
+                                                                       
+       For multi-owner chains:                                         
+       • Multiple owners can propose                                   
+       • Validators track which block gets quorum                      
+       • Fallback to single-leader if contention                       
+                                                                       
+     
+                                                                         
+     
+    4. EXECUTION                                                       
+                                                                       
+       Once validated:                                                 
+       • Execute operations in Wasm runtime                            
+       • Update chain state                                            
+       • Emit outgoing messages                                        
+       • Store block in history                                        
+                                                                       
+     
+                                                                         
+  KEY PROPERTIES:                                                        
+  • Safety: Validators guarantee no double-spending, no invalid state   
+  • Liveness: Chain owners guarantee progress (can always propose)      
+  • No PoW/PoS: Consensus among validators, not for block production    
+                                                                         
+
 ```
 
 ## Worker Sharding
@@ -211,45 +211,45 @@ flowchart TB
 ```
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      WORKER SHARDING                                    │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  Problem: Single validator handling millions of chains                  │
-│  Solution: Shard chains across multiple workers                         │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                      VALIDATOR NODE                              │   │
-│  │                                                                  │   │
-│  │   ┌─────────────┐                                               │   │
-│  │   │   Proxy /   │  Routes requests to correct worker            │   │
-│  │   │   Router    │  based on chain_id                            │   │
-│  │   └──────┬──────┘                                               │   │
-│  │          │                                                       │   │
-│  │    ┌─────┴─────┬─────────┬─────────┬─────────┐                  │   │
-│  │    │           │         │         │         │                  │   │
-│  │    ▼           ▼         ▼         ▼         ▼                  │   │
-│  │ ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐              │   │
-│  │ │Work- │  │Work- │  │Work- │  │Work- │  │Work- │              │   │
-│  │ │er 1  │  │er 2  │  │er 3  │  │er 4  │  │er N  │              │   │
-│  │ │      │  │      │  │      │  │      │  │      │              │   │
-│  │ │Chains│  │Chains│  │Chains│  │Chains│  │Chains│              │   │
-│  │ │0-999│  │1k-2k │  │2k-3k │  │3k-4k │  │...   │              │   │
-│  │ └──────┘  └──────┘  └──────┘  └──────┘  └──────┘              │   │
-│  │                                                                  │   │
-│  │  Each worker:                                                    │   │
-│  │  • Owns subset of chain states                                   │   │
-│  │  • Processes blocks for those chains                             │   │
-│  │  • Communicates with other validators' workers                   │   │
-│  │                                                                  │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│  BENEFITS:                                                              │
-│  • Horizontal scalability within validator                             │
-│  • Parallel block processing                                           │
-│  • Isolated failures (one worker down ≠ validator down)               │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+
+                      WORKER SHARDING                                    
+
+                                                                         
+  Problem: Single validator handling millions of chains                  
+  Solution: Shard chains across multiple workers                         
+                                                                         
+     
+                        VALIDATOR NODE                                 
+                                                                       
+                                                       
+        Proxy /     Routes requests to correct worker               
+        Router      based on chain_id                               
+                                                       
+                                                                      
+                           
+                                                                 
+                                                                 
+                            
+   Work-   Work-   Work-   Work-   Work-                  
+   er 1    er 2    er 3    er 4    er N                   
+                                                          
+   Chains  Chains  Chains  Chains  Chains                 
+   0-999  1k-2k   2k-3k   3k-4k   ...                    
+                            
+                                                                       
+    Each worker:                                                       
+    • Owns subset of chain states                                      
+    • Processes blocks for those chains                                
+    • Communicates with other validators' workers                      
+                                                                       
+     
+                                                                         
+  BENEFITS:                                                              
+  • Horizontal scalability within validator                             
+  • Parallel block processing                                           
+  • Isolated failures (one worker down ≠ validator down)               
+                                                                         
+
 ```
 
 ## Validator Economics

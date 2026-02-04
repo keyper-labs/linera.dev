@@ -15,15 +15,15 @@ This security analysis follows the **Safe (formerly Gnosis Safe) multisig standa
 
 ### Key Points
 
-**Safe Standard Compliance Status**: 🟡 **Partial** - Core functionality works, missing standard safety features
+**Safe Standard Compliance Status**:  **Partial** - Core functionality works, missing standard safety features
 
 | Feature | Safe Standard | Current Implementation | Status |
 |---------|---------------|------------------------|--------|
-| Authorization ✅ | Owner-only operations | Owner-only operations | ✅ Compliant |
-| Threshold Enforcement ✅ | Required confirmations | Required confirmations | ✅ Compliant |
-| Proposal Expiration | 7+ days default | ❌ Not implemented | ⚠️ To implement |
-| Time-Delay | Optional feature | ❌ Not implemented | ℹ️ Optional |
-| Balance Validation | Pre-execution check | ❌ Not implemented | 🔴 Vulnerability |
+| Authorization  | Owner-only operations | Owner-only operations |  Compliant |
+| Threshold Enforcement  | Required confirmations | Required confirmations |  Compliant |
+| Proposal Expiration | 7+ days default |  Not implemented |  To implement |
+| Time-Delay | Optional feature |  Not implemented | ℹ Optional |
+| Balance Validation | Pre-execution check |  Not implemented |  Vulnerability |
 
 ---
 
@@ -33,7 +33,7 @@ This security analysis follows the **Safe (formerly Gnosis Safe) multisig standa
 
 **Safe Model**: Proposals expire after a configurable period (default: 7+ days)
 **Purpose**: Prevents stale proposals from being executed indefinitely
-**Implementation Priority**: ⚠️ **High** - Expected feature in production multisigs
+**Implementation Priority**:  **High** - Expected feature in production multisigs
 
 #### Why Safe Uses Expiration
 
@@ -168,10 +168,10 @@ const LONG_LIFETIME: u64 = 7776000;     // 90 days (slow governance)
 
 ### 2. Time-Delay for Execution (Optional Feature)
 
-**Safe Native**: ❌ NOT included in core Safe implementation
+**Safe Native**:  NOT included in core Safe implementation
 **Available As**: Optional module/add-on (e.g., Safe apps with delay)
 **Purpose**: Gives owners time to react before execution
-**Implementation Priority**: ℹ️ **Optional** - Not required for Safe compliance
+**Implementation Priority**: ℹ **Optional** - Not required for Safe compliance
 
 #### Why Time-Delay is Optional
 
@@ -306,11 +306,11 @@ const LONG_DELAY: u64 = 172800;      // 48 hours (maximum caution)
 
 ## Actual Vulnerabilities Found
 
-### 🔴 HIGH: Transfer Without Balance Validation
+###  HIGH: Transfer Without Balance Validation
 
 **Severity**: High
 **Category**: Logic Bug
-**Status**: 🔴 **Requires Fix**
+**Status**:  **Requires Fix**
 
 #### Description
 
@@ -378,19 +378,19 @@ async fn execute_transfer(&mut self, source: AccountOwner, to: AccountOwner, val
 
 ## Additional Recommendations (Low Priority)
 
-### ⚠️ MEDIUM: Threshold Change Lockout Protection
+###  MEDIUM: Threshold Change Lockout Protection
 
 **Issue**: Owner set can change threshold to 1, take control, then restore threshold
 **Safe Model**: Does not prevent this - governance changes require owner vigilance
 **Recommendation**: Document as expected behavior; owners must be cautious about threshold changes
 
-### ⚠️ MEDIUM: Unbounded State Growth
+###  MEDIUM: Unbounded State Growth
 
 **Issue**: Executed proposals stored forever
 **Safe Model**: Similar issue - Safe uses event logs but on-chain state persists
 **Recommendation**: Implement optional pruning after N executed proposals
 
-### ⚠️ LOW: Missing Event Emission
+###  LOW: Missing Event Emission
 
 **Issue**: No structured events for off-chain monitoring
 **Safe Model**: Emits events for all state changes
@@ -401,12 +401,12 @@ async fn execute_transfer(&mut self, source: AccountOwner, to: AccountOwner, val
 ## Implementation Priority
 
 ### For Testnet Deployment
-1. ✅ **DONE**: Core multisig functionality (submit, confirm, execute)
-2. ✅ **DONE**: Unit tests (42 tests)
-3. ✅ **DONE**: Authorization (ensure_is_owner)
-4. ⚠️ **TODO**: Balance validation in execute_transfer (Vulnerability fix)
-5. ⚠️ **TODO**: Proposal expiration (7 days) - Safe standard feature
-6. ℹ️ **OPTIONAL**: Time-delay parameter (0 = disabled by default)
+1.  **DONE**: Core multisig functionality (submit, confirm, execute)
+2.  **DONE**: Unit tests (42 tests)
+3.  **DONE**: Authorization (ensure_is_owner)
+4.  **TODO**: Balance validation in execute_transfer (Vulnerability fix)
+5.  **TODO**: Proposal expiration (7 days) - Safe standard feature
+6. ℹ **OPTIONAL**: Time-delay parameter (0 = disabled by default)
 
 ### For Mainnet Deployment
 - All testnet items, plus:
@@ -424,16 +424,16 @@ The Linera multisig application implements **core multisig functionality correct
 
 | Feature | Status | Action Required |
 |---------|--------|-----------------|
-| Authorization ✅ | ✅ Implemented | None |
-| Threshold Enforcement ✅ | ✅ Implemented | None |
-| Proposal Expiration | ⚠️ Missing | **Implement (Safe standard)** |
-| Time-Delay | ℹ️ Not required | Optional parameter only |
+| Authorization  |  Implemented | None |
+| Threshold Enforcement  |  Implemented | None |
+| Proposal Expiration |  Missing | **Implement (Safe standard)** |
+| Time-Delay | ℹ Not required | Optional parameter only |
 
 ### Vulnerabilities Found
 
 | Severity | Issue | Action |
 |----------|-------|--------|
-| 🔴 HIGH | Transfer without balance validation | **Fix required** |
+|  HIGH | Transfer without balance validation | **Fix required** |
 
 ### Summary
 
@@ -441,7 +441,7 @@ The Linera multisig application implements **core multisig functionality correct
 2. **One Safe standard feature missing**: Proposal expiration (7+ days) should be implemented
 3. **One optional feature**: Time-delay can be added as optional parameter (default: disabled)
 
-**Overall Assessment**: 🟢 **Solid foundation, minor fixes for Safe compliance**
+**Overall Assessment**:  **Solid foundation, minor fixes for Safe compliance**
 
 The implementation correctly handles authorization and threshold enforcement. Adding proposal expiration (Safe standard) and fixing balance validation will bring it to production-ready status.
 

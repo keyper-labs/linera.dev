@@ -38,8 +38,8 @@ Use **two separate Wasm binaries**: Contract (write) and Service (read).
 
 ### Consequences
 
-✅ **Positive**: Clear security model, efficient queries
-⚠️ **Negative**: More complex development workflow
+ **Positive**: Clear security model, efficient queries
+ **Negative**: More complex development workflow
 
 ---
 
@@ -82,8 +82,8 @@ Use **linera-views** system with key-value store abstraction.
 
 ### Consequences
 
-✅ **Positive**: Efficient state management, scalable
-⚠️ **Negative**: Learning curve for view system
+ **Positive**: Efficient state management, scalable
+ **Negative**: Learning curve for view system
 
 ---
 
@@ -124,8 +124,8 @@ pub struct ChainOwnership {
 
 ### Consequences
 
-✅ **Positive**: Native multisig support
-⚠️ **Negative**: Complex consensus configuration
+ **Positive**: Native multisig support
+ **Negative**: Complex consensus configuration
 
 ---
 
@@ -148,10 +148,10 @@ Use **asynchronous messaging** with tracking and authentication.
 
 **Message Guarantees**:
 
-- ✅ Exactly-once delivery
-- ✅ Ordered delivery (per channel)
-- ✅ No duplicates
-- ✅ No reordering
+-  Exactly-once delivery
+-  Ordered delivery (per channel)
+-  No duplicates
+-  No reordering
 
 **Message Builder Pattern**:
 
@@ -172,8 +172,8 @@ runtime.prepare_message(message)
 
 ### Consequences
 
-✅ **Positive**: Secure, reliable cross-chain communication
-⚠️ **Negative**: Asynchronous (not immediate), latency
+ **Positive**: Secure, reliable cross-chain communication
+ **Negative**: Asynchronous (not immediate), latency
 
 ---
 
@@ -213,8 +213,8 @@ pub fn call_application<A: ContractAbi + Send>(
 
 ### Consequences
 
-✅ **Positive**: Efficient same-chain composition
-⚠️ **Negative**: Cannot use cross-chain
+ **Positive**: Efficient same-chain composition
+ **Negative**: Cannot use cross-chain
 
 ---
 
@@ -254,8 +254,8 @@ async fn process_streams(&mut self, updates: Vec<StreamUpdate>) {
 
 ### Consequences
 
-✅ **Positive**: Rich off-chain integration
-⚠️ **Negative**: Not for on-chain logic
+ **Positive**: Rich off-chain integration
+ **Negative**: Not for on-chain logic
 
 ---
 
@@ -289,8 +289,8 @@ pub fn http_request(&mut self, request: http::Request) -> http::Response
 
 ### Consequences
 
-✅ **Positive**: External data access
-⚠️ **Negative**: Limited to deterministic queries, not for fast blocks
+ **Positive**: External data access
+ **Negative**: Limited to deterministic queries, not for fast blocks
 
 ---
 
@@ -323,8 +323,8 @@ Use **WebAssembly (Wasm)** for contract and service binaries.
 
 ### Consequences
 
-✅ **Positive**: Secure, portable, efficient
-⚠️ **Negative**: Limited access to system resources
+ **Positive**: Secure, portable, efficient
+ **Negative**: Limited access to system resources
 
 ---
 
@@ -355,8 +355,8 @@ Use **GraphQL** for service queries with auto-generated schema.
 
 ### Consequences
 
-✅ **Positive**: Flexible, type-safe queries
-⚠️ **Negative**: Read-only only
+ **Positive**: Flexible, type-safe queries
+ **Negative**: Read-only only
 
 ---
 
@@ -388,53 +388,53 @@ Use **fuel-based gas metering** for WASM execution.
 
 ### Consequences
 
-✅ **Positive**: Resource control, fairness
-⚠️ **Negative**: Complexity in gas estimation
+ **Positive**: Resource control, fairness
+ **Negative**: Complexity in gas estimation
 
 ---
 
 ## Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Client Layer                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
-│  │   React UI   │  │  Mobile App  │  │   CLI Tool   │             │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘             │
-└─────────┼──────────────────┼──────────────────┼───────────────────┘
-          │                  │                  │
-          └──────────────────┼──────────────────┘
+
+                         Client Layer                                
+                   
+     React UI       Mobile App       CLI Tool                
+                   
+
+                                              
+          
                              ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Application Layer                              │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │              Multisig Application (Wasm)                     │  │
-│  ├──────────────────────────────────────────────────────────────┤  │
-│  │  Contract (Write)              Service (Read)                │  │
-│  │  ┌──────────────────────┐    ┌──────────────────────┐       │  │
-│  │  │ • execute_operation  │    │ • handle_query       │       │  │
-│  │  │ • execute_message    │    │ • GraphQL API        │       │  │
-│  │  │ • process_streams    │    │ • query_application  │       │  │
-│  │  │ • instantiate        │    │                      │       │  │
-│  │  └──────────────────────┘    └──────────────────────┘       │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
+
+                      Application Layer                              
+    
+                Multisig Application (Wasm)                       
+    
+    Contract (Write)              Service (Read)                  
+                 
+     • execute_operation       • handle_query                
+     • execute_message         • GraphQL API                 
+     • process_streams         • query_application           
+     • instantiate                                           
+                 
+    
+
                              ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                       Linera Protocol Layer                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
-│  │ Cross-Chain  │  │  Storage     │  │  Consensus   │             │
-│  │  Messaging   │  │  (Views)     │  │   Engine     │             │
-│  └──────────────┘  └──────────────┘  └──────────────┘             │
-└─────────────────────────────────────────────────────────────────────┘
+
+                       Linera Protocol Layer                         
+                   
+   Cross-Chain      Storage         Consensus                
+    Messaging       (Views)          Engine                  
+                   
+
                              ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Infrastructure Layer                           │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
-│  │   RocksDB    │  │   ScyllaDB   │  │  DynamoDB    │             │
-│  │  (Storage)   │  │  (Storage)   │  │  (Storage)   │             │
-│  └──────────────┘  └──────────────┘  └──────────────┘             │
-└─────────────────────────────────────────────────────────────────────┘
+
+                      Infrastructure Layer                           
+                   
+     RocksDB         ScyllaDB       DynamoDB                 
+    (Storage)       (Storage)       (Storage)                
+                   
+
 ```
 
 ---
@@ -442,31 +442,31 @@ Use **fuel-based gas metering** for WASM execution.
 ## Multisig Architecture Pattern
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Multisig Platform                           │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                    Multisig Chain                           │   │
-│  │  ┌─────────────────────────────────────────────────────┐   │   │
-│  │  │            Multisig Application (Wasm)              │   │   │
-│  │  │  • 3-of-5 multisig logic                            │   │   │
-│  │  │  • Proposal management                              │   │   │
-│  │  │  • Approval aggregation                             │   │   │
-│  │  │  • Threshold validation                             │   │   │
-│  │  │  • Execution logic                                  │   │   │
-│  │  └─────────────────────────────────────────────────────┘   │   │
-│  │                                                               │   │
-│  │  Owners: Owner1, Owner2, Owner3, Owner4, Owner5              │   │
-│  │  Threshold: 3                                               │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                              ↕ Messaging                           │
-│  ┌───────────────────┐  ┌───────────────────┐  ┌───────────────┐  │
-│  │   Owner Chain 1   │  │   Owner Chain 2   │  │ Owner Chain 3│  │
-│  │  (Owner1 Wallet)  │  │  (Owner2 Wallet)  │  │(Owner3 Wallet)│  │
-│  └───────────────────┘  └───────────────────┘  └───────────────┘  │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+
+                        Multisig Platform                           
+
+                                                                     
+     
+                      Multisig Chain                              
+          
+                Multisig Application (Wasm)                    
+      • 3-of-5 multisig logic                                  
+      • Proposal management                                    
+      • Approval aggregation                                   
+      • Threshold validation                                   
+      • Execution logic                                        
+          
+                                                                    
+    Owners: Owner1, Owner2, Owner3, Owner4, Owner5                 
+    Threshold: 3                                                  
+     
+                              ↕ Messaging                           
+        
+     Owner Chain 1        Owner Chain 2      Owner Chain 3  
+    (Owner1 Wallet)      (Owner2 Wallet)    (Owner3 Wallet)  
+        
+                                                                     
+
 ```
 
 ---
@@ -488,5 +488,5 @@ Use **fuel-based gas metering** for WASM execution.
 
 ---
 
-**Status**: ✅ Complete
+**Status**:  Complete
 **Next**: Implementation guide with code examples

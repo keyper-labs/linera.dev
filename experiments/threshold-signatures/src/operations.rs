@@ -1,60 +1,60 @@
-// Operaciones simplificadas para evitar opcode 252
-// Solo una operación principal: ExecuteWithThresholdSignature
+// Simplified operations to avoid opcode 252
+// Only one main operation: ExecuteWithThresholdSignature
 
 use serde::{Deserialize, Serialize};
 use linera_sdk::linera_base_types::AccountOwner;
 
-/// Operación principal del contrato
-/// En lugar de Proposal + Approvals, usamos threshold signatures
+/// Main contract operation
+/// Instead of Proposal + Approvals, we use threshold signatures
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MultisigOperation {
-    /// Ejecutar transacción con firma threshold
-    /// La firma threshold se genera off-chain cuando m owners firman
+    /// Execute transaction with threshold signature
+    /// The threshold signature is generated off-chain when m owners sign
     ExecuteWithThresholdSignature {
-        /// Destinatario de la transferencia
+        /// Transfer recipient
         to: AccountOwner,
-        /// Monto a transferir
+        /// Amount to transfer
         amount: u64,
-        /// Nonce para evitar replay attacks
+        /// Nonce to prevent replay attacks
         nonce: u64,
-        /// Firma threshold (agregada off-chain)
-        /// Contiene las firmas de m owners agrupadas
+        /// Threshold signature (aggregated off-chain)
+        /// Contains signatures from m owners grouped together
         threshold_signature: Vec<u8>,
-        /// Mensaje que fue firmado (para verificación)
+        /// Message that was signed (for verification)
         message: Vec<u8>,
     },
 
-    /// Cambiar configuración (requiere threshold signature)
-    /// Opcional: permite cambiar owners/threshold
+    /// Change configuration (requires threshold signature)
+    /// Optional: allows changing owners/threshold
     ChangeConfig {
-        /// Nuevos owners
+        /// New owners
         new_owners: Vec<AccountOwner>,
-        /// Nuevo threshold
+        /// New threshold
         new_threshold: u64,
-        /// Nueva clave pública agregada
+        /// New aggregate public key
         new_aggregate_key: Vec<u8>,
         /// Nonce
         nonce: u64,
-        /// Firma threshold de la configuración actual
+        /// Threshold signature of current configuration
         threshold_signature: Vec<u8>,
     },
 }
 
-/// Mensaje que los owners firman off-chain
+/// Message that owners sign off-chain
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThresholdMessage {
-    /// Nonce actual del contrato
+    /// Current contract nonce
     pub nonce: u64,
 
-    /// Tipo de operación
+    /// Operation type
     pub operation_type: String,
 
-    /// Datos de la operación
+    /// Operation data
     pub operation_data: Vec<u8>,
 }
 
 impl ThresholdMessage {
-    /// Crear mensaje para transferencia
+    /// Create message for transfer
     pub fn transfer(nonce: u64, to: &AccountOwner, amount: u64) -> Self {
         Self {
             nonce,
@@ -63,7 +63,7 @@ impl ThresholdMessage {
         }
     }
 
-    /// Crear mensaje para cambio de configuración
+    /// Create message for configuration change
     pub fn config_change(nonce: u64, owners: &[&AccountOwner], threshold: u64) -> Self {
         let owners_str = owners.iter()
             .map(|o| o.to_string())
@@ -77,9 +77,9 @@ impl ThresholdMessage {
         }
     }
 
-    /// Serializar mensaje para firmar
+    /// Serialize message for signing
     pub fn to_bytes(&self) -> Vec<u8> {
-        // Serialización simple para evitar operaciones complejas
+        // Simple serialization to avoid complex operations
         let mut bytes = Vec::new();
         bytes.extend_from_slice(&self.nonce.to_be_bytes());
         bytes.extend_from_slice(self.operation_type.as_bytes());

@@ -20,59 +20,59 @@ Visual reference for Linera blockchain architecture, data flows, and system comp
 ### Linera Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Client Layer                             │
-├─────────────┬─────────────┬─────────────┬───────────────────────┤
-│  CLI Wallet │  Web Client │   dApp      │   Node Service        │
-│  (linera)   │ (@linera/   │  (Browser)  │   (GraphQL)           │
-│             │  client)    │             │                       │
-└──────┬──────┴──────┬──────┴──────┬──────┴───────────┬───────────┘
-       │             │             │                  │
-       └─────────────┴──────┬──────┴──────────────────┘
-                            │ gRPC / RPC
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Validator Network                           │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │  Validator  │  │  Validator  │  │  Validator  │  ...         │
-│  │   Node 1    │  │   Node 2    │  │   Node N    │              │
-│  └─────────────┘  └─────────────┘  └─────────────┘             │
-└─────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Microchain Layer                            │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │
-│  │ Chain 1 │ │ Chain 2 │ │ Chain 3 │ │ Chain 4 │ │ Chain N │   │
-│  │(Single) │ │(Multi)  │ │(Public) │ │(App)    │ │(...)    │   │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+
+                         Client Layer                             
+
+  CLI Wallet   Web Client    dApp         Node Service        
+  (linera)    (@linera/     (Browser)     (GraphQL)           
+               client)                                        
+
+                                                   
+       
+                             gRPC / RPC
+                            
+
+                      Validator Network                           
+                   
+    Validator      Validator      Validator    ...         
+     Node 1         Node 2         Node N                  
+                   
+
+                            
+                            
+
+                      Microchain Layer                            
+         
+   Chain 1   Chain 2   Chain 3   Chain 4   Chain N    
+  (Single)  (Multi)   (Public)  (App)     (...)       
+         
+
 ```
 
 ### Chain Ownership Types
 
 ```
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│  Single-Owner   │  │  Multi-Owner    │  │  Public Chain   │
-│     Chain       │  │     Chain       │  │                 │
-├─────────────────┤  ├─────────────────┤  ├─────────────────┤
-│  Owner: A       │  │  Owners: A,B,C  │  │  Owners: None   │
-│                 │  │  Threshold: 2   │  │                 │
-│  ┌───────────┐  │  │                 │  │  ┌───────────┐  │
-│  │  Fast     │  │  │  ┌───────────┐  │  │  │  Any      │  │
-│  │  Rounds   │  │  │  │  Multi-   │  │  │  │  User     │  │
-│  └───────────┘  │  │  │  Leader   │  │  │  └───────────┘  │
-│                 │  │  │  Rounds   │  │  │                 │
-│  Low latency    │  │  └───────────┘  │  │  Open to all    │
-│  Single writer  │  │                 │  │                 │
-│                 │  │  Single-Leader  │  │  Shared apps    │
-│  Best for:      │  │  Fallback       │  │                 │
-│  - Personal     │  │                 │  │  Best for:      │
-│  - High freq    │  │  Best for:      │  │  - Public       │
-│                 │  │  - Team         │  │    services     │
-│                 │  │  - Shared       │  │  - Shared       │
-│                 │  │    control      │  │    state        │
-└─────────────────┘  └─────────────────┘  └─────────────────┘
+    
+  Single-Owner       Multi-Owner        Public Chain   
+     Chain              Chain                          
+    
+  Owner: A           Owners: A,B,C      Owners: None   
+                     Threshold: 2                      
+                             
+    Fast                   Any        
+    Rounds           Multi-           User       
+          Leader           
+                       Rounds                        
+  Low latency              Open to all    
+  Single writer                                        
+                     Single-Leader      Shared apps    
+  Best for:          Fallback                          
+  - Personal                            Best for:      
+  - High freq        Best for:          - Public       
+                     - Team               services     
+                     - Shared           - Shared       
+                       control            state        
+    
 ```
 
 ---
