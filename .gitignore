@@ -15,6 +15,11 @@ open-agents/tools/
 # Gemini session files
 .gemini/
 
+#Cargo Backups
+.make_backups/
+**/*.bak
+
+
 # Python
 __pycache__/
 *.py[cod]

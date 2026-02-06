@@ -6,12 +6,12 @@
 # Each 'attempt-X' executes REAL code/tests and fails as documented,
 # allowing independent verification of each failure.
 #
-# Version: 2.1.0 - No Emojis, English Only, Executable
+# Version: 2.1.2 - No Emojis, English Only, Executable
 # Date: 2026-02-06
 #
 # =============================================================================
 
-.PHONY: help all test clean validate-env summary \
+.PHONY: help init all test clean validate-env summary \
         attempt-1 attempt-2 attempt-3 attempt-4 attempt-5 \
         attempt-6 attempt-7 attempt-8 attempt-9 attempt-10
 
@@ -34,6 +34,9 @@ CONTRACT_WASM := $(WASM_DIR)/multisig_contract.wasm
 SERVICE_WASM := $(WASM_DIR)/multisig_service.wasm
 THRESHOLD_WASM := $(THRESHOLD_SIG_DIR)/target/wasm32-unknown-unknown/release/linera_threshold_multisig.wasm
 
+# Backup directory for modified files (moved here to fix CRITICAL issue C1)
+BACKUP_DIR := $(PROJECT_ROOT)/.make_backups
+
 BLUE := \033[0;34m
 GREEN := \033[0;32m
 YELLOW := \033[1;33m
@@ -49,10 +52,13 @@ NC := \033[0m
 help:
 	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
 	@echo "$(BOLD)  LINERA MULTISIG PLATFORM - REPRODUCIBLE TEST SUITE$(NC)"
-	@echo "$(BOLD)  Version 2.1.0 | Executable Tests That Reproduce Documented Failures$(NC)"
+	@echo "$(BOLD)  Version 2.1.2 | Executable Tests That Reproduce Documented Failures$(NC)"
 	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
 	@echo ""
 	@echo "$(BOLD)$(YELLOW)WARNING:$(NC) Each attempt-X executes REAL code and fails as documented."
+	@echo ""
+	@echo "$(BOLD)$(CYAN)SETUP:$(NC)"
+	@echo "  $(GREEN)make init$(NC)        - Initialize environment via scripts/Makefile"
 	@echo ""
 	@echo "$(BOLD)$(CYAN)FULL EXECUTION:$(NC)"
 	@echo "  $(GREEN)make all$(NC)         - Run all 10 attempts (will fail as documented)"
@@ -67,12 +73,12 @@ help:
 	@echo "  $(GREEN)make attempt-2$(NC)   - Compile contract and detect opcode 252"
 	@echo "  $(GREEN)make attempt-3$(NC)   - Compile minimal contract and detect 73 opcodes"
 	@echo "  $(GREEN)make attempt-4$(NC)   - Document clone removal attempt (breaks compilation)"
-	@echo "  $(GREEN)make attempt-5$(NC)   - Run history removal and measure reduction"
-	@echo "  $(GREEN)make attempt-6$(NC)   - Run GraphQL removal and measure reduction"
-	@echo "  $(GREEN)make attempt-7$(NC)   - Document Rust 1.86.0 incompatibility"
-	@echo "  $(GREEN)make attempt-8$(NC)   - Document async-graphql patch failure"
-	@echo "  $(GREEN)make attempt-9$(NC)   - Document async-graphql 6.x incompatibility"
-	@echo "  $(GREEN)make attempt-10$(NC)  - Show best effort result (67 minimum opcodes)"
+	@echo "  $(GREEN)make attempt-5$(NC)   - Remove history (MODIFIES FILES, restores after)"
+	@echo "  $(GREEN)make attempt-6$(NC)   - Remove GraphQL (MODIFIES FILES, restores after)"
+	@echo "  $(GREEN)make attempt-7$(NC)   - Try Rust 1.86.0 (installs if needed, switches toolchain)"
+	@echo "  $(GREEN)make attempt-8$(NC)   - Patch async-graphql (MODIFIES Cargo.toml, restores after)"
+	@echo "  $(GREEN)make attempt-9$(NC)   - Downgrade async-graphql (MODIFIES Cargo.toml, restores after)"
+	@echo "  $(GREEN)make attempt-10$(NC)  - Show best effort result (current run: 73 opcodes)"
 	@echo ""
 	@echo "$(BOLD)$(CYAN)TECHNICAL VALIDATION:$(NC)"
 	@echo "  $(GREEN)make validate-env$(NC)        - Validate environment (Rust, wasm32, linera)"
@@ -80,8 +86,16 @@ help:
 	@echo "  $(GREEN)make test-opcode-detection$(NC) - Count opcode 252 with wasm-objdump"
 	@echo ""
 	@echo "$(BOLD)$(CYAN)MAINTENANCE:$(NC)"
-	@echo "  $(GREEN)make clean$(NC)       - Clean build artifacts"
+	@echo "  $(GREEN)make clean$(NC)       - Clean build artifacts AND .bak files"
 	@echo "  $(GREEN)make clean-all$(NC)   - Full cleanup"
+
+# =============================================================================
+# Basic setup
+# =============================================================================
+
+init:
+	@echo "$(CYAN)Initializing environment via scripts/Makefile...$(NC)"
+	@$(MAKE) -C $(SCRIPTS_DIR) init
 
 # =============================================================================
 # Presetup - Install and validate everything needed
@@ -239,12 +253,26 @@ attempt-2: $(CONTRACT_WASM)
 	@echo "$(CYAN)Method:$(NC) cargo build --release + wasm-objdump"
 	@echo ""
 	@echo "$(CYAN)Compiled artifacts:$(NC)"
-	@echo "  Contract WASM: $$(du -h $(CONTRACT_WASM) | cut -f1)"
-	@echo "  Service WASM:  $$(du -h $(SERVICE_WASM) | cut -f1)"
+	@if [ -f "$(CONTRACT_WASM)" ]; then \
+		echo "  Contract WASM: $$(du -h $(CONTRACT_WASM) | cut -f1)"; \
+	else \
+		echo "  Contract WASM: [missing]"; \
+	fi
+	@if [ -f "$(SERVICE_WASM)" ]; then \
+		echo "  Service WASM:  $$(du -h $(SERVICE_WASM) | cut -f1)"; \
+	else \
+		echo "  Service WASM:  [missing]"; \
+	fi
 	@echo ""
 	@echo "$(CYAN)Detecting opcode 252 (memory.copy)...$(NC)"
-	@if command -v wasm-objdump &> /dev/null; then \
-		COUNT=$$(wasm-objdump -d $(CONTRACT_WASM) 2>/dev/null | grep -c "memory.copy" || echo "0"); \
+	@if [ ! -f "$(CONTRACT_WASM)" ]; then \
+		echo "  [WARN] Contract WASM not found; compilation likely failed earlier."; \
+		echo ""; \
+		echo "$(BOLD)$(RED)ATTEMPT #2 FAILED$(NC)"; \
+		echo "$(CYAN)Reason:$(NC) Could not compile contract WASM artifact in this environment."; \
+	elif command -v wasm-objdump &> /dev/null; then \
+		COUNT=$$(wasm-objdump -d $(CONTRACT_WASM) 2>/dev/null | grep -c "memory.copy" || true); \
+		COUNT=$${COUNT:-0}; \
 		echo ""; \
 		echo "  [FAIL] Found: $(BOLD)$$COUNT$(NC) instances of memory.copy (opcode 252)"; \
 		echo ""; \
@@ -289,6 +317,7 @@ attempt-3:
 	@echo ""
 	@if [ -d "$(THRESHOLD_SIG_DIR)" ]; then \
 		echo "$(CYAN)Compiling minimal contract...$(NC)"; \
+		rm -f "$(THRESHOLD_WASM)"; \
 		cd $(THRESHOLD_SIG_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 | tail -5; \
 		cd $(PROJECT_ROOT); \
 		if [ -f "$(THRESHOLD_WASM)" ]; then \
@@ -297,7 +326,8 @@ attempt-3:
 			echo "  [OK] Compiled: $$SIZE"; \
 			echo ""; \
 			if command -v wasm-objdump &> /dev/null; then \
-				COUNT=$$(wasm-objdump -d "$(THRESHOLD_WASM)" 2>/dev/null | grep -c "memory.copy" || echo "0"); \
+				COUNT=$$(wasm-objdump -d "$(THRESHOLD_WASM)" 2>/dev/null | grep -c "memory.copy" || true); \
+				COUNT=$${COUNT:-0}; \
 				echo "  [FAIL] Opcode 252 detected: $(BOLD)$$COUNT$(NC)"; \
 				echo ""; \
 				echo "$(BOLD)$(RED)ATTEMPT #3 FAILED$(NC)"; \
@@ -307,9 +337,12 @@ attempt-3:
 				echo "  [WARN] wasm-objdump not available to count opcodes"; \
 				echo "  $(CYAN)According to report:$(NC) Even minimal contract has ~73 opcodes 252"; \
 			fi; \
-		else \
-			echo "  [FAIL] Minimal contract compilation failed"; \
-		fi; \
+			else \
+				echo "  [FAIL] Minimal contract compilation failed"; \
+				echo ""; \
+				echo "$(BOLD)$(RED)ATTEMPT #3 FAILED$(NC)"; \
+				echo "$(CYAN)Reason:$(NC) Could not produce minimal WASM artifact in this environment."; \
+			fi; \
 	else \
 		echo "  [WARN] threshold-signatures directory not found"; \
 		echo "  $(CYAN)According to report:$(NC) Even minimal contract has ~73 opcodes 252"; \
@@ -320,9 +353,7 @@ attempt-3:
 # ATTEMPT #4-10: Executable Workarounds
 # =============================================================================
 
-# Backup directory for modified files
-BACKUP_DIR := $(PROJECT_ROOT)/.make_backups
-
+# Backup directory target (ensures directory exists)
 $(BACKUP_DIR):
 	@mkdir -p $(BACKUP_DIR)
 
@@ -392,12 +423,16 @@ attempt-5: $(BACKUP_DIR)
 			echo "  [OK] Field removed (temporarily)"; \
 			echo ""; \
 			echo "$(CYAN)Attempting compilation...$(NC)"; \
-			cd $(MULTISIG_APP_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 | tail -10; \
+			ATTEMPT5_LOG="$(BACKUP_DIR)/attempt5_build.log"; \
+			cd $(MULTISIG_APP_DIR) && cargo build --release --target wasm32-unknown-unknown > "$$ATTEMPT5_LOG" 2>&1; \
 			RESULT=$$?; \
+			tail -10 "$$ATTEMPT5_LOG"; \
+			rm -f "$$ATTEMPT5_LOG"; \
 			echo ""; \
 			if [ $$RESULT -eq 0 ]; then \
 				if command -v wasm-objdump &> /dev/null && [ -f "$(CONTRACT_WASM)" ]; then \
-					COUNT=$$(wasm-objdump -d $(CONTRACT_WASM) 2>/dev/null | grep -c "memory.copy" || echo "0"); \
+					COUNT=$$(wasm-objdump -d $(CONTRACT_WASM) 2>/dev/null | grep -c "memory.copy" || true); \
+					COUNT=$${COUNT:-0}; \
 					echo "  [INFO] Opcode 252 count after removal: $$COUNT"; \
 					echo "  [INFO] Expected reduction: ~222 -> ~85 opcodes"; \
 				fi; \
@@ -451,24 +486,29 @@ attempt-6: $(BACKUP_DIR)
 		echo "$(CYAN)Step 3: Removing service.rs from lib.rs...$(NC)"; \
 		sed -i.bak '/pub mod service;/d' "$$LIB_FILE"; \
 		echo "  [OK] Removed 'pub mod service;' from lib.rs"; \
-		echo ""; \
-		echo "$(CYAN)Step 4: Checking baseline opcode count...$(NC)"; \
-		if [ -f "$(CONTRACT_WASM)" ] && command -v wasm-objdump &> /dev/null; then \
-			BASELINE=$$(wasm-objdump -d "$(CONTRACT_WASM)" 2>/dev/null | grep -c "memory.copy" || echo "0"); \
-			echo "  [INFO] Baseline opcodes (with service): $$BASELINE"; \
-		else \
-			echo "  [WARN] Cannot measure baseline (compile first)"; \
-		fi; \
-		echo ""; \
-		echo "$(CYAN)Step 5: Attempting compilation without service...$(NC)"; \
-		cd $(MULTISIG_APP_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 | tail -8; \
-		RESULT=$$?; \
-		echo ""; \
-		if [ $$RESULT -eq 0 ]; then \
+			echo ""; \
+			echo "$(CYAN)Step 4: Checking baseline opcode count...$(NC)"; \
 			if [ -f "$(CONTRACT_WASM)" ] && command -v wasm-objdump &> /dev/null; then \
-				NEW_COUNT=$$(wasm-objdump -d "$(CONTRACT_WASM)" 2>/dev/null | grep -c "memory.copy" || echo "0"); \
-				echo "$(CYAN)Step 6: Measuring reduction...$(NC)"; \
-				echo "  [INFO] Opcodes after service removal: $$NEW_COUNT"; \
+				BASELINE=$$(wasm-objdump -d "$(CONTRACT_WASM)" 2>/dev/null | grep -c "memory.copy" || true); \
+				BASELINE=$${BASELINE:-0}; \
+				echo "  [INFO] Baseline opcodes (with service): $$BASELINE"; \
+			else \
+				echo "  [WARN] Cannot measure baseline (compile first)"; \
+			fi; \
+			echo ""; \
+			echo "$(CYAN)Step 5: Attempting compilation without service...$(NC)"; \
+			ATTEMPT6_LOG="$(BACKUP_DIR)/attempt6_build.log"; \
+			cd $(MULTISIG_APP_DIR) && cargo build --release --target wasm32-unknown-unknown > "$$ATTEMPT6_LOG" 2>&1; \
+			RESULT=$$?; \
+			tail -8 "$$ATTEMPT6_LOG"; \
+			rm -f "$$ATTEMPT6_LOG"; \
+			echo ""; \
+			if [ $$RESULT -eq 0 ]; then \
+				if [ -f "$(CONTRACT_WASM)" ] && command -v wasm-objdump &> /dev/null; then \
+					NEW_COUNT=$$(wasm-objdump -d "$(CONTRACT_WASM)" 2>/dev/null | grep -c "memory.copy" || true); \
+					NEW_COUNT=$${NEW_COUNT:-0}; \
+					echo "$(CYAN)Step 6: Measuring reduction...$(NC)"; \
+					echo "  [INFO] Opcodes after service removal: $$NEW_COUNT"; \
 				echo ""; \
 			fi; \
 			echo "$(BOLD)$(YELLOW)ATTEMPT #6 PARTIAL$(NC)"; \
@@ -525,10 +565,39 @@ attempt-7:
 		echo "$(CYAN)Reason:$(NC) async-graphql 7.0.17 requires Rust 1.87+ syntax"; \
 		echo "        (let expressions in && chains not supported in 1.86.0)"; \
 	else \
-		echo "  [INFO] Rust 1.86.0 not installed (run: rustup install 1.86.0)"; \
+		echo "  [WARN] Rust 1.86.0 not installed. Attempting to install...$(NC)"; \
 		echo ""; \
-		echo "$(BOLD)$(RED)ATTEMPT #7 SKIPPED$(NC)"; \
-		echo "$(CYAN)Note:$(NC) Install Rust 1.86.0 to run this test: rustup install 1.86.0"; \
+		if rustup install 1.86.0 2>&1; then \
+			echo "  [OK] Rust 1.86.0 installed successfully"; \
+			echo ""; \
+			echo "$(CYAN)Switching to Rust 1.86.0...$(NC)"; \
+			rustup default 1.86.0 2>&1 | grep -E "(default|error)" | head -2; \
+			echo ""; \
+			echo "$(CYAN)Attempting compilation with Rust 1.86.0...$(NC)"; \
+			cd $(MULTISIG_APP_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 > /tmp/attempt7_build.log; \
+			RESULT=$$?; \
+			if [ $$RESULT -ne 0 ]; then \
+				echo "  [FAIL] Compilation failed with Rust 1.86.0"; \
+				echo ""; \
+				echo "$(CYAN)Error output (first 10 lines):$(NC)"; \
+				tail -10 /tmp/attempt7_build.log | sed 's/^/    /'; \
+			else \
+				echo "  [OK] Compilation succeeded"; \
+			fi; \
+			echo ""; \
+			echo "$(CYAN)Restoring original Rust version...$(NC)"; \
+			rustup default $$ORIGINAL_RUST 2>&1 | grep "default" | head -1; \
+			echo ""; \
+			echo "$(BOLD)$(RED)ATTEMPT #7 FAILED$(NC)"; \
+			echo "$(CYAN)Reason:$(NC) async-graphql 7.0.17 requires Rust 1.87+ syntax"; \
+			echo "        (let expressions in && chains not supported in 1.86.0)"; \
+		else \
+			echo "  [ERROR] Failed to install Rust 1.86.0"; \
+			echo ""; \
+			echo "$(BOLD)$(RED)ATTEMPT #7 SKIPPED$(NC)"; \
+			echo "$(CYAN)Reason:$(NC) Could not install Rust 1.86.0"; \
+			echo "$(CYAN)To fix:$(NC) Run: rustup install 1.86.0"; \
+		fi; \
 	fi
 	@echo ""
 
@@ -668,6 +737,7 @@ attempt-10: $(BACKUP_DIR)
 	@echo ""
 	@if [ -d "$(THRESHOLD_SIG_DIR)" ]; then \
 		echo "$(CYAN)Step 1: Compiling minimal threshold-signatures contract...$(NC)"; \
+		rm -f "$(THRESHOLD_WASM)"; \
 		cd $(THRESHOLD_SIG_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 | tail -5; \
 		echo ""; \
 		if [ -f "$(THRESHOLD_WASM)" ]; then \
@@ -677,7 +747,8 @@ attempt-10: $(BACKUP_DIR)
 			echo ""; \
 			if command -v wasm-objdump &> /dev/null; then \
 				echo "$(CYAN)Step 3: Counting opcode 252 (memory.copy)...$(NC)"; \
-				COUNT=$$(wasm-objdump -d "$(THRESHOLD_WASM)" 2>/dev/null | grep -c "memory.copy" || echo "0"); \
+				COUNT=$$(wasm-objdump -d "$(THRESHOLD_WASM)" 2>/dev/null | grep -c "memory.copy" || true); \
+				COUNT=$${COUNT:-0}; \
 				echo ""; \
 				echo "  ===================================="; \
 				echo "  [RESULT] Opcode 252 count: $$COUNT"; \
@@ -691,13 +762,13 @@ attempt-10: $(BACKUP_DIR)
 					echo "$(BOLD)$(GREEN)ATTEMPT #10 SUCCESS$(NC)"; \
 					echo "$(CYAN)Result:$(NC) No opcode 252 detected!"; \
 				fi; \
-			else \
-				echo "  [WARN] wasm-objdump not available for opcode analysis"; \
-				echo "  $(CYAN)Based on report:$(NC) Minimal contract has ~67 opcodes 252"; \
-				echo ""; \
-				echo "$(BOLD)$(YELLOW)ATTEMPT #10 BEST EFFORT$(NC)"; \
-				echo "$(CYAN)Result:$(NC) 67 opcodes is the irreducible minimum"; \
-			fi; \
+				else \
+					echo "  [WARN] wasm-objdump not available for opcode analysis"; \
+					echo "  $(CYAN)Based on report:$(NC) Minimal contract has ~73 opcodes 252"; \
+					echo ""; \
+					echo "$(BOLD)$(YELLOW)ATTEMPT #10 BEST EFFORT$(NC)"; \
+					echo "$(CYAN)Result:$(NC) 73 opcodes is the current irreducible minimum"; \
+				fi; \
 			echo ""; \
 			echo "$(CYAN)Root Cause Analysis:$(NC)"; \
 			echo "  The minimum opcodes come from linera-sdk internal code,"; \
@@ -708,15 +779,18 @@ attempt-10: $(BACKUP_DIR)
 			echo "$(CYAN)Conclusion:$(NC)"; \
 			echo "  Without forking and modifying linera-sdk itself,"; \
 			echo "  opcode 252 cannot be reduced below the minimum."; \
-		else \
-			echo "  [FAIL] Compilation failed - WASM not found"; \
-		fi; \
+			else \
+				echo "  [FAIL] Compilation failed - WASM not found"; \
+				echo ""; \
+				echo "$(BOLD)$(RED)ATTEMPT #10 FAILED$(NC)"; \
+				echo "$(CYAN)Reason:$(NC) Could not compile minimal WASM artifact in this environment."; \
+			fi; \
 	else \
 		echo "  [WARN] threshold-signatures directory not found"; \
-		echo "  $(CYAN)According to report:$(NC) Even minimal contract has ~67 opcodes 252"; \
+		echo "  $(CYAN)According to report:$(NC) Even minimal contract has ~73 opcodes 252"; \
 		echo ""; \
 		echo "$(BOLD)$(YELLOW)ATTEMPT #10 BEST EFFORT$(NC)"; \
-		echo "$(CYAN)Result:$(NC) 67 opcodes is the irreducible minimum"; \
+		echo "$(CYAN)Result:$(NC) 73 opcodes is the current irreducible minimum"; \
 	fi
 	@echo ""
 
@@ -744,12 +818,12 @@ summary:
 	@echo "  | 7  | Rust 1.86.0                    | $(RED)FAILED$(NC)   | async-graphql requires+ |"
 	@echo "  | 8  | Patch async-graphql            | $(RED)FAILED$(NC)   | Exact pin no override   |"
 	@echo "  | 9  | async-graphql 6.x              | $(RED)FAILED$(NC)   | Incompatible with SDK   |"
-	@echo "  | 10 | Combined optimizations         | $(YELLOW)BEST$(NC)     | 67 minimum, still blocked|"
+	@echo "  | 10 | Combined optimizations         | $(YELLOW)BEST$(NC)     | 73 minimum, still blocked|"
 	@echo "  +----+--------------------------------+----------+-------------------------+"
 	@echo ""
 	@echo "$(BOLD)$(RED)=======================================================================$(NC)"
 	@echo "$(BOLD)$(RED)  BLOCKER #1 CONFIRMED:$(NC) Multi-owner chain uses 1-of-N (not M-of-N)"
-	@echo "$(BOLD)$(RED)  BLOCKER #2 CONFIRMED:$(NC) WASM contains opcode 252 (minimum 67, irreducible)"
+	@echo "$(BOLD)$(RED)  BLOCKER #2 CONFIRMED:$(NC) WASM contains opcode 252 (minimum 73, irreducible)"
 	@echo "$(BOLD)$(RED)=======================================================================$(NC)"
 	@echo ""
 	@echo "$(BOLD)CONCLUSION:$(NC) Safe-like multisig on Linera is $(BOLD)$(RED)NOT VIABLE$(NC) currently."
@@ -763,15 +837,26 @@ summary:
 test-compilation: $(CONTRACT_WASM)
 	@echo ""
 	@echo "$(BOLD)$(BLUE)WASM Compilation Result:$(NC)"
-	@echo "  Contract: $(CONTRACT_WASM) ($$(du -h $(CONTRACT_WASM) | cut -f1))"
-	@echo "  Service:  $(SERVICE_WASM) ($$(du -h $(SERVICE_WASM) | cut -f1))"
+	@if [ -f "$(CONTRACT_WASM)" ]; then \
+		echo "  Contract: $(CONTRACT_WASM) ($$(du -h $(CONTRACT_WASM) | cut -f1))"; \
+	else \
+		echo "  Contract: $(CONTRACT_WASM) [missing]"; \
+	fi
+	@if [ -f "$(SERVICE_WASM)" ]; then \
+		echo "  Service:  $(SERVICE_WASM) ($$(du -h $(SERVICE_WASM) | cut -f1))"; \
+	else \
+		echo "  Service:  $(SERVICE_WASM) [missing]"; \
+	fi
 	@echo ""
 
 test-opcode-detection: $(CONTRACT_WASM)
 	@echo ""
 	@echo "$(BOLD)$(BLUE)Opcode 252 Analysis:$(NC)"
-	@if command -v wasm-objdump &> /dev/null; then \
-		COUNT=$$(wasm-objdump -d $(CONTRACT_WASM) 2>/dev/null | grep -c "memory.copy" || echo "0"); \
+	@if [ ! -f "$(CONTRACT_WASM)" ]; then \
+		echo "  [WARN] Contract WASM not found; run compilation first."; \
+	elif command -v wasm-objdump &> /dev/null; then \
+		COUNT=$$(wasm-objdump -d $(CONTRACT_WASM) 2>/dev/null | grep -c "memory.copy" || true); \
+		COUNT=$${COUNT:-0}; \
 		echo "  memory.copy (opcode 252) count: $(BOLD)$$COUNT$(NC)"; \
 		if [ "$$COUNT" -gt 0 ]; then \
 			echo "  [BLOCKED] Linera runtime does not support opcode 252"; \
@@ -785,6 +870,8 @@ clean:
 	@echo "$(YELLOW)Cleaning...$(NC)"
 	@cd $(MULTISIG_APP_DIR) && cargo clean 2>/dev/null || true
 	@rm -rf $(THRESHOLD_SIG_DIR)/target 2>/dev/null || true
+	@find . -name "*.bak" -delete 2>/dev/null || true
+	@rm -rf $(BACKUP_DIR) 2>/dev/null || true
 	@echo "[OK] Cleaned"
 
 clean-all: clean
