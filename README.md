@@ -2,7 +2,7 @@
 
 > **Research repository for building a multi-signature wallet platform on Linera blockchain**
 >
-> **Status**: Research Complete | **Deployment**: 🔴 BLOCKED by SDK opcode 252 issue
+> **Status**: Research Complete | **Deployment**: BLOCKED by SDK opcode 252 issue
 
 ---
 
@@ -35,11 +35,11 @@ Research and testing infrastructure for a **Safe-like multisig wallet** on the *
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| **Research** | ✅ Complete | Infrastructure and feasibility analyzed |
-| **Multi-Owner Chains** | ✅ Validated | Native protocol feature working on testnet |
-| **@linera/client SDK** | ✅ Available | TypeScript SDK for frontend/backend |
-| **Wasm Multisig Contract** | 🔴 **BLOCKED** | Opcode 252 incompatibility (see below) |
-| **Testnet Deployment** | 🔴 **BLOCKED** | Requires SDK fix from Linera team |
+| **Research** | Complete | Infrastructure and feasibility analyzed |
+| **Multi-Owner Chains** | Validated | Native protocol feature working on testnet |
+| **@linera/client SDK** | Available | TypeScript SDK for frontend/backend |
+| **Wasm Multisig Contract** | **BLOCKED** | Opcode 252 incompatibility (see below) |
+| **Testnet Deployment** | **BLOCKED** | Requires SDK fix from Linera team |
 
 ### The Blocker: Opcode 252
 
@@ -73,18 +73,18 @@ Execution error: Invalid Wasm module: Unknown opcode 252 during Operation(0)
 
 | Layer | Technology | Status |
 |-------|-----------|--------|
-| **Frontend** | React + TypeScript + @linera/client | ✅ Available |
-| **Backend** | Node.js/TypeScript + @linera/client | ✅ Available |
-| **Protocol** | Linera Multi-Owner Chains | ✅ Working (1-of-N) |
-| **Wallet** | Custom Ed25519 via SDK | ✅ Available |
+| **Frontend** | React + TypeScript + @linera/client | Available |
+| **Backend** | Node.js/TypeScript + @linera/client | Available |
+| **Protocol** | Linera Multi-Owner Chains | Working (1-of-N) |
+| **Wallet** | Custom Ed25519 via SDK | Available |
 
 ### What Doesn't Work (Blocked)
 
 | Component | Technology | Blocker |
 |-----------|-----------|---------|
-| **Smart Contracts** | Rust → Wasm (linera-sdk) | ❌ Opcode 252 |
-| **Threshold Logic** | Custom m-of-n implementation | ❌ Requires Wasm |
-| **Safe-like UX** | Propose → Approve → Execute | ❌ Requires Wasm |
+| **Smart Contracts** | Rust → Wasm (linera-sdk) | BLOCKED: Opcode 252 |
+| **Threshold Logic** | Custom m-of-n implementation | BLOCKED: Requires Wasm |
+| **Safe-like UX** | Propose → Approve → Execute | BLOCKED: Requires Wasm |
 
 ---
 
@@ -157,8 +157,8 @@ make rust-publish  # Attempt deployment (will fail)
 
 | Test Type | Command | Status |
 |-----------|---------|--------|
-| CLI Multi-Owner | `cd scripts && make cli-test` | ⚠️ Requires reachable faucet/testnet |
-| SDK Multisig | `cd scripts && make rust-test` | ⚠️ Requires crates.io access (or cached deps); deploy still blocked |
+| CLI Multi-Owner | `cd scripts && make cli-test` | Requires reachable faucet/testnet |
+| SDK Multisig | `cd scripts && make rust-test` | Requires crates.io access (or cached deps); deploy still blocked |
 
 Full test report: [`docs/reports/COMPREHENSIVE_TEST_REPORT.md`](docs/reports/COMPREHENSIVE_TEST_REPORT.md)
 
@@ -172,7 +172,7 @@ This repository has **TWO Makefiles** for different purposes:
 
 **Location**: [`/Makefile`](Makefile) (root directory)
 
-**Purpose**: Reproduces all 10 documented failed attempts from the comprehensive test report. Each `attempt-X` target executes REAL code and fails as documented.
+**Purpose**: Reproduces all 10 documented failed attempts from the comprehensive test report. Each `attempt-X` target runs real code and fails as documented.
 
 ```bash
 # Run from project root - no need to cd
@@ -190,21 +190,21 @@ make summary     # Show final conclusion
 
 | Command | Description | Result |
 |---------|-------------|--------|
-| `make attempt-1` | Run multi-owner chain validation | ❌ 1-of-N, no threshold |
+| `make attempt-1` | Run multi-owner chain validation | Failed: 1-of-N, no threshold |
 
 #### Blocker #2: Opcode 252 (Attempts #2-10)
 
 | Command | Description | Opcode Count | Result |
 |---------|-------------|--------------|--------|
-| `make attempt-2` | Compile full contract, detect opcode 252 | 222 | ❌ Blocked |
-| `make attempt-3` | Compile minimal contract (threshold-signatures) | 73 | ❌ Blocked |
-| `make attempt-4` | Remove .clone() calls from source | N/A | ❌ Breaks mutability |
-| `make attempt-5` | Remove proposal history and measure | 85 | ⚠️ Reduced, still blocked |
-| `make attempt-6` | Remove GraphQL service and measure | 82 | ⚠️ Reduced, still blocked |
-| `make attempt-7` | Try Rust 1.86.0 (pre-opcode 252) | N/A | ❌ async-graphql incompatible |
-| `make attempt-8` | Apply patch to async-graphql version | N/A | ❌ Exact pin prevents override |
-| `make attempt-9` | Downgrade to async-graphql 6.x | N/A | ❌ API incompatible |
-| `make attempt-10` | Combined best effort result | 73 | ⚠️ Minimum, still blocked |
+| `make attempt-2` | Compile full contract, detect opcode 252 | 222 | Failed: Blocked |
+| `make attempt-3` | Compile minimal contract (threshold-signatures) | 73 | Failed: Blocked |
+| `make attempt-4` | Remove .clone() calls from source | N/A | Failed: Breaks mutability |
+| `make attempt-5` | Remove proposal history and measure | 85 | Partial: Reduced, still blocked |
+| `make attempt-6` | Remove GraphQL service and measure | 82 | Partial: Reduced, still blocked |
+| `make attempt-7` | Try Rust 1.86.0 (pre-opcode 252) | N/A | Failed: async-graphql incompatible |
+| `make attempt-8` | Apply patch to async-graphql version | N/A | Failed: Exact pin prevents override |
+| `make attempt-9` | Downgrade to async-graphql 6.x | N/A | Failed: API incompatible |
+| `make attempt-10` | Combined best effort result | 73 | Partial: Minimum, still blocked |
 
 #### Technical Validation
 
@@ -215,7 +215,7 @@ make summary     # Show final conclusion
 | `make test-opcode-detection` | Count opcode 252 with wasm-objdump |
 | `make clean` / `make clean-all` | Clean build artifacts |
 
-**Key Finding**: Even with ALL optimizations combined, the minimum achievable opcode 252 count is **73**. These come from linera-sdk internal code, NOT from contract implementation.
+**Key Finding**: Even with all optimizations combined, the minimum achievable opcode 252 count is **73**. These come from linera-sdk internal code, not from contract implementation.
 
 ---
 
@@ -258,13 +258,13 @@ cd scripts  # Makefile is in scripts/ directory
 
 - 1-of-N execution (any owner can execute)
 - Native protocol feature
-- ✅ Working on testnet
+- Working on testnet
 
 **Multisig Application** (Wasm contract level):
 
 - M-of-N threshold enforcement
 - Proposal/approval workflow
-- 🔴 Blocked by opcode 252
+- Blocked by opcode 252
 
 **Stack**: React frontend → Node.js backend → Linera Network
 
@@ -290,10 +290,10 @@ cd scripts  # Makefile is in scripts/ directory
 
 | Feature | Safe-like Multisig (Required) | Linera Multi-Owner (Actual) | Match |
 |---------|------------------------------|----------------------------|-------|
-| Threshold enforcement | M-of-N required | 1-of-N execution | ❌ |
-| Confirmation tracking | Track approvals per owner | No confirmation counting | ❌ |
-| Proposal lifecycle | Submit → Approve → Execute | Single step execution | ❌ |
-| Revoke confirmations | Can revoke before execution | No confirmation to revoke | ❌ |
+| Threshold enforcement | M-of-N required | 1-of-N execution | No |
+| Confirmation tracking | Track approvals per owner | No confirmation counting | No |
+| Proposal lifecycle | Submit → Approve → Execute | Single step execution | No |
+| Revoke confirmations | Can revoke before execution | No confirmation to revoke | No |
 
 ### Blocker #2: Opcode 252 - Wasm Deployment Failure
 
