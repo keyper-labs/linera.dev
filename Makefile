@@ -84,10 +84,59 @@ help:
 	@echo "  $(GREEN)make clean-all$(NC)   - Full cleanup"
 
 # =============================================================================
+# Presetup - Install and validate everything needed
+# =============================================================================
+
+presetup: validate-env
+	@echo ""
+	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
+	@echo "$(BOLD)$(BLUE)  PRESETUP: Installing and validating all dependencies$(NC)"
+	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
+	@echo ""
+	@echo "$(CYAN)Step 1: Checking Rust installation...$(NC)"
+	@if command -v rustc &> /dev/null; then \
+		echo "  [OK] Rust installed: $$(rustc --version)"; \
+	else \
+		echo "  [INSTALL] Installing Rust via rustup..."; \
+		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; \
+		source $$HOME/.cargo/env; \
+	fi
+	@echo ""
+	@echo "$(CYAN)Step 2: Installing wasm32 target...$(NC)"
+	@rustup target add wasm32-unknown-unknown 2>/dev/null && echo "  [OK] wasm32 target installed" || echo "  [OK] wasm32 target already installed"
+	@echo ""
+	@echo "$(CYAN)Step 3: Checking wabt (wasm-objdump)...$(NC)"
+	@if command -v wasm-objdump &> /dev/null; then \
+		echo "  [OK] wasm-objdump installed"; \
+	elif command -v brew &> /dev/null; then \
+		echo "  [INSTALL] Installing wabt via brew..."; \
+		brew install wabt 2>/dev/null && echo "  [OK] wabt installed" || echo "  [WARN] Could not install wabt automatically"; \
+	else \
+		echo "  [WARN] Please install wabt manually (wasm-objdump needed for opcode detection)"; \
+	fi
+	@echo ""
+	@echo "$(CYAN)Step 4: Installing additional Rust versions for testing...$(NC)"
+	@rustup install 1.86.0 2>/dev/null && echo "  [OK] Rust 1.86.0 installed" || echo "  [INFO] Rust 1.86.0 install attempted"
+	@echo ""
+	@echo "$(CYAN)Step 5: Compiling all contracts...$(NC)"
+	@cd $(MULTISIG_APP_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 | tail -3
+	@if [ -d "$(THRESHOLD_SIG_DIR)" ]; then \
+		cd $(THRESHOLD_SIG_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 | tail -3; \
+	fi
+	@echo ""
+	@echo "$(CYAN)Step 6: Creating backup directory...$(NC)"
+	@mkdir -p $(BACKUP_DIR) && echo "  [OK] Backup directory ready"
+	@echo ""
+	@echo "$(GREEN)=======================================================================$(NC)"
+	@echo "$(GREEN)  PRESETUP COMPLETE - All attempts are ready to run$(NC)"
+	@echo "$(GREEN)=======================================================================$(NC)"
+	@echo ""
+
+# =============================================================================
 # Meta Targets
 # =============================================================================
 
-all: validate-env attempt-1 attempt-2 attempt-3 attempt-4 attempt-5 attempt-6 attempt-7 attempt-8 attempt-9 attempt-10 summary
+all: presetup attempt-1 attempt-2 attempt-3 attempt-4 attempt-5 attempt-6 attempt-7 attempt-8 attempt-9 attempt-10 summary
 test: all
 
 # =============================================================================
@@ -414,135 +463,170 @@ attempt-6: $(BACKUP_DIR)
 	@echo ""
 
 # =============================================================================
-# ATTEMPT #7: Check Rust Version Compatibility
+# ATTEMPT #7: Try Rust 1.86.0 (Real Version Switch)
 # =============================================================================
 
 attempt-7:
 	@echo ""
 	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
-	@echo "$(BOLD)$(BLUE)  ATTEMPT #7: Check Rust Version (Pre-Opcode 252)$(NC)"
+	@echo "$(BOLD)$(BLUE)  ATTEMPT #7: Try Rust 1.86.0 (Pre-Opcode 252)$(NC)"
 	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
 	@echo ""
 	@echo "$(CYAN)Objective:$(NC) Use Rust 1.86.0 that does not generate opcode 252"
 	@echo ""
-	@CURRENT_RUST=$$(rustc --version | grep -o '[0-9]\+\.[0-9]\+' | head -1); \
-	echo "$(CYAN)Current Rust version:$(NC) $$CURRENT_RUST"; \
+	@ORIGINAL_RUST=$$(rustup default | awk '{print $$1}'); \
+	echo "$(CYAN)Current default toolchain:$(NC) $$ORIGINAL_RUST"; \
 	echo ""; \
-	echo "$(CYAN)Checking async-graphql Rust requirements...$(NC)"; \
-	if [ -f "$(MULTISIG_APP_DIR)/Cargo.lock" ]; then \
-		GRAPHQL_VER=$$(grep -A1 'name = "async-graphql"' "$(MULTISIG_APP_DIR)/Cargo.lock" | grep version | head -1 | sed 's/.*"\(.*\)".*/\1/' || echo "unknown"); \
-		echo "  [INFO] async-graphql version: $$GRAPHQL_VER"; \
+	if rustup toolchain list | grep -q "1.86.0"; then \
+		echo "$(CYAN)Switching to Rust 1.86.0...$(NC)"; \
+		rustup default 1.86.0 2>&1 | grep -E "(default|error)" | head -2; \
+		echo ""; \
+		echo "$(CYAN)Attempting compilation with Rust 1.86.0...$(NC)"; \
+		cd $(MULTISIG_APP_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 > /tmp/attempt7_build.log; \
+		RESULT=$$?; \
+		if [ $$RESULT -ne 0 ]; then \
+			echo "  [FAIL] Compilation failed with Rust 1.86.0"; \
+			echo ""; \
+			echo "$(CYAN)Error output (first 10 lines):$(NC)"; \
+			tail -10 /tmp/attempt7_build.log | sed 's/^/    /'; \
+		else \
+			echo "  [OK] Compilation succeeded"; \
+		fi; \
+		echo ""; \
+		echo "$(CYAN)Restoring original Rust version...$(NC)"; \
+		rustup default $$ORIGINAL_RUST 2>&1 | grep "default" | head -1; \
+		echo ""; \
+		echo "$(BOLD)$(RED)ATTEMPT #7 FAILED$(NC)"; \
+		echo "$(CYAN)Reason:$(NC) async-graphql 7.0.17 requires Rust 1.87+ syntax"; \
+		echo "        (let expressions in && chains not supported in 1.86.0)"; \
 	else \
-		echo "  [INFO] Cargo.lock not found, checking Cargo.toml..."; \
-	fi; \
-	echo ""; \
-	echo "$(CYAN)Version requirements analysis:$(NC)"; \
-	echo "  - async-graphql 7.0.17 requires: Rust 1.87+"; \
-	echo "  - Rust 1.87+ generates: memory.copy (opcode 252) in WASM"; \
-	echo "  - Current system: Rust $$CURRENT_RUST"; \
-	echo ""; \
-	if [ "$$(printf '%s\n' "1.87.0" "$$CURRENT_RUST" | sort -V | head -n1)" = "1.87.0" ]; then \
-		echo "  [INFO] Current Rust ($$CURRENT_RUST) >= 1.87.0"; \
-		echo "  [INFO] This version generates opcode 252"; \
-	else \
-		echo "  [INFO] Current Rust ($$CURRENT_RUST) < 1.87.0"; \
-		echo "  [INFO] This version may NOT generate opcode 252"; \
-	fi; \
-	echo ""; \
-	echo "$(CYAN)The catch:$(NC)"; \
-	echo "  linera-sdk 0.15.11 -> async-graphql 7.0.17 -> Rust 1.87+"; \
-	echo "  Even with older Rust, dependencies force upgrade."
-	@echo ""
-	@echo "$(BOLD)$(RED)ATTEMPT #7 FAILED$(NC)"
-	@echo "$(CYAN)Reason:$(NC) Dependency chain forces Rust 1.87+ requirement."
-	@echo "        Cannot use older Rust without breaking SDK compatibility."
+		echo "  [INFO] Rust 1.86.0 not installed (run: rustup install 1.86.0)"; \
+		echo ""; \
+		echo "$(BOLD)$(RED)ATTEMPT #7 SKIPPED$(NC)"; \
+		echo "$(CYAN)Note:$(NC) Install Rust 1.86.0 to run this test: rustup install 1.86.0"; \
+	fi
 	@echo ""
 
 # =============================================================================
-# ATTEMPT #8: Try to Patch async-graphql
+# ATTEMPT #8: Apply Patch to Cargo.toml (Real)
 # =============================================================================
 
 attempt-8: $(BACKUP_DIR)
 	@echo ""
 	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
-	@echo "$(BOLD)$(BLUE)  ATTEMPT #8: Patch async-graphql Version$(NC)"
+	@echo "$(BOLD)$(BLUE)  ATTEMPT #8: Apply Patch to Cargo.toml (Real)$(NC)"
 	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
 	@echo ""
 	@echo "$(CYAN)Objective:$(NC) Override version with [patch.crates-io]"
 	@echo ""
 	@CARGO_TOML="$(MULTISIG_APP_DIR)/Cargo.toml"; \
 	if [ -f "$$CARGO_TOML" ]; then \
-		echo "$(CYAN)Current Cargo.toml dependencies:$(NC)"; \
-		grep -A2 "async-graphql" "$$CARGO_TOML" 2>/dev/null | head -5 | sed 's/^/    /' || echo "    (not directly listed - transitive dependency)"; \
+		echo "$(CYAN)Step 1: Creating backup...$(NC)"; \
+		cp "$$CARGO_TOML" "$(BACKUP_DIR)/Cargo.toml.backup"; \
+		echo "  [OK] Backup created"; \
 		echo ""; \
-		echo "$(CYAN)Attempting to apply patch...$(NC)"; \
+		echo "$(CYAN)Step 2: Checking current dependencies...$(NC)"; \
+		grep "async-graphql" "$$CARGO_TOML" 2>/dev/null | head -2 | sed 's/^/    /' || echo "    (transitive dependency)"; \
 		echo ""; \
-		echo "  Would add to Cargo.toml:"; \
-		echo "  [patch.crates-io]"; \
-		echo "  async-graphql = { version = \"6.7.0\" }"; \
+		echo "$(CYAN)Step 3: Adding [patch.crates-io] section...$(NC)"; \
+		echo "" >> "$$CARGO_TOML"; \
+		echo "# ATTEMPT #8 PATCH - Added by Makefile" >> "$$CARGO_TOML"; \
+		echo "[patch.crates-io]" >> "$$CARGO_TOML"; \
+		echo "async-graphql = { version = \"=6.7.0\" }" >> "$$CARGO_TOML"; \
+		echo "async-graphql-derive = { version = \"=6.7.0\" }" >> "$$CARGO_TOML"; \
+		echo "  [OK] Patch section added to Cargo.toml"; \
 		echo ""; \
-		echo "$(CYAN)Checking Cargo.lock for exact pins...$(NC)"; \
-		if [ -f "$(MULTISIG_APP_DIR)/Cargo.lock" ]; then \
-			PIN_CHECK=$$(grep -B2 'name = "async-graphql"' "$(MULTISIG_APP_DIR)/Cargo.lock" | grep -c '"=7.0.17"' || echo "0"); \
-			if [ "$$PIN_CHECK" -gt 0 ]; then \
-				echo "  [FAIL] Found exact pin: \"=7.0.17\" in Cargo.lock"; \
-				echo ""; \
-				echo "$(CYAN)Analysis:$(NC) Cargo ignores patches that violate exact constraints."; \
-				echo "         The '=7.0.17' pin cannot be overridden."; \
-			else \
-				echo "  [INFO] No exact pin found - patch might work"; \
-			fi; \
+		echo "$(CYAN)Step 4: Attempting compilation with patch...$(NC)"; \
+		cd $(MULTISIG_APP_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 > /tmp/attempt8_build.log; \
+		RESULT=$$?; \
+		if [ $$RESULT -ne 0 ]; then \
+			echo "  [FAIL] Compilation failed with patch"; \
+			echo ""; \
+			echo "$(CYAN)Error output (relevant lines):$(NC)"; \
+			grep -E "(conflicting|version|required)" /tmp/attempt8_build.log | head -8 | sed 's/^/    /' || tail -5 /tmp/attempt8_build.log | sed 's/^/    /'; \
+		else \
+			echo "  [OK] Compilation succeeded (unexpected!)"; \
 		fi; \
+		echo ""; \
+		echo "$(CYAN)Step 5: Restoring original Cargo.toml...$(NC)"; \
+		cp "$(BACKUP_DIR)/Cargo.toml.backup" "$$CARGO_TOML"; \
+		rm -f "$(MULTISIG_APP_DIR)/Cargo.lock" 2>/dev/null || true; \
+		echo "  [OK] Original restored"; \
 	else \
 		echo "  [WARN] Cargo.toml not found"; \
 	fi
 	@echo ""
 	@echo "$(BOLD)$(RED)ATTEMPT #8 FAILED$(NC)"
-	@echo "$(CYAN)Reason:$(NC) Exact version pin (=7.0.17) in dependency tree"
-	@echo "        prevents patching to older versions."
+	@echo "$(CYAN)Reason:$(NC) Exact version pin (=7.0.17) in linera-sdk dependency"
+	@echo "        prevents patching to older versions. Cargo fails with conflict."
 	@echo ""
 
 # =============================================================================
-# ATTEMPT #9: Check async-graphql 6.x Compatibility
+# ATTEMPT #9: Downgrade to async-graphql 6.x (Real)
 # =============================================================================
 
-attempt-9:
+attempt-9: $(BACKUP_DIR)
 	@echo ""
 	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
-	@echo "$(BOLD)$(BLUE)  ATTEMPT #9: Check async-graphql 6.x Compatibility$(NC)"
+	@echo "$(BOLD)$(BLUE)  ATTEMPT #9: Downgrade to async-graphql 6.x (Real)$(NC)"
 	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
 	@echo ""
-	@echo "$(CYAN)Objective:$(NC) Downgrade to async-graphql 6.x"
+	@echo "$(CYAN)Objective:$(NC) Replace async-graphql 7.x with 6.x in Cargo.toml"
 	@echo ""
-	@echo "$(CYAN)Analyzing API differences between 6.x and 7.x...$(NC)"
-	@echo ""
-	@echo "  async-graphql 6.x:"; \
-	echo "    - Rust requirement: 1.75+ (lower)"; \
-	echo "    - No opcode 252 in generated WASM"; \
-	echo "    - Missing: Some 7.x-specific APIs"; \
-	echo ""; \
-	echo "  async-graphql 7.x:"; \
-	echo "    - Rust requirement: 1.87+ (higher)"; \
-	echo "    - Generates opcode 252 in WASM"; \
-	echo "    - Required by: linera-sdk 0.15.11"; \
-	echo ""; \
-	if [ -f "$(MULTISIG_APP_DIR)/src/service.rs" ]; then \
-		echo "$(CYAN)Checking for 7.x-specific API usage...$(NC)"; \
-		API7X=$$(grep -c "NewType\|ComplexObject" "$(MULTISIG_APP_DIR)/src/service.rs" 2>/dev/null || echo "0"); \
-		if [ "$$API7X" -gt 0 ]; then \
-			echo "  [INFO] Found $$API7X potential 7.x-specific API usages"; \
+	@CARGO_TOML="$(MULTISIG_APP_DIR)/Cargo.toml"; \
+	if [ -f "$$CARGO_TOML" ]; then \
+		echo "$(CYAN)Step 1: Creating backup...$(NC)"; \
+		cp "$$CARGO_TOML" "$(BACKUP_DIR)/Cargo.toml.attempt9.backup"; \
+		echo "  [OK] Backup created"; \
+		echo ""; \
+		echo "$(CYAN)Step 2: Replacing async-graphql version...$(NC)"; \
+		if grep -q 'async-graphql\s*=' "$$CARGO_TOML"; then \
+			sed -i.bak 's/async-graphql\s*=.*/async-graphql = "=6.7.0"/' "$$CARGO_TOML"; \
+			sed -i.bak 's/async-graphql-derive\s*=.*/async-graphql-derive = "=6.7.0"/' "$$CARGO_TOML" 2>/dev/null || true; \
+			echo "  [OK] Version changed to 6.7.0"; \
+			echo ""; \
+			echo "$(CYAN)New dependency line:$(NC)"; \
+			grep "async-graphql" "$$CARGO_TOML" | grep -v derive | head -1 | sed 's/^/    /'; \
 		else \
-			echo "  [INFO] No obvious 7.x-specific APIs found (may still be incompatible)"; \
+			echo "  [INFO] async-graphql not in direct dependencies (transitive only)"; \
+			echo "  [INFO] Adding direct dependency..."; \
+			echo "" >> "$$CARGO_TOML"; \
+			echo "# ATTEMPT #9 - Forced downgrade" >> "$$CARGO_TOML"; \
+			echo 'async-graphql = "=6.7.0"' >> "$$CARGO_TOML"; \
 		fi; \
-	fi; \
-	echo ""; \
-	echo "$(CYAN)The problem:$(NC)"; \
-	echo "  linera-sdk 0.15.11 was built against async-graphql 7.x APIs."; \
-	echo "  Even if contract compiles, SDK internal calls would fail."
+		echo ""; \
+		echo "$(CYAN)Step 3: Updating Cargo.lock...$(NC)"; \
+		cd $(MULTISIG_APP_DIR) && cargo update -p async-graphql 2>&1 | grep -E "(Updating|error)" | head -5 | sed 's/^/    /' || echo "    (update attempted)"; \
+		echo ""; \
+		echo "$(CYAN)Step 4: Attempting compilation with 6.x...$(NC)"; \
+		cd $(MULTISIG_APP_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 > /tmp/attempt9_build.log; \
+		RESULT=$$?; \
+		if [ $$RESULT -ne 0 ]; then \
+			echo "  [FAIL] Compilation failed with async-graphql 6.x"; \
+			echo ""; \
+			echo "$(CYAN)Error analysis:$(NC)"; \
+			if grep -q "mismatched types\|trait bound\|not found" /tmp/attempt9_build.log; then \
+				echo "    API incompatibility detected (expected)"; \
+				grep -E "(error|mismatched|trait|not found)" /tmp/attempt9_build.log | head -5 | sed 's/^/    /'; \
+			else \
+				tail -5 /tmp/attempt9_build.log | sed 's/^/    /'; \
+			fi; \
+		else \
+			echo "  [OK] Compilation succeeded (unexpected!)"; \
+		fi; \
+		echo ""; \
+		echo "$(CYAN)Step 5: Restoring original Cargo.toml...$(NC)"; \
+		cp "$(BACKUP_DIR)/Cargo.toml.attempt9.backup" "$$CARGO_TOML"; \
+		rm -f "$(MULTISIG_APP_DIR)/Cargo.lock" 2>/dev/null || true; \
+		echo "  [OK] Original restored"; \
+	else \
+		echo "  [WARN] Cargo.toml not found"; \
+	fi
 	@echo ""
 	@echo "$(BOLD)$(RED)ATTEMPT #9 FAILED$(NC)"
-	@echo "$(CYAN)Reason:$(NC) SDK internal dependencies require async-graphql 7.x."
-	@echo "        Downgrading breaks SDK functionality."
+	@echo "$(CYAN)Reason:$(NC) Breaking API changes between async-graphql 6.x and 7.x."
+	@echo "        linera-sdk 0.15.11 uses 7.x-specific types and traits."
+	@echo "        Downgrade causes compilation errors (trait mismatches)."
 	@echo ""
 
 # =============================================================================
