@@ -4,7 +4,7 @@
 
 **Date**: February 3, 2026
 **Network**: Testnet Conway (operational)
-**Issue**: https://github.com/linera-io/linera-protocol/issues/4742
+**Issue**: <https://github.com/linera-io/linera-protocol/issues/4742>
 
 ---
 
@@ -13,16 +13,19 @@
 **Conclusion**: Safe-like multisig on Linera is **NOT FEASIBLE** due to SDK ecosystem blocker.
 
 **What Works**:
+
 - Multi-owner chains (1-of-N, verified)
 - @linera/client SDK (TypeScript)
 - Frontend + Backend (both viable)
 
 **What Doesn't Work**:
+
 - Custom Wasm multisig contract (opcode 252 blocker)
 - Threshold m-of-n logic (requires Wasm)
 - Safe-like UX
 
 **Root Cause**:
+
 ```
 linera-sdk 0.15.11
      async-graphql = "=7.0.17"
@@ -44,12 +47,14 @@ linera-sdk 0.15.11
 **Purpose**: Build Wasm applications (smart contracts)
 
 **Provides**:
+
 - Application state management (Views)
 - Contract logic implementation
 - Cross-chain messaging
 - Wasm compilation
 
 **Does NOT provide**:
+
 - Client SDK features (queries, wallet, network)
 - These are in separate `linera-client` crate
 
@@ -67,6 +72,7 @@ linera-sdk 0.15.11
 **Finding**: Use TypeScript for backend.
 
 **@linera/client package** (npm):
+
 ```typescript
 import { Client } from '@linera/client';
 
@@ -81,6 +87,7 @@ const balance = await client.queryBalance(chainId);
 ### 2.1 GraphQL API Not Functional
 
 **Testnet Conway Node Service**:
+
 - Starts successfully
 - GraphiQL loads
 - Schema fails to load
@@ -95,6 +102,7 @@ const balance = await client.queryBalance(chainId);
 **Problem**: Cannot deploy complex Wasm contracts to Linera testnet.
 
 **Root Cause**:
+
 ```
 linera-sdk 0.15.11
      async-graphql = "=7.0.17" (exact pin)
@@ -116,14 +124,16 @@ linera-sdk 0.15.11
 | Combined all |  Still 67 opcodes |
 
 **Evidence**:
+
 - [`docs/research/LINERA_OPCODE_252_ISSUE.md`](LINERA_OPCODE_252_ISSUE.md)
 - [`docs/research/OPCODE_252_CODE_ANALYSIS.md`](OPCODE_252_CODE_ANALYSIS.md)
 
-####  Threshold Signatures Experiment (February 4, 2026)
+#### Threshold Signatures Experiment (February 4, 2026)
 
 **Hypothesis**: Minimal contract using threshold signatures might avoid opcode 252.
 
 **Tested Contract**:
+
 ```rust
 pub struct MultisigState {
     pub owners: RegisterView<Vec<AccountOwner>>,
@@ -154,6 +164,7 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 **Status**:  BLOCKED (same SDK issue)
 
 **Components**:
+
 - Frontend: React + @linera/client
 - Backend: Rust + linera-client crate
 - Smart Contract: Rust Wasm (blocked by opcode 252)
@@ -163,6 +174,7 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 **Status**:  VIABLE for Frontend + Backend,  BLOCKED for Wasm contract
 
 **Components**:
+
 - Frontend: React + @linera/client
 - Backend: Node.js + @linera/client
 - Smart Contract: Rust Wasm (blocked by opcode 252)
@@ -174,11 +186,13 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 **Status**:  WORKS (but limited)
 
 **What you get**:
+
 - Shared wallet with multiple owners
 - 1-of-N execution (any owner can execute)
 - On-chain balance tracking
 
 **What you don't get**:
+
 - Threshold m-of-n enforcement
 - Proposal/approval workflow
 - Safe-like security model
@@ -194,10 +208,12 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 ### Options
 
 **Option 1**: Wait for Linera SDK team
-- Issue: https://github.com/linera-io/linera-protocol/issues/4742
+
+- Issue: <https://github.com/linera-io/linera-protocol/issues/4742>
 - Timeline: unknown
 
 **Option 2**: Build simplified wallet (multi-owner only)
+
 - Accept 1-of-N limitation
 - Not competitive with existing multisig solutions
 - ~300 hours
@@ -220,6 +236,7 @@ wasm-objdump -d contract.wasm | grep "memory.copy"
 ## 6. Testnet Validation
 
 **Verified** (Testnet Conway):
+
 ```bash
 # Create multi-owner chain
 linera open-multi-owner-chain \
@@ -232,6 +249,7 @@ linera query-balance "$CHAIN_ID"
 ```
 
 **Failed** (Wasm deployment):
+
 - Custom multisig contract won't deploy
 - Error: Unknown opcode 252
 
@@ -239,7 +257,7 @@ linera query-balance "$CHAIN_ID"
 
 ## 7. References
 
-- **Linera SDK**: https://github.com/linera-io/linera-protocol
+- **Linera SDK**: <https://github.com/linera-io/linera-protocol>
 - **Opcode 252 Analysis**: [`docs/research/LINERA_OPCODE_252_ISSUE.md`](docs/research/LINERA_OPCODE_252_ISSUE.md)
 - **Code Analysis**: [`docs/research/OPCODE_252_CODE_ANALYSIS.md`](docs/research/OPCODE_252_CODE_ANALYSIS.md)
 - **Investigation Log**: [`docs/research/OPCODE_252_INVESTIGATION_LOG.md`](docs/research/OPCODE_252_INVESTIGATION_LOG.md)
