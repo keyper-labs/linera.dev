@@ -433,33 +433,58 @@ attempt-6: $(BACKUP_DIR)
 	@echo "$(BOLD)$(BLUE)  ATTEMPT #6: Remove GraphQL Service$(NC)"
 	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
 	@echo ""
-	@echo "$(CYAN)Objective:$(NC) Remove async-graphql generated code"
-	@echo "$(CYAN)Method:$(NC) Analyze GraphQL usage and measure impact"
+	@echo "$(CYAN)Objective:$(NC) Remove async-graphql generated code and measure impact"
+	@echo "$(CYAN)Method:$(NC) Backup, modify lib.rs to exclude service.rs, recompile, restore"
 	@echo ""
-	@SERVICE_FILE="$(MULTISIG_APP_DIR)/src/service.rs"; \
-	if [ -f "$$SERVICE_FILE" ]; then \
-		echo "$(CYAN)Found service.rs - analyzing GraphQL usage...$(NC)"; \
-		GRAPHQL_COUNT=$$(grep -c "async_graphql\|graphql" "$$SERVICE_FILE" 2>/dev/null || echo "0"); \
-		echo "  [INFO] Found $$GRAPHQL_COUNT GraphQL-related lines"; \
+	@LIB_FILE="$(MULTISIG_APP_DIR)/src/lib.rs"; \
+	SERVICE_FILE="$(MULTISIG_APP_DIR)/src/service.rs"; \
+	if [ -f "$$LIB_FILE" ] && [ -f "$$SERVICE_FILE" ]; then \
+		echo "$(CYAN)Step 1: Creating backups...$(NC)"; \
+		cp "$$LIB_FILE" "$(BACKUP_DIR)/lib.rs.attempt6.backup"; \
+		cp "$$SERVICE_FILE" "$(BACKUP_DIR)/service.rs.attempt6.backup"; \
+		echo "  [OK] Backups created"; \
 		echo ""; \
-		echo "$(CYAN)Checking Cargo.toml dependencies...$(NC)"; \
-		if grep -q "async-graphql" "$(MULTISIG_APP_DIR)/Cargo.toml"; then \
-			grep "async-graphql" "$(MULTISIG_APP_DIR)/Cargo.toml" | sed 's/^/    /'; \
+		echo "$(CYAN)Step 2: Counting GraphQL usage in service.rs...$(NC)"; \
+		GRAPHQL_COUNT=$$(grep -c "async_graphql\|graphql" "$$SERVICE_FILE" 2>/dev/null || echo "0"); \
+		echo "  [INFO] Found $$GRAPHQL_COUNT GraphQL-related lines in service.rs"; \
+		echo ""; \
+		echo "$(CYAN)Step 3: Removing service.rs from lib.rs...$(NC)"; \
+		sed -i.bak '/pub mod service;/d' "$$LIB_FILE"; \
+		echo "  [OK] Removed 'pub mod service;' from lib.rs"; \
+		echo ""; \
+		echo "$(CYAN)Step 4: Checking baseline opcode count...$(NC)"; \
+		if [ -f "$(CONTRACT_WASM)" ] && command -v wasm-objdump &> /dev/null; then \
+			BASELINE=$$(wasm-objdump -d "$(CONTRACT_WASM)" 2>/dev/null | grep -c "memory.copy" || echo "0"); \
+			echo "  [INFO] Baseline opcodes (with service): $$BASELINE"; \
+		else \
+			echo "  [WARN] Cannot measure baseline (compile first)"; \
 		fi; \
 		echo ""; \
-		echo "$(CYAN)Note:$(NC) Removing GraphQL service would require:"; \
-		echo "  1. Removing service.rs from lib.rs"; \
-		-echo "  2. Removing async-graphql from Cargo.toml"; \
-		echo "  3. Keeping only ABI definitions"; \
+		echo "$(CYAN)Step 5: Attempting compilation without service...$(NC)"; \
+		cd $(MULTISIG_APP_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 | tail -8; \
+		RESULT=$$?; \
 		echo ""; \
-		echo "$(CYAN)Expected result:$(NC) ~222 -> ~82 opcodes (based on report)"; \
+		if [ $$RESULT -eq 0 ]; then \
+			if [ -f "$(CONTRACT_WASM)" ] && command -v wasm-objdump &> /dev/null; then \
+				NEW_COUNT=$$(wasm-objdump -d "$(CONTRACT_WASM)" 2>/dev/null | grep -c "memory.copy" || echo "0"); \
+				echo "$(CYAN)Step 6: Measuring reduction...$(NC)"; \
+				echo "  [INFO] Opcodes after service removal: $$NEW_COUNT"; \
+				echo ""; \
+			fi; \
+			echo "$(BOLD)$(YELLOW)ATTEMPT #6 PARTIAL$(NC)"; \
+			echo "$(CYAN)Result:$(NC) Compilation succeeded without GraphQL service."; \
+		else \
+			echo "$(BOLD)$(RED)ATTEMPT #6 FAILED$(NC)"; \
+			echo "$(CYAN)Reason:$(NC) Other code depends on service module."; \
+		fi; \
+		echo ""; \
+		echo "$(CYAN)Step 7: Restoring original files...$(NC)"; \
+		cp "$(BACKUP_DIR)/lib.rs.attempt6.backup" "$$LIB_FILE"; \
+		cp "$(BACKUP_DIR)/service.rs.attempt6.backup" "$$SERVICE_FILE"; \
+		echo "  [OK] Original files restored"; \
 	else \
-		echo "  [INFO] service.rs not found - may already be minimal"; \
+		echo "  [WARN] lib.rs or service.rs not found at expected location"; \
 	fi
-	@echo ""
-	@echo "$(BOLD)$(YELLOW)ATTEMPT #6 PARTIAL$(NC)"
-	@echo "$(CYAN)Analysis:$(NC) GraphQL removal requires source modification."
-	@echo "        Report documents reduction to ~82 opcodes (still blocked)."
 	@echo ""
 
 # =============================================================================
@@ -633,51 +658,66 @@ attempt-9: $(BACKUP_DIR)
 # ATTEMPT #10: Combined Best Effort
 # =============================================================================
 
-attempt-10:
+attempt-10: $(BACKUP_DIR)
 	@echo ""
 	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
 	@echo "$(BOLD)$(BLUE)  ATTEMPT #10: Combined Best Effort Result$(NC)"
 	@echo "$(BOLD)$(BLUE)=======================================================================$(NC)"
 	@echo ""
-	@echo "$(CYAN)Objective:$(NC) Summary of all attempted optimizations"
+	@echo "$(CYAN)Objective:$(NC) Compile minimal contract and measure actual opcode count"
 	@echo ""
-	@echo "$(CYAN)Optimizations tried:$(NC)"
-	@echo "  1. [DONE] Remove proposal history"; \
-	echo "  2. [DONE] Remove GraphQL service (ABI only)"; \
-	echo "  3. [DONE] Minimize clone operations"; \
-	echo "  4. [DONE] Simplify state structure"; \
-	echo "  5. [DONE] Use minimal dependencies"; \
-	echo "  6. [FAILED] Downgrade async-graphql"; \
-	echo "  7. [FAILED] Use older Rust"; \
-	echo ""; \
-	if [ -f "$(THRESHOLD_WASM)" ]; then \
-		echo "$(CYAN)Current minimal contract result:$(NC)"; \
-		SIZE=$$(du -h "$(THRESHOLD_WASM)" | cut -f1); \
-		echo "  Size: $$SIZE"; \
-		if command -v wasm-objdump &> /dev/null; then \
-			COUNT=$$(wasm-objdump -d "$(THRESHOLD_WASM)" 2>/dev/null | grep -c "memory.copy" || echo "0"); \
-			echo "  Opcode 252 count: $$COUNT"; \
-			echo "  (Reported minimum achievable: 67)"; \
+	@if [ -d "$(THRESHOLD_SIG_DIR)" ]; then \
+		echo "$(CYAN)Step 1: Compiling minimal threshold-signatures contract...$(NC)"; \
+		cd $(THRESHOLD_SIG_DIR) && cargo build --release --target wasm32-unknown-unknown 2>&1 | tail -5; \
+		echo ""; \
+		if [ -f "$(THRESHOLD_WASM)" ]; then \
+			SIZE=$$(du -h "$(THRESHOLD_WASM)" | cut -f1); \
+			echo "$(CYAN)Step 2: Compilation successful$(NC)"; \
+			echo "  [OK] WASM size: $$SIZE"; \
+			echo ""; \
+			if command -v wasm-objdump &> /dev/null; then \
+				echo "$(CYAN)Step 3: Counting opcode 252 (memory.copy)...$(NC)"; \
+				COUNT=$$(wasm-objdump -d "$(THRESHOLD_WASM)" 2>/dev/null | grep -c "memory.copy" || echo "0"); \
+				echo ""; \
+				echo "  ===================================="; \
+				echo "  [RESULT] Opcode 252 count: $$COUNT"; \
+				echo "  ===================================="; \
+				echo ""; \
+				if [ "$$COUNT" -gt 0 ]; then \
+					echo "$(BOLD)$(YELLOW)ATTEMPT #10 BEST EFFORT - STILL BLOCKED$(NC)"; \
+					echo "$(CYAN)Result:$(NC) Even minimal contract has $$COUNT opcodes 252"; \
+					echo "$(CYAN)Status:$(NC) Compilation succeeds, deployment BLOCKED"; \
+				else \
+					echo "$(BOLD)$(GREEN)ATTEMPT #10 SUCCESS$(NC)"; \
+					echo "$(CYAN)Result:$(NC) No opcode 252 detected!"; \
+				fi; \
+			else \
+				echo "  [WARN] wasm-objdump not available for opcode analysis"; \
+				echo "  $(CYAN)Based on report:$(NC) Minimal contract has ~67 opcodes 252"; \
+				echo ""; \
+				echo "$(BOLD)$(YELLOW)ATTEMPT #10 BEST EFFORT$(NC)"; \
+				echo "$(CYAN)Result:$(NC) 67 opcodes is the irreducible minimum"; \
+			fi; \
+			echo ""; \
+			echo "$(CYAN)Root Cause Analysis:$(NC)"; \
+			echo "  The minimum opcodes come from linera-sdk internal code,"; \
+			echo "  NOT from the contract implementation. They are generated by:"; \
+			echo "    - async-graphql dependency (via SDK)"; \
+			echo "    - SDK internal structures and serialization"; \
+			echo ""; \
+			echo "$(CYAN)Conclusion:$(NC)"; \
+			echo "  Without forking and modifying linera-sdk itself,"; \
+			echo "  opcode 252 cannot be reduced below the minimum."; \
+		else \
+			echo "  [FAIL] Compilation failed - WASM not found"; \
 		fi; \
 	else \
-		echo "$(CYAN)Expected result (from report):$(NC)"; \
-		echo "  - Minimum opcode 252: 67 instances"; \
-		echo "  - Achieved by: threshold-signatures minimal contract"; \
-	fi; \
-	echo ""; \
-	echo "$(CYAN)Root Cause Analysis:$(NC)"; \
-	echo "  The 67 minimum opcodes come from linera-sdk internal code,"; \
-	echo "  NOT from the contract implementation. They are generated by:"; \
-	echo "    - async-graphql dependency (via SDK)"; \
-	echo "    - SDK internal structures and serialization"; \
-	echo ""; \
-	echo "$(CYAN)Conclusion:$(NC)"; \
-	echo "  Without forking and modifying linera-sdk itself,"; \
-	echo "  opcode 252 cannot be reduced below 67."
-	@echo ""
-	@echo "$(BOLD)$(YELLOW)ATTEMPT #10 BEST EFFORT$(NC)"
-	@echo "$(CYAN)Result:$(NC) 67 opcodes is the irreducible minimum."
-	@echo "$(CYAN)Status:$(NC) Compilation succeeds, deployment BLOCKED."
+		echo "  [WARN] threshold-signatures directory not found"; \
+		echo "  $(CYAN)According to report:$(NC) Even minimal contract has ~67 opcodes 252"; \
+		echo ""; \
+		echo "$(BOLD)$(YELLOW)ATTEMPT #10 BEST EFFORT$(NC)"; \
+		echo "$(CYAN)Result:$(NC) 67 opcodes is the irreducible minimum"; \
+	fi
 	@echo ""
 
 # =============================================================================
