@@ -1,4 +1,4 @@
-.PHONY: help init cli-test rust-test clean all
+.PHONY: help init cli-test rust-test rust-check-toolchain clean all
 
 # Linera Multisig Testing Makefile
 # This Makefile orchestrates CLI and SDK-based multisig testing
@@ -7,7 +7,7 @@
 WALLET_DIR ?= $(PWD)/test-wallets
 PROJECT_DIR ?= $(PWD)/multisig-app
 FAUCET_URL ?= http://localhost:8080
-LINERA_SDK_VERSION ?= 0.12.0
+LINERA_SDK_VERSION ?= 0.15.11
 
 # Colors for output
 BLUE := \033[0;34m
@@ -30,7 +30,8 @@ help:
 	@echo ""
 	@echo "$(GREEN)SDK Testing (Application-Level Multisig):$(NC)"
 	@echo "  make rust-test         - Build and test Rust SDK multisig app"
-	@echo "  make rust-build        - Build the Rust application"
+	@echo "  make rust-build        - Build the Rust application (Wasm)"
+	@echo "  make rust-check-toolchain - Verify Rust 1.86 is available"
 	@echo "  make rust-clean        - Clean Rust build artifacts"
 	@echo "  make rust-publish      - Publish application to testnet"
 	@echo ""
@@ -95,11 +96,22 @@ rust-test:
 	@echo ""
 	@bash scripts/multisig-test-rust.sh
 
-rust-build:
+rust-check-toolchain:
+	@echo "$(BLUE)=== Checking Rust Toolchain ===$(NC)"
+	@RUST_VERSION=$$(rustc --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1); \
+	if [ "$$RUST_VERSION" = "1.86" ]; then \
+		echo "$(GREEN)Rust 1.86 detected$(NC)"; \
+	else \
+		echo "$(YELLOW)Warning: Rust $$RUST_VERSION detected. Rust 1.86.0 required for Linera Wasm.$(NC)"; \
+		echo "$(YELLOW)Run: rustup install 1.86.0$(NC)"; \
+		echo "$(YELLOW)Projects with rust-toolchain.toml will use 1.86 automatically.$(NC)"; \
+	fi
+
+rust-build: rust-check-toolchain
 	@echo "$(BLUE)=== Building Rust Multisig Application ===$(NC)"
 	@if [ -d "$(PROJECT_DIR)" ]; then \
 		cd $(PROJECT_DIR) && \
-		cargo build --release --features contract,service; \
+		cargo build --release --target wasm32-unknown-unknown; \
 		echo "$(GREEN)Build complete$(NC)"; \
 	else \
 		echo "$(RED)Project not found. Run 'make rust-test' first.$(NC)"; \

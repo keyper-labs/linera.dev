@@ -1,5 +1,4 @@
 # Cargo config for Linera Wasm compilation
-# Configured to avoid unsupported opcodes like memory.copy (0xFC 0x0A)
 #
 # NOTE: The target-feature=-bulk-memory flag alone is NOT sufficient to prevent
 # memory.copy opcodes in Rust 1.87+. You MUST use Rust 1.86.0 via
@@ -9,11 +8,6 @@
 target = "wasm32-unknown-unknown"
 
 [target.wasm32-unknown-unknown]
-# Rust compiler flags for Wasm
-# -C opt-level=s: Optimize for size while maintaining performance
-# -C lto=false: Disable link-time optimization (reduces optimization passes)
-# -C codegen-units=1: Single codegen unit for reproducibility
-# -C target-feature=-bulk-memory: Supplementary flag (requires Rust 1.86 to be effective)
 rustflags = [
     "-C", "opt-level=s",
     "-C", "lto=no",
@@ -22,7 +16,6 @@ rustflags = [
 ]
 
 [profile.release]
-# Release profile optimized for Linera Wasm
 opt-level = "s"
 lto = false
 codegen-units = 1

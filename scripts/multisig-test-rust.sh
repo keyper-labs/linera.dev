@@ -495,23 +495,39 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-linera-sdk = { version = "${LINERA_SDK_VERSION}", features = ["contract", "service"] }
-linera-views = { version = "${LINERA_SDK_VERSION}" }
+linera-sdk = { version = "${LINERA_SDK_VERSION}" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 log = "0.4"
 
+# Pin async-graphql sub-crates to 7.0.17 to match linera-sdk's pinned version.
+# Without this, Cargo resolves to 7.2.1 which requires Rust 1.89.0+.
+async-graphql-value = "=7.0.17"
+async-graphql-parser = "=7.0.17"
+
 [dev-dependencies]
 linera-sdk = { version = "${LINERA_SDK_VERSION}", features = ["test"] }
-
-[features]
-default = ["contract", "service"]
-contract = ["linera-sdk/contract"]
-service = ["linera-sdk/service"]
-test = ["linera-sdk/test"]
 EOF
 
     log_success "Cargo.toml created"
+}
+
+create_rust_toolchain() {
+    log_info "Creating rust-toolchain.toml (pinning Rust 1.86.0)..."
+
+    cat > rust-toolchain.toml <<'EOF'
+# Rust 1.86.0 is required to avoid memory.copy opcodes (opcode 252).
+# Rust 1.87+ generates bulk memory operations that Linera's runtime rejects.
+# See docs/research/SDK_COMPILATION_TEST_REPORT.md for details.
+
+[toolchain]
+channel = "1.86.0"
+components = ["rust-src", "rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"
+EOF
+
+    log_success "rust-toolchain.toml created"
 }
 
 create_tests() {
@@ -981,6 +997,7 @@ main() {
     create_service
     create_main
     create_cargo_toml
+    create_rust_toolchain
     create_tests
     create_makefile
     create_readme

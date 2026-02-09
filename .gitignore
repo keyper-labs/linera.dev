@@ -47,8 +47,9 @@ Thumbs.db
 # Rust build artifacts
 target/
 
-# multisig-app
+# multisig-app build artifacts
 scripts/multisig-app/target/
+multisig-app/Cargo.lock
 
 # Local analysis and corrections (NEVER commit these)
 # All corrections must appear as if documents were always correct
