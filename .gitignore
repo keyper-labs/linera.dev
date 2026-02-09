@@ -9,7 +9,6 @@ open-agents/output-refined/
 open-agents/tools/
 
 # Claude Code session files
-.claude-sneakpeek/
 .claude/
 
 # Gemini session files
@@ -52,8 +51,9 @@ Thumbs.db
 # Rust build artifacts
 target/
 
-# multisig-app
-scripts/multisig-app/target/
+# multisig-app build artifacts
+scripts/multisig-app/target/**
+multisig-app/Cargo.lock
 
 # Local analysis and corrections (NEVER commit these)
 # All corrections must appear as if documents were always correct

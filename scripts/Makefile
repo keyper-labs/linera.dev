@@ -32,7 +32,8 @@ help:
 	@echo ""
 	@echo "$(GREEN)SDK Testing (Application-Level Multisig):$(NC)"
 	@echo "  make rust-test         - Build and test Rust SDK multisig app"
-	@echo "  make rust-build        - Build the Rust application"
+	@echo "  make rust-build        - Build the Rust application (Wasm)"
+	@echo "  make rust-check-toolchain - Verify Rust 1.86 is available"
 	@echo "  make rust-clean        - Clean Rust build artifacts"
 	@echo "  make rust-publish      - Attempt module publish to testnet"
 	@echo ""
@@ -117,7 +118,18 @@ rust-test:
 	fi
 	@$(MAKE) rust-build
 
-rust-build:
+rust-check-toolchain:
+	@echo "$(BLUE)=== Checking Rust Toolchain ===$(NC)"
+	@RUST_VERSION=$$(rustc --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1); \
+	if [ "$$RUST_VERSION" = "1.86" ]; then \
+		echo "$(GREEN)Rust 1.86 detected$(NC)"; \
+	else \
+		echo "$(YELLOW)Warning: Rust $$RUST_VERSION detected. Rust 1.86.0 required for Linera Wasm.$(NC)"; \
+		echo "$(YELLOW)Run: rustup install 1.86.0$(NC)"; \
+		echo "$(YELLOW)Projects with rust-toolchain.toml will use 1.86 automatically.$(NC)"; \
+	fi
+
+rust-build: rust-check-toolchain
 	@echo "$(BLUE)=== Building Rust Multisig Application ===$(NC)"
 	@if [ -d "$(MULTISIG_APP_PROJECT_DIR)" ]; then \
 		cd $(MULTISIG_APP_PROJECT_DIR) && \
