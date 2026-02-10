@@ -263,7 +263,7 @@ cd scripts  # Makefile is in scripts/ directory
 - RevokeConfirmation
 - Multi-owner confirmation workflows
 
-See [`.linera-deploy/e2e_verify_20260210_192244/results.md`](.linera-deploy/e2e_verify_20260210_192244/results.md) for full details.
+See [`docs/e2e-results/conway-testnet-e2e-verification-20260210.md`](docs/e2e-results/conway-testnet-e2e-verification-20260210.md) for full details.
 
 ---
 

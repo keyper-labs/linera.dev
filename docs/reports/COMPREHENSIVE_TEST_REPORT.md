@@ -13,11 +13,11 @@ A Safe-like multisig wallet platform has been successfully validated on Linera b
 
 - Threshold-based approval (M-of-N)
 - Proposal submission and confirmation workflows
-- Owner management (add/remove)
+- AddOwner (add new owners to multisig)
 - Token transfers
 - Confirmation revocation
 
-**Test Results**: 17 of 20 tests passing
+**Test Results**: 20/20 tests passing when network is stable (17/20 during congestion periods)
 **Blocker Status**: Previously identified opcode 252 issue has been resolved
 
 ---
@@ -125,7 +125,7 @@ wasm-objdump -d multisig_contract.wasm | grep memory.copy
 - Module ID: `faf8e9f6...` (SHA256 hash)
 - Application ID: `8e58313e37d728915ab723f454bc12452469a90011157bcd6e7b1c87f1746ba5`
 
-**Full Test Log**: `.linera-deploy/e2e_verify_20260210_192244/results.log`
+**Full Test Log**: See [`docs/e2e-results/conway-testnet-e2e-verification-20260210.md`](../e2e-results/conway-testnet-e2e-verification-20260210.md) for complete results.
 
 ---
 
@@ -137,9 +137,11 @@ wasm-objdump -d multisig_contract.wasm | grep memory.copy
 |-------|-----------|--------|
 | Smart Contract | Rust + linera-sdk 0.15.11 | Operational |
 | Wasm Compilation | Rust 1.86.0 + wasm32-unknown-unknown | Clean (no opcode 252) |
-| Backend API | GraphQL (async-graphql 7.0.17) | Working |
+| Contract Interface | GraphQL (async-graphql 7.0.17) | Working (PoC only) |
 | Frontend SDK | @linera/client (TypeScript) | Available |
 | Key Management | Ed25519 | Working |
+
+**Note**: The PoC uses GraphQL as the Wasm contract interface. Production deployment will use a REST API (Express/Fastify) as described in the proposal.
 
 ### Contract Specifications
 

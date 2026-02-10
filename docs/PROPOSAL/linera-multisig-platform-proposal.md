@@ -193,7 +193,7 @@ cargo build --release --target wasm32-unknown-unknown
 ## 8. Evidence
 
 - [`docs/research/CONWAY_TESTNET_PROOF_OF_EXECUTION.md`](../research/CONWAY_TESTNET_PROOF_OF_EXECUTION.md) - Complete E2E validation
-- [`.linera-deploy/e2e_verify_20260210_192244/results.md`](../../../.linera-deploy/e2e_verify_20260210_192244/results.md) - Latest test results
+- [`docs/e2e-results/conway-testnet-e2e-verification-20260210.md`](../e2e-results/conway-testnet-e2e-verification-20260210.md) - Latest test results
 - [`docs/reports/COMPREHENSIVE_TEST_REPORT.md`](../reports/COMPREHENSIVE_TEST_REPORT.md) - Client-facing report
 - [Multisig contract source](../../scripts/multisig-app/) - Working implementation
 

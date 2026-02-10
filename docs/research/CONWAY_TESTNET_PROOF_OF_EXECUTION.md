@@ -768,13 +768,11 @@ All transactions were committed successfully despite validator issues. The netwo
 
 ## Session Artifacts
 
-| Artifact | Path |
-|----------|------|
-| Deployment Environment | `.linera-deploy/e2e_clean_20260210_161550/deploy.env` |
-| Wallet | `.linera-deploy/e2e_clean_20260210_161550/wallet.json` |
-| Keystore | `.linera-deploy/e2e_clean_20260210_161550/keystore.json` |
-| RocksDB State | `.linera-deploy/e2e_clean_20260210_161550/client.db/` |
-| Service Logs | `/tmp/e2e_clean_service.log` |
+For detailed deployment artifacts and test results, see:
+- [`docs/e2e-results/conway-testnet-e2e-verification-20260210.md`](../e2e-results/conway-testnet-e2e-verification-20260210.md)
+- [`docs/reports/COMPREHENSIVE_TEST_REPORT.md`](../reports/COMPREHENSIVE_TEST_REPORT.md)
+
+**Note**: Session-specific deployment files (wallet, keystore, logs) are stored in `.linera-deploy/` which is excluded from git for security and cleanliness purposes.
 
 ---
 
