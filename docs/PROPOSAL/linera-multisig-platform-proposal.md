@@ -90,8 +90,8 @@ cargo build --release --target wasm32-unknown-unknown
 
 | Milestone | Hours | Status |
 |-----------|-------|--------|
-| M1: Project Setup | 40h | Complete |
-| M2: Multisig Contract | 170h | **Complete** |
+| M1: Project Setup | 40h | VERIFIED |
+| M2: Multisig Contract | 170h | PoC VERIFIED |
 | M3: Backend Core | 180h | Ready to start |
 | M4: Frontend Core | 160h | Not started |
 | M5: Integration | 160h | Not started |
