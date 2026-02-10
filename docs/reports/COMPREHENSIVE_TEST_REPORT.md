@@ -230,6 +230,44 @@ Multiple E2E test runs on Conway testnet show varying pass rates due to network 
 
 ---
 
+## Recommendations
+
+### 1. Direct Linera Developer Support
+
+**Critical Requirement**: Establish direct communication channel with Linera development team.
+
+Based on challenges encountered during PoC development, PalmeraDAO requires direct access to Linera engineers for production development:
+
+| Challenge | Impact | Required Support |
+|-----------|--------|------------------|
+| SDK documentation gaps | Extensive trial-and-error debugging | API clarification, usage examples |
+| Undocumented runtime behaviors | Non-obvious workarounds required | Runtime behavior documentation |
+| Testnet instability | Difficult to distinguish code vs network issues | Network status visibility, dedicated testnet |
+| GraphQL error responses | Errors returned despite success | Error handling patterns clarification |
+| Opcode compatibility | Version-specific workarounds | Compiler/runtime roadmap visibility |
+
+**Requested**: Dedicated Slack channel or direct email access to Linera engineers for:
+- Quick clarification questions (< 1 day response time)
+- Bug triage and workaround verification
+- Early access to SDK updates and breaking changes
+- Testnet deployment coordination
+
+### 2. Production Development Phasing
+
+Given the 690-hour adjusted timeline, recommend phased approach:
+
+- **Phase 1** (Backend + Foundation): 340h - Core backend infrastructure with Linera SDK integration
+- **Phase 2** (Frontend + Integration): 260h - React frontend and end-to-end integration
+- **Phase 3** (QA + Handoff): 90h - Comprehensive testing and documentation
+
+### 3. Testnet Strategy
+
+- Request dedicated testnet environment for PalmeraDAO development
+- Coordinate testnet reset schedules with Linera team
+- Establish testnet status monitoring dashboard
+
+---
+
 ## Conclusion
 
 The Linera multisig platform Proof of Concept is **complete and verified**. All 20 Safe-like operations are functional on Conway testnet. All tests pass when the network is stable.
