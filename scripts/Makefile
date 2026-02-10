@@ -1,4 +1,4 @@
-.PHONY: help init cli-test cli-show cli-clean rust-test rust-build rust-clean rust-publish rust-check-toolchain validate-workaround validate-workaround-e2e e2e-canonical route-b-check validate-route-b validate-create-app-regression deploy-conway validate-conway-74 validate-conway-safe-e2e clean all test readme
+.PHONY: help init cli-test cli-show cli-clean rust-test rust-build rust-clean rust-publish rust-check-toolchain validate-workaround validate-workaround-e2e e2e-canonical route-b-check validate-route-b validate-create-app-regression deploy-conway validate-conway-74 validate-conway-safe-e2e e2e-verify clean all test readme
 
 # Linera Multisig Testing Makefile
 # This Makefile orchestrates CLI and SDK-based multisig testing
@@ -47,6 +47,7 @@ help:
 	@echo "  make deploy-conway     - Production-style deploy to Conway (publish + create-application)"
 	@echo "  make validate-conway-74 - Deploy on Conway and validate documented 74-test suite"
 	@echo "  make validate-conway-safe-e2e - Real Safe-like E2E validation on deployed Conway app"
+	@echo "  make e2e-verify        - Full E2E verification: deploy + test all operations on Conway"
 	@echo "  make rust-clean        - Clean Rust build artifacts"
 	@echo "  make rust-publish      - Attempt module publish to testnet"
 	@echo ""
@@ -216,6 +217,10 @@ validate-conway-74: rust-build
 validate-conway-safe-e2e: rust-build
 	@echo "$(BLUE)=== Conway Safe-like real E2E validation ===$(NC)"
 	@bash $(SCRIPT_DIR)/validate-conway-safe-e2e.sh
+
+e2e-verify: rust-build
+	@echo "$(BLUE)=== Full E2E Verification on Conway Testnet ===$(NC)"
+	@SKIP_BUILD=1 bash $(SCRIPT_DIR)/e2e-multisig-conway.sh
 
 rust-publish: rust-build
 	@echo "$(BLUE)=== Publishing Rust Multisig Application ===$(NC)"

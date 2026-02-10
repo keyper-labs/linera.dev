@@ -370,30 +370,25 @@ impl MultisigContract {
         response
     }
 
-    /// Execute a transfer
-    async fn execute_transfer(&mut self, source: AccountOwner, to: AccountOwner, value: u64) -> MultisigResponse {
+    /// Execute a transfer from the chain's shared balance to a destination account.
+    async fn execute_transfer(&mut self, _caller: AccountOwner, to: AccountOwner, value: u64) -> MultisigResponse {
         // Convert u64 to Amount (from_tokens expects u128)
         let amount = Amount::from_tokens(value.into());
 
         // Validate balance before transfer (prevent state corruption)
-        let contract_balance = self.runtime.chain_balance();
-        if contract_balance < amount {
+        let chain_balance = self.runtime.chain_balance();
+        if chain_balance < amount {
             panic!(
-                "Insufficient balance: required={}, available={}",
-                amount, contract_balance
+                "Insufficient chain balance: required={}, available={}",
+                amount, chain_balance
             );
         }
 
-        // Execute the actual transfer from contract to destination
+        // Transfer from the chain's shared balance (AccountOwner::CHAIN) to the destination.
+        // This is the correct source for a multisig: funds belong to the chain, not individual owners.
         let chain_id = self.runtime.chain_id();
         let destination = linera_sdk::linera_base_types::Account::new(chain_id, to);
-        self.runtime.transfer(source, destination, amount);
-
-        // Validate post-transfer balance (ensure transfer succeeded)
-        let new_balance = self.runtime.chain_balance();
-        if new_balance >= contract_balance {
-            panic!("Transfer validation failed - balance did not decrease");
-        }
+        self.runtime.transfer(AccountOwner::CHAIN, destination, amount);
 
         info!("Transferred {} tokens to {:?}", value, to);
 

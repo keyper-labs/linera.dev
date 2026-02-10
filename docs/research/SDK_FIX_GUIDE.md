@@ -1,9 +1,9 @@
-# Linera SDK Opcode 252 Fix Guide
+# Linera SDK Fix Guide
 
-**Date**: 2026-02-06
-**Affects**: linera-sdk 0.15.11, Wasm compilation, Conway testnet deployment
+**Date**: 2026-02-10
+**Affects**: linera-sdk 0.15.11, Wasm compilation, Conway testnet deployment and interaction
 
-This document explains the three issues discovered during SDK validation testing, how each was diagnosed, and the exact code changes applied to fix them.
+This document explains the four issues discovered during SDK validation testing, how each was diagnosed, and the exact code changes applied to fix them.
 
 ---
 
@@ -12,9 +12,10 @@ This document explains the three issues discovered during SDK validation testing
 1. [Issue 1: Cargo Resolves Wrong async-graphql Sub-crate Versions](#issue-1-cargo-resolves-wrong-async-graphql-sub-crate-versions)
 2. [Issue 2: Rust 1.87+ Emits Unsupported Wasm Opcodes](#issue-2-rust-187-emits-unsupported-wasm-opcodes)
 3. [Issue 3: Scripts Reference Non-existent linera-sdk Features](#issue-3-scripts-reference-non-existent-linera-sdk-features)
-4. [Files Changed Summary](#files-changed-summary)
-5. [Configuration Reference](#configuration-reference)
-6. [Verification](#verification)
+4. [Issue 4: Transfer Execution Fails - Wrong Balance Source](#issue-4-transfer-execution-fails---wrong-balance-source)
+5. [Files Changed Summary](#files-changed-summary)
+6. [Configuration Reference](#configuration-reference)
+7. [Verification](#verification)
 
 ---
 
@@ -419,10 +420,116 @@ Specifically removed from:
 
 ---
 
+## Issue 4: Transfer Execution Fails - Wrong Balance Source
+
+### Diagnosis
+
+After successfully deploying the multisig contract to Conway and interacting with it via GraphQL (queries, governance proposals), **transfer execution** failed with:
+
+```
+Local node operation failed: Worker operation failed: Execution error:
+The transferred amount must not exceed the balance of the current account
+0xc8b2fa20c2773790a3c9656f749a92da7055475bd83633ca1669842f3434ddcf: 0.
+during Operation(0)
+```
+
+The Linera runtime rejected the transfer because the contract was trying to transfer from an individual owner's account balance (which is 0), instead of from the chain's shared balance (which holds the faucet-funded tokens).
+
+**Root cause**: Linera separates chain balance from individual owner account balances. When a chain receives tokens from the faucet, they go to the **chain balance** (unowned pool). But `runtime.transfer(owner, dest, amount)` debits from the specific owner's sub-account, not from the chain balance.
+
+The contract had two mismatches:
+
+1. **Balance check**: Used `runtime.chain_balance()` (chain-wide) - correct for a multisig
+2. **Transfer source**: Used the `caller` (individual owner) - wrong, this account has 0 balance
+
+### Fix: Use AccountOwner::CHAIN as Transfer Source
+
+The Linera SDK provides `AccountOwner::CHAIN` (`AccountOwner::Reserved(0)`), a special constant that represents the chain's own shared balance. When passed as the `source` to `transfer()`, the runtime debits from the chain balance instead of an individual owner's account.
+
+#### `scripts/multisig-app/src/contract.rs` (`execute_transfer` function)
+
+**Before:**
+
+```rust
+async fn execute_transfer(&mut self, source: AccountOwner, to: AccountOwner, value: u64) -> MultisigResponse {
+    let amount = Amount::from_tokens(value.into());
+    let contract_balance = self.runtime.chain_balance();
+    if contract_balance < amount {
+        panic!("Insufficient balance: ...");
+    }
+    let chain_id = self.runtime.chain_id();
+    let destination = linera_sdk::linera_base_types::Account::new(chain_id, to);
+    self.runtime.transfer(source, destination, amount);  // source = caller's account (0 balance)
+    // ...
+}
+```
+
+**After:**
+
+```rust
+async fn execute_transfer(&mut self, _caller: AccountOwner, to: AccountOwner, value: u64) -> MultisigResponse {
+    let amount = Amount::from_tokens(value.into());
+    let chain_balance = self.runtime.chain_balance();
+    if chain_balance < amount {
+        panic!("Insufficient chain balance: ...");
+    }
+    let chain_id = self.runtime.chain_id();
+    let destination = linera_sdk::linera_base_types::Account::new(chain_id, to);
+    self.runtime.transfer(AccountOwner::CHAIN, destination, amount);  // chain's shared balance
+    // ...
+}
+```
+
+**What changed**:
+
+- Transfer source changed from `source` (individual caller) to `AccountOwner::CHAIN` (chain balance)
+- Removed post-transfer balance validation (unnecessary and fails for self-transfers)
+- `caller` parameter renamed to `_caller` (no longer used as transfer source)
+
+### Linera Account Model Reference
+
+| Concept | API | Description |
+|---------|-----|-------------|
+| Chain balance | `runtime.chain_balance()` | Shared unowned pool on the chain |
+| Owner balance | `runtime.owner_balance(owner)` | Individual owner's sub-account |
+| Chain account constant | `AccountOwner::CHAIN` | `Reserved(0)` - represents the chain itself |
+| Chain account helper | `Account::chain(chain_id)` | Creates `Account { chain_id, owner: CHAIN }` |
+| Transfer from chain | `runtime.transfer(AccountOwner::CHAIN, dest, amount)` | Debits chain balance |
+| Transfer from owner | `runtime.transfer(owner, dest, amount)` | Debits owner's sub-account |
+
+### Conway Network Notes
+
+During interaction testing, several Conway testnet validators exhibited transient errors. These are **not application bugs** but network-level instability:
+
+| Validator | Error | Impact |
+|-----------|-------|--------|
+| `testnet-linera.lavenderfive.com` | `Failed to subscribe: received fatal alert: InternalError` | Subscription drops, retries needed |
+| `conway-testnet.dzdaic.com` | `Blobs not found: ChainDescription` | Chain not yet propagated to this validator |
+| `linera.everstake.one` | `Blobs not found: ChainDescription` | Same as above |
+| `swyke-linera-test-00.restake.cloud` | `tcp connect error` | Validator unreachable |
+| `linera-testnet.ankr.network` | `Chain is expecting block at height 0 but given block is at height N` | Validator behind on sync |
+
+These transient errors are handled by the retry logic in `deploy-multisig-conway.sh` (`run_with_retry` + `is_transient_network_error`).
+
+### Verification
+
+Deployed and tested on Conway (2026-02-10):
+
+```
+1. Submit transfer proposal (1 token to self): OK - mutation accepted
+2. Execute transfer proposal:                  OK - proposal marked executed
+3. Chain balance decreased by 1 token:         OK - transfer completed
+```
+
+Previous behavior: step 2 failed with "balance of current account: 0".
+
+---
+
 ## Files Changed Summary
 
 | File | Action | Changes |
 |------|--------|---------|
+| `scripts/multisig-app/src/contract.rs` | Modified | Fixed `execute_transfer` to use `AccountOwner::CHAIN` instead of caller's account |
 | `scripts/multisig-app/Cargo.toml` | Modified | Replaced `async-graphql = "7.0"` with pinned sub-crates |
 | `scripts/multisig-app/rust-toolchain.toml` | Created | Pins Rust 1.86.0 with wasm32 target |
 | `scripts/multisig-app/.cargo/config.toml` | Modified | Added warning about `-bulk-memory` flag limitations |
@@ -539,4 +646,4 @@ All four validators accepted the Wasm binary, confirming zero unsupported opcode
 
 ---
 
-**Last Updated**: 2026-02-06
+**Last Updated**: 2026-02-10
