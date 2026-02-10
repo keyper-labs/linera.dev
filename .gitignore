@@ -72,3 +72,5 @@ experiments/poc-sdk-opcode-252/multisig-app/Cargo.lock
 # Temporary folders
 .tmp/
 tmp/
+.deprecated/
+
