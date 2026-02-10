@@ -63,16 +63,16 @@ Linera's native multi-owner chain allows multiple owners to control a chain, but
 
 Built a custom Rust contract implementing M-of-N threshold logic at the application level:
 
-- ✅ Proposal submission and queuing
-- ✅ Confirmation tracking per owner
-- ✅ Threshold enforcement before execution
-- ✅ Proposal lifecycle management
-- ✅ Confirmation revocation
-- ✅ Multi-owner confirmation workflows
+- Proposal submission and queuing
+- Confirmation tracking per owner
+- Threshold enforcement before execution
+- Proposal lifecycle management
+- Confirmation revocation
+- Multi-owner confirmation workflows
 
 **Result**: The multi-owner chain is used only for ownership structure. Application-level contract provides full Safe-like functionality.
 
-**Status**: ✅ **RESOLVED**
+**Status**: **RESOLVED**
 
 ---
 
@@ -144,10 +144,10 @@ wasm-objdump -d multisig_contract.wasm | grep "memory.copy"
 
 | Attempted Solution | Expected | Reality | Status |
 |---------------------|----------|---------|--------|
-| Use Linera Multi-Owner Chain | Native multisig | 1-of-N only | ❌ Insufficient |
-| Deploy Custom WASM Contract | Full Safe-like | Blocked by opcode 252 | ❌ Initially failed |
-| Threshold Signatures (minimal contract) | Avoid opcode 252 | Still 73 opcodes | ❌ SDK-level issue |
-| Use Rust 1.86.0 | Avoid opcode generation | **SUCCESS** | ✅ **Final solution** |
+| Use Linera Multi-Owner Chain | Native multisig | 1-of-N only | Insufficient |
+| Deploy Custom WASM Contract | Full Safe-like | Blocked by opcode 252 | Initially failed |
+| Threshold Signatures (minimal contract) | Avoid opcode 252 | Still 73 opcodes | SDK-level issue |
+| Use Rust 1.86.0 | Avoid opcode generation | **SUCCESS** | **Final solution** |
 
 ### Status
 
@@ -156,11 +156,11 @@ wasm-objdump -d multisig_contract.wasm | grep "memory.copy"
 | Custom multisig contract | Built and validated |
 | Contract functionality | All 8 operations implemented |
 | Contract security | Proper authorization and validation |
-| Contract deployment | ✅ **Successful on Conway testnet** |
-| Testnet deployment | ✅ **Verified operational** |
+| Contract deployment | **Successful on Conway testnet** |
+| Testnet deployment | **Verified operational** |
 | Production readiness | Ready for production development |
 
-**Challenge #2 Status**: ✅ **RESOLVED**
+**Challenge #2 Status**: **RESOLVED**
 
 ---
 
@@ -220,11 +220,11 @@ wasm-objdump -d multisig_contract.wasm | grep "memory.copy"
 
 | What Linera Provides | What We Need | Resolution |
 |---------------------|--------------|------------|
-| Multi-owner chains for governance | M-of-N threshold validation | ✅ Application contract |
-| Single-signature execution | Proposal-based flow | ✅ Application contract |
-| Chain-level ownership | Application-level custody | ✅ Application contract |
+| Multi-owner chains for governance | M-of-N threshold validation | Application contract |
+| Single-signature execution | Proposal-based flow | Application contract |
+| Chain-level ownership | Application-level custody | Application contract |
 
-**Gap Severity**: ✅ **RESOLVED** - Application-level approach bridges the gap
+**Gap Severity**: **RESOLVED** - Application-level approach bridges the gap
 
 ### Contract Deployment Gap
 
@@ -234,10 +234,10 @@ wasm-objdump -d multisig_contract.wasm | grep "memory.copy"
 
 | What Linera Supports | What Our Multisig Requires | Resolution |
 |----------------------|---------------------------|------------|
-| Simple WASM contracts | Complex contract with GraphQL | ✅ Working |
-| Rust 1.86 or earlier | Modern Rust for dependencies | ✅ Rust 1.86.0 |
+| Simple WASM contracts | Complex contract with GraphQL | Working |
+| Rust 1.86 or earlier | Modern Rust for dependencies | Rust 1.86.0 |
 
-**Gap Severity**: ✅ **RESOLVED** - Toolchain pinning workaround operational
+**Gap Severity**: **RESOLVED** - Toolchain pinning workaround operational
 
 ---
 
@@ -245,23 +245,23 @@ wasm-objdump -d multisig_contract.wasm | grep "memory.copy"
 
 ### Aspect | Status |
 |--------|--------|
-| Custom multisig contract | ✅ Built and validated |
-| Contract functionality | ✅ All 8 operations implemented |
-| Contract security | ✅ Proper authorization and validation |
-| Contract deployment | ✅ **Successful on Conway testnet** |
-| E2E validation | ✅ **20/20 tests passing** |
-| Testnet deployment | ✅ **Verified operational** |
+| Custom multisig contract | Built and validated |
+| Contract functionality | All 8 operations implemented |
+| Contract security | Proper authorization and validation |
+| Contract deployment | **Successful on Conway testnet** |
+| E2E validation | **20/20 tests passing** |
+| Testnet deployment | **Verified operational** |
 | Production readiness | Ready for production development |
 
 ### Technical Architecture
 
 | Layer | Technology | Status |
 |-------|-----------|--------|
-| Smart Contract | Rust + linera-sdk 0.15.11 | ✅ Operational |
-| Wasm Compilation | Rust 1.86.0 + wasm32-unknown-unknown | ✅ Clean (no opcode 252) |
-| Contract Interface | GraphQL (async-graphql 7.0.17) | ✅ Working (PoC) |
+| Smart Contract | Rust + linera-sdk 0.15.11 | Operational |
+| Wasm Compilation | Rust 1.86.0 + wasm32-unknown-unknown | Clean (no opcode 252) |
+| Contract Interface | GraphQL (async-graphql 7.0.17) | Working (PoC) |
 | Frontend SDK | @linera/client (TypeScript) | Available |
-| Key Management | Ed25519 | ✅ Working |
+| Key Management | Ed25519 | Working |
 
 ### Contract Specifications
 
@@ -276,27 +276,22 @@ wasm-objdump -d multisig_contract.wasm | grep "memory.copy"
 
 ---
 
-## Remaining Work
+## Production Development
 
-### Completed
+### Current Status
 
-- [x] Multisig contract implementation (Rust)
-- [x] Opcode 252 workaround (Rust 1.86.0)
-- [x] E2E validation on Conway testnet
-- [x] All Safe-like operations verified
+The multisig contract is operational on Conway testnet with all Safe-like functionality verified. The following production milestones represent the work required to build a production-ready platform.
 
-### Next Phase (Production Development)
+### Production Milestones
 
-**Risk Adjustment**: Estimates increased by 1.5x-2x based on real PoC challenges:
-
-| Milestone | Original | Adjusted | Rationale |
-|-----------|----------|----------|------------|
-| Backend Core | 120h | **180h** | SDK documentation gaps, undocumented behaviors |
-| Frontend Core | 120h | **160h** | @linera/client integration complexity |
-| Integration | 80h | **160h** | 2x multiplier for unexpected runtime issues |
-| Observability | 40h | **60h** | Debugging complexity requires better tooling |
-| QA & UAT | 50h | **100h** | Extensive testing needed for edge cases |
-| Handoff | 20h | **30h** | Extra documentation required for unknown SDK |
+| Milestone | Hours | Notes |
+|-----------|-------|-------|
+| Backend Core | 180h | SDK documentation gaps, undocumented behaviors |
+| Frontend Core | 160h | @linera/client integration complexity |
+| Integration | 160h | Unexpected runtime issues |
+| Observability | 60h | Debugging complexity requires better tooling |
+| QA & UAT | 100h | Extensive testing needed for edge cases |
+| Handoff | 30h | Documentation required for unknown SDK |
 
 **Total Remaining**: ~690 hours
 
@@ -326,7 +321,7 @@ Based on challenges encountered during PoC development, direct access to Linera 
 
 ### 2. Production Development Phasing
 
-Given the 690-hour adjusted timeline, recommend phased approach:
+Given the 690-hour production timeline, recommend phased approach:
 
 - **Phase 1** (Backend + Foundation): 340h - Core backend infrastructure with Linera SDK integration
 - **Phase 2** (Frontend + Integration): 260h - React frontend and end-to-end integration
@@ -351,12 +346,12 @@ Both primary challenges identified during initial research have been **successfu
 
 ### Verification Results
 
-- ✅ Custom multisig contract deployed and operational on Conway testnet
-- ✅ All 20 Safe-like operations verified working
-- ✅ Zero bulk-memory opcodes in compiled Wasm
-- ✅ Multi-owner confirmation workflows functional
-- ✅ Threshold enforcement (2-of-3) operational
-- ✅ Proposal lifecycle (submit, confirm, execute) complete
+- Custom multisig contract deployed and operational on Conway testnet
+- All 20 Safe-like operations verified working
+- Zero bulk-memory opcodes in compiled Wasm
+- Multi-owner confirmation workflows functional
+- Threshold enforcement (2-of-3) operational
+- Proposal lifecycle (submit, confirm, execute) complete
 
 ### Production Readiness
 

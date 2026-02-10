@@ -92,16 +92,16 @@ cargo build --release --target wasm32-unknown-unknown
 |-----------|-------|--------|
 | M1: Project Setup | 40h | Complete |
 | M2: Multisig Contract | 170h | **Complete** |
-| M3: Backend Core | 120h | Ready to start |
-| M4: Frontend Core | 120h | Not started |
-| M5: Integration | 80h | Not started |
-| M6: Observability | 40h | Not started |
-| M7: QA & UAT | 50h | Not started |
-| M8: Handoff | 20h | Not started |
+| M3: Backend Core | 180h | Ready to start |
+| M4: Frontend Core | 160h | Not started |
+| M5: Integration | 160h | Not started |
+| M6: Observability | 60h | Not started |
+| M7: QA & UAT | 100h | Not started |
+| M8: Handoff | 30h | Not started |
 
-**Total**: ~640h
+**Total**: ~900h
 **Completed**: M1 + M2 (210h)
-**Remaining**: ~430h
+**Remaining**: ~690h
 
 ---
 
@@ -139,49 +139,49 @@ cargo build --release --target wasm32-unknown-unknown
 - Self-custodial (Ed25519 keys)
 
 **Status**: PoC complete, ready for production development
-**Estimate**: ~430 hours remaining
+**Estimate**: ~690 hours remaining
 **Risk**: Low - all components verified
 
 ---
 
 ## 7. Development Timeline
 
-### Phase 1: Backend Core (120h)
+### Phase 1: Backend Core (180h)
 
 - Node.js + @linera/client SDK integration
 - REST API (Express/Fastify)
 - PostgreSQL + Redis storage
 - Wallet management endpoints
 
-### Phase 2: Frontend Core (120h)
+### Phase 2: Frontend Core (160h)
 
 - React application setup
 - @linera/client SDK integration
 - Wallet UI components
 - Proposal management interface
 
-### Phase 3: Integration (80h)
+### Phase 3: Integration (160h)
 
 - Frontend-backend connection
 - Linera network integration
 - Transaction lifecycle management
 - Error handling and recovery
 
-### Phase 4: Observability (40h)
+### Phase 4: Observability (60h)
 
 - Logging infrastructure
 - Metrics collection
 - Monitoring dashboards
 - Alert configuration
 
-### Phase 5: QA & UAT (50h)
+### Phase 5: QA & UAT (100h)
 
 - Unit testing
 - Integration testing
 - User acceptance testing
 - Security audit
 
-### Phase 6: Handoff (20h)
+### Phase 6: Handoff (30h)
 
 - Documentation
 - Deployment guides
