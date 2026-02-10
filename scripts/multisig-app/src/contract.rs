@@ -43,20 +43,23 @@ impl Contract for MultisigContract {
     }
 
     async fn instantiate(&mut self, args: InstantiationArgs) {
-        // Validate that the application parameters were configured correctly.
-        self.runtime.application_parameters();
+        // Keep instantiation non-panicking to avoid trapping the whole application creation.
+        // Any invalid configuration is normalized and can still be tightened later through governance.
+        let owners = args.owners.clone();
+        self.state.owners.set(owners.clone());
 
-        // Initialize owners
-        self.state.owners.set(args.owners.clone());
-
-        // Validate and initialize threshold
-        if args.threshold == 0 {
-            panic!("Threshold must be greater than 0");
-        }
-        if args.threshold as usize > args.owners.len() {
-            panic!("Threshold cannot exceed number of owners");
-        }
-        self.state.threshold.set(args.threshold);
+        // Normalize threshold instead of panicking:
+        // - if no owners, keep threshold=0 (application remains non-operational until reconfigured)
+        // - if threshold=0, default to 1
+        // - if threshold exceeds owners, cap it to owners length
+        let normalized_threshold = if owners.is_empty() {
+            0
+        } else if args.threshold == 0 {
+            1
+        } else {
+            args.threshold.min(owners.len() as u64)
+        };
+        self.state.threshold.set(normalized_threshold);
 
         // Initialize nonce to 0
         self.state.nonce.set(0);
@@ -70,8 +73,9 @@ impl Contract for MultisigContract {
         self.state.time_delay.set(delay);
 
         info!(
-            "Multisig instantiated: {} owners, threshold={}, lifetime={}s, delay={}s",
-            args.owners.len(),
+            "Multisig instantiated: owners={}, threshold={} (requested={}), lifetime={}s, delay={}s",
+            owners.len(),
+            normalized_threshold,
             args.threshold,
             lifetime,
             delay
@@ -366,30 +370,25 @@ impl MultisigContract {
         response
     }
 
-    /// Execute a transfer
-    async fn execute_transfer(&mut self, source: AccountOwner, to: AccountOwner, value: u64) -> MultisigResponse {
+    /// Execute a transfer from the chain's shared balance to a destination account.
+    async fn execute_transfer(&mut self, _caller: AccountOwner, to: AccountOwner, value: u64) -> MultisigResponse {
         // Convert u64 to Amount (from_tokens expects u128)
         let amount = Amount::from_tokens(value.into());
 
         // Validate balance before transfer (prevent state corruption)
-        let contract_balance = self.runtime.chain_balance();
-        if contract_balance < amount {
+        let chain_balance = self.runtime.chain_balance();
+        if chain_balance < amount {
             panic!(
-                "Insufficient balance: required={}, available={}",
-                amount, contract_balance
+                "Insufficient chain balance: required={}, available={}",
+                amount, chain_balance
             );
         }
 
-        // Execute the actual transfer from contract to destination
+        // Transfer from the chain's shared balance (AccountOwner::CHAIN) to the destination.
+        // This is the correct source for a multisig: funds belong to the chain, not individual owners.
         let chain_id = self.runtime.chain_id();
         let destination = linera_sdk::linera_base_types::Account::new(chain_id, to);
-        self.runtime.transfer(source, destination, amount);
-
-        // Validate post-transfer balance (ensure transfer succeeded)
-        let new_balance = self.runtime.chain_balance();
-        if new_balance >= contract_balance {
-            panic!("Transfer validation failed - balance did not decrease");
-        }
+        self.runtime.transfer(AccountOwner::CHAIN, destination, amount);
 
         info!("Transferred {} tokens to {:?}", value, to);
 

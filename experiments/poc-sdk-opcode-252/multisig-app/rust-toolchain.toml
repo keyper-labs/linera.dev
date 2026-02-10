@@ -1,0 +1,9 @@
+# Rust 1.86.0 is required to avoid memory.copy opcodes (opcode 252).
+# Rust 1.87+ generates bulk memory operations that Linera's runtime rejects.
+# See docs/research/SDK_COMPILATION_TEST_REPORT.md for details.
+
+[toolchain]
+channel = "1.86.0"
+components = ["rust-src", "rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"
