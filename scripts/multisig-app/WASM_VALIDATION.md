@@ -1,6 +1,6 @@
 # Linera Multisig Wasm Binaries Validation Report
 
-**Date**: 2026-02-03 18:33:41 UTC
+**Date**: 2026-02-09 13:30:22 UTC
 **SDK Version**: 0.15.11
 **Rust Toolchain**: rustc 1.92.0 (ded5c06cf 2025-12-08)
 
@@ -8,8 +8,8 @@
 
 | Binary | Size | Status |
 |--------|------|--------|
-| Contract | 347935 bytes | ✅ Valid |
-| Service | 2001870 bytes | ✅ Valid |
+| Contract | 304482 bytes | ✅ Valid |
+| Service | 1219392 bytes | ✅ Valid |
 
 ## Validation Results
 

@@ -53,7 +53,7 @@ target/
 
 # multisig-app build artifacts
 scripts/multisig-app/target/**
-multisig-app/Cargo.lock
+experiments/poc-sdk-opcode-252/multisig-app/Cargo.lock
 
 # Local analysis and corrections (NEVER commit these)
 # All corrections must appear as if documents were always correct
@@ -62,6 +62,9 @@ multisig-app/Cargo.lock
 *_CORRECTION*.md
 *_ANALYSIS*.md
 *.local.md
+
+# tools
+.tools/
 
 # linera deployment files
 .linera-deploy/

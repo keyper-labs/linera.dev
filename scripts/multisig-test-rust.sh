@@ -30,7 +30,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-PROJECT_DIR="${PROJECT_DIR:-$(pwd)/multisig-app}"
+PROJECT_DIR="${PROJECT_DIR:-$(pwd)/experiments/poc-sdk-opcode-252/multisig-app}"
 LINERA_SDK_VERSION="${LINERA_SDK_VERSION:-0.15.11}"
 RUST_TOOLCHAIN="${RUST_TOOLCHAIN:-stable}"
 
@@ -737,7 +737,7 @@ all: build
 # Build the application
 build:
 	@echo "Building multisig application..."
-	cargo build --release --features contract,service
+	cargo build --release --target wasm32-unknown-unknown
 	@echo "Build complete. Wasm files in target/wasm32-unknown-unknown/release/"
 
 # Run tests
@@ -785,7 +785,7 @@ fmt:
 
 # Lint code
 lint:
-	cargo clippy --features contract,service
+	cargo clippy
 
 # Show help
 help:

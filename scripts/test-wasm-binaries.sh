@@ -24,7 +24,8 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # Configuration
-MULTISIG_APP_DIR="$(pwd)/multisig-app"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MULTISIG_APP_DIR="$SCRIPT_DIR/multisig-app"
 WASM_DIR="$MULTISIG_APP_DIR/target/wasm32-unknown-unknown/release"
 CONTRACT_WASM="$WASM_DIR/multisig_contract.wasm"
 SERVICE_WASM="$WASM_DIR/multisig_service.wasm"

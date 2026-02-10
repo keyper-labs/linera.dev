@@ -43,12 +43,14 @@ Four test scenarios were run to validate the documented opcode 252 blocker (see 
 ### Scenario 1: Rust 1.87.0 without pinned sub-crates
 
 **Cargo.toml**:
+
 ```toml
 [dependencies]
 linera-sdk = "0.15.11"
 ```
 
 **Command**:
+
 ```bash
 cargo build --target wasm32-unknown-unknown --release
 ```
@@ -66,6 +68,7 @@ error[E0658]: `let` expressions in this position are unstable
 ```
 
 Cargo lock output confirmed the resolution:
+
 ```
 Adding async-graphql v7.0.17 (available: v7.2.1, requires Rust 1.89.0)
 Adding async-graphql-parser v7.2.1
@@ -75,6 +78,7 @@ Adding async-graphql-value v7.2.1
 ### Scenario 2: Rust 1.87.0 WITH pinned sub-crates
 
 **Cargo.toml**:
+
 ```toml
 [dependencies]
 linera-sdk = "0.15.11"
@@ -83,6 +87,7 @@ async-graphql-parser = "=7.0.17"
 ```
 
 **Command**:
+
 ```bash
 cargo build --target wasm32-unknown-unknown --release
 ```
@@ -90,6 +95,7 @@ cargo build --target wasm32-unknown-unknown --release
 **Result**: Compiles successfully (33.48s)
 
 **Binary analysis** (149,532 bytes):
+
 ```
 Opcode 0xFC (bulk-memory prefix): 165
 memory.copy (0xFC 0x0A):          25
@@ -105,6 +111,7 @@ Conclusion: Compiles, but binary contains opcode 252. Would fail at Linera runti
 **Cargo.toml**: Same as Scenario 2.
 
 **Command**:
+
 ```bash
 cargo +1.86.0 build --target wasm32-unknown-unknown --release
 ```
@@ -112,6 +119,7 @@ cargo +1.86.0 build --target wasm32-unknown-unknown --release
 **Result**: Compiles successfully (33.70s)
 
 **Binary analysis** (149,872 bytes):
+
 ```
 Opcode 0xFC (bulk-memory prefix): 123
 memory.copy (0xFC 0x0A):          0
@@ -127,6 +135,7 @@ Conclusion: Clean Wasm. No opcode 252. Deployable to Linera runtime.
 **Cargo.toml**: Same as Scenario 1.
 
 **Command**:
+
 ```bash
 cargo +1.86.0 build --target wasm32-unknown-unknown --release
 ```
@@ -161,6 +170,7 @@ The confusion arose because `async-graphql 7.0.17` uses caret (`^`) dependencies
 ### The fix
 
 Pin the sub-crates explicitly:
+
 ```toml
 async-graphql-value = "=7.0.17"
 async-graphql-parser = "=7.0.17"
@@ -189,6 +199,7 @@ async-graphql-parser = "=7.0.17"
 ### Step 2: Pin Rust toolchain
 
 Create `rust-toolchain.toml`:
+
 ```toml
 [toolchain]
 channel = "1.86.0"
@@ -208,11 +219,13 @@ cargo build --release --target wasm32-unknown-unknown
 The existing test scripts reference `features = ["contract", "service"]` for linera-sdk. These features **do not exist** in version 0.15.11.
 
 Actual features available in linera-sdk 0.15.11:
+
 ```
 async-trait, ethereum, linera-ethereum, test, wasmer, wasmtime
 ```
 
 Any script or Cargo.toml referencing `contract` or `service` features will fail with:
+
 ```
 error: failed to select a version for `linera-sdk`.
 the package depends on `linera-sdk`, with features: `contract`
@@ -269,6 +282,7 @@ The Rust 1.86 + pinned sub-crates Wasm binary was tested against Conway testnet 
 | `linera publish-and-create` | Expected failure | Module accepted, but application creation fails because test code doesn't implement `linera:app/contract-entrypoints#instantiate` |
 
 The `publish-module` success confirms:
+
 - The Wasm binary contains no unsupported opcodes
 - Linera validators accept Rust 1.86 compiled bytecode
 - The opcode 252 blocker is resolved with this workaround

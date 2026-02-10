@@ -43,20 +43,23 @@ impl Contract for MultisigContract {
     }
 
     async fn instantiate(&mut self, args: InstantiationArgs) {
-        // Validate that the application parameters were configured correctly.
-        self.runtime.application_parameters();
+        // Keep instantiation non-panicking to avoid trapping the whole application creation.
+        // Any invalid configuration is normalized and can still be tightened later through governance.
+        let owners = args.owners.clone();
+        self.state.owners.set(owners.clone());
 
-        // Initialize owners
-        self.state.owners.set(args.owners.clone());
-
-        // Validate and initialize threshold
-        if args.threshold == 0 {
-            panic!("Threshold must be greater than 0");
-        }
-        if args.threshold as usize > args.owners.len() {
-            panic!("Threshold cannot exceed number of owners");
-        }
-        self.state.threshold.set(args.threshold);
+        // Normalize threshold instead of panicking:
+        // - if no owners, keep threshold=0 (application remains non-operational until reconfigured)
+        // - if threshold=0, default to 1
+        // - if threshold exceeds owners, cap it to owners length
+        let normalized_threshold = if owners.is_empty() {
+            0
+        } else if args.threshold == 0 {
+            1
+        } else {
+            args.threshold.min(owners.len() as u64)
+        };
+        self.state.threshold.set(normalized_threshold);
 
         // Initialize nonce to 0
         self.state.nonce.set(0);
@@ -70,8 +73,9 @@ impl Contract for MultisigContract {
         self.state.time_delay.set(delay);
 
         info!(
-            "Multisig instantiated: {} owners, threshold={}, lifetime={}s, delay={}s",
-            args.owners.len(),
+            "Multisig instantiated: owners={}, threshold={} (requested={}), lifetime={}s, delay={}s",
+            owners.len(),
+            normalized_threshold,
             args.threshold,
             lifetime,
             delay

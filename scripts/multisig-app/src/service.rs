@@ -5,20 +5,21 @@
 
 use std::sync::Arc;
 
-use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Request, Response, Result, Schema};
+use async_graphql::{Context, EmptySubscription, Object, Request, Response, Result, Schema};
 use linera_sdk::{
     linera_base_types::WithServiceAbi,
     views::View,
     Service, ServiceRuntime,
 };
-use linera_multisig::{MultisigAbi, Owner, ProposalView};
+use linera_multisig::{MultisigAbi, MultisigOperation, Owner, ProposalType, ProposalView};
 
 mod state;
-use state::{MultisigState, Proposal, ProposalType};
+use state::{MultisigState, Proposal};
 
 /// Multisig service implementation
 pub struct MultisigService {
     state: Arc<MultisigState>,
+    runtime: Arc<ServiceRuntime<Self>>,
 }
 
 linera_sdk::service!(MultisigService);
@@ -31,18 +32,22 @@ impl Service for MultisigService {
     type Parameters = ();
 
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
+        let runtime = Arc::new(runtime);
         let state = MultisigState::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         MultisigService {
             state: Arc::new(state),
+            runtime,
         }
     }
 
     async fn handle_query(&self, request: Request) -> Response {
         let schema = Schema::build(
             QueryRoot,
-            EmptyMutation,
+            MutationRoot {
+                runtime: self.runtime.clone(),
+            },
             EmptySubscription,
         )
         .data(self.state.clone())
@@ -53,6 +58,87 @@ impl Service for MultisigService {
 
 /// Query root for GraphQL API
 pub struct QueryRoot;
+
+/// Mutation root for scheduling multisig operations.
+pub struct MutationRoot {
+    runtime: Arc<ServiceRuntime<MultisigService>>,
+}
+
+#[Object]
+impl MutationRoot {
+    /// Submit a Transfer proposal.
+    async fn submit_transfer(&self, to: Owner, value: u64, data: Option<Vec<u8>>) -> bool {
+        let operation = MultisigOperation::SubmitProposal {
+            proposal_type: ProposalType::Transfer {
+                to,
+                value,
+                data: data.unwrap_or_default(),
+            },
+        };
+        self.runtime.schedule_operation(&operation);
+        true
+    }
+
+    /// Submit an AddOwner proposal.
+    async fn submit_add_owner(&self, owner: Owner) -> bool {
+        let operation = MultisigOperation::SubmitProposal {
+            proposal_type: ProposalType::AddOwner { owner },
+        };
+        self.runtime.schedule_operation(&operation);
+        true
+    }
+
+    /// Submit a RemoveOwner proposal.
+    async fn submit_remove_owner(&self, owner: Owner) -> bool {
+        let operation = MultisigOperation::SubmitProposal {
+            proposal_type: ProposalType::RemoveOwner { owner },
+        };
+        self.runtime.schedule_operation(&operation);
+        true
+    }
+
+    /// Submit a ReplaceOwner proposal.
+    async fn submit_replace_owner(&self, old_owner: Owner, new_owner: Owner) -> bool {
+        let operation = MultisigOperation::SubmitProposal {
+            proposal_type: ProposalType::ReplaceOwner {
+                old_owner,
+                new_owner,
+            },
+        };
+        self.runtime.schedule_operation(&operation);
+        true
+    }
+
+    /// Submit a ChangeThreshold proposal.
+    async fn submit_change_threshold(&self, threshold: u64) -> bool {
+        let operation = MultisigOperation::SubmitProposal {
+            proposal_type: ProposalType::ChangeThreshold { threshold },
+        };
+        self.runtime.schedule_operation(&operation);
+        true
+    }
+
+    /// Confirm a proposal.
+    async fn confirm_proposal(&self, proposal_id: u64) -> bool {
+        let operation = MultisigOperation::ConfirmProposal { proposal_id };
+        self.runtime.schedule_operation(&operation);
+        true
+    }
+
+    /// Execute a proposal.
+    async fn execute_proposal(&self, proposal_id: u64) -> bool {
+        let operation = MultisigOperation::ExecuteProposal { proposal_id };
+        self.runtime.schedule_operation(&operation);
+        true
+    }
+
+    /// Revoke a confirmation.
+    async fn revoke_confirmation(&self, proposal_id: u64) -> bool {
+        let operation = MultisigOperation::RevokeConfirmation { proposal_id };
+        self.runtime.schedule_operation(&operation);
+        true
+    }
+}
 
 #[Object]
 impl QueryRoot {

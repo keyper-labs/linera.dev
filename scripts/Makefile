@@ -1,4 +1,4 @@
-.PHONY: help init cli-test cli-show cli-clean rust-test rust-build rust-clean rust-publish clean all test readme
+.PHONY: help init cli-test cli-show cli-clean rust-test rust-build rust-clean rust-publish rust-check-toolchain validate-workaround validate-workaround-e2e e2e-canonical route-b-check validate-route-b validate-create-app-regression deploy-conway validate-conway-74 validate-conway-safe-e2e clean all test readme
 
 # Linera Multisig Testing Makefile
 # This Makefile orchestrates CLI and SDK-based multisig testing
@@ -9,6 +9,10 @@ WALLET_DIR ?= $(SCRIPT_DIR)/test-wallets
 MULTISIG_APP_PROJECT_DIR ?= $(SCRIPT_DIR)/multisig-app
 FAUCET_URL ?= http://localhost:8080
 LINERA_SDK_VERSION ?= 0.15.11
+RUST_TOOLCHAIN ?= 1.86.0
+RUSTUP_CARGO := $(shell rustup which --toolchain $(RUST_TOOLCHAIN) cargo 2>/dev/null || echo cargo)
+RUSTUP_RUSTC := $(shell rustup which --toolchain $(RUST_TOOLCHAIN) rustc 2>/dev/null || echo rustc)
+CARGO_RUN := RUSTC=$(RUSTUP_RUSTC) $(RUSTUP_CARGO)
 
 # Colors for output
 BLUE := \033[0;34m
@@ -34,6 +38,15 @@ help:
 	@echo "  make rust-test         - Build and test Rust SDK multisig app"
 	@echo "  make rust-build        - Build the Rust application (Wasm)"
 	@echo "  make rust-check-toolchain - Verify Rust 1.86 is available"
+	@echo "  make validate-workaround - Build + opcode gate (memory.copy/memory.fill)"
+	@echo "  make validate-workaround-e2e - Build + opcode gate + create-application smoke test"
+	@echo "  make e2e-canonical    - Canonical create-app route (aligned bin + raw owner + regression)"
+	@echo "  make route-b-check     - Verify SDK/protocol alignment for Route B"
+	@echo "  make validate-route-b  - Route B full validation (aligned env + E2E smoke)"
+	@echo "  make validate-create-app-regression - Route B + create-application argument matrix"
+	@echo "  make deploy-conway     - Production-style deploy to Conway (publish + create-application)"
+	@echo "  make validate-conway-74 - Deploy on Conway and validate documented 74-test suite"
+	@echo "  make validate-conway-safe-e2e - Real Safe-like E2E validation on deployed Conway app"
 	@echo "  make rust-clean        - Clean Rust build artifacts"
 	@echo "  make rust-publish      - Attempt module publish to testnet"
 	@echo ""
@@ -49,6 +62,15 @@ help:
 	@echo "  WALLET_DIR            - Wallet directory (default: $(WALLET_DIR))"
 	@echo "  MULTISIG_APP_PROJECT_DIR           - Rust project directory (default: $(MULTISIG_APP_PROJECT_DIR))"
 	@echo "  LINERA_SDK_VERSION    - Linera SDK version (default: $(LINERA_SDK_VERSION))"
+	@echo "  RUST_TOOLCHAIN        - Rust toolchain for Wasm (default: $(RUST_TOOLCHAIN))"
+	@echo "  LINERA_BIN            - Optional explicit linera binary for Route B"
+	@echo "  ADDITIONAL_OWNERS     - Comma-separated extra owners for deploy-conway"
+	@echo "  THRESHOLD             - Multisig threshold for deploy-conway"
+	@echo "  PROPOSAL_LIFETIME     - Proposal lifetime seconds for deploy-conway"
+	@echo "  TIME_DELAY            - Execution delay seconds for deploy-conway"
+	@echo "  DEPLOY_ENV_FILE       - Output env file for deployment context"
+	@echo "  RUN_DEPLOY            - 1/0 for validate-conway-74 (deploy before validating)"
+	@echo "  RUN_DEPLOY            - 1/0 for validate-conway-safe-e2e (deploy before validating)"
 	@echo ""
 	@echo "$(YELLOW)Required Environment Variables:$(NC)"
 	@echo "  LINERA_WALLET         - Path to wallet.json"
@@ -120,20 +142,27 @@ rust-test:
 
 rust-check-toolchain:
 	@echo "$(BLUE)=== Checking Rust Toolchain ===$(NC)"
-	@RUST_VERSION=$$(rustc --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1); \
-	if [ "$$RUST_VERSION" = "1.86" ]; then \
-		echo "$(GREEN)Rust 1.86 detected$(NC)"; \
-	else \
-		echo "$(YELLOW)Warning: Rust $$RUST_VERSION detected. Rust 1.86.0 required for Linera Wasm.$(NC)"; \
-		echo "$(YELLOW)Run: rustup install 1.86.0$(NC)"; \
-		echo "$(YELLOW)Projects with rust-toolchain.toml will use 1.86 automatically.$(NC)"; \
+	@if ! command -v rustup >/dev/null 2>&1; then \
+		echo "$(RED)Error: rustup not found. Install rustup to pin toolchain $(RUST_TOOLCHAIN).$(NC)"; \
+		exit 1; \
 	fi
+	@if ! rustup toolchain list | grep -q "^$(RUST_TOOLCHAIN)"; then \
+		echo "$(RED)Error: toolchain $(RUST_TOOLCHAIN) not installed.$(NC)"; \
+		echo "$(YELLOW)Run: rustup toolchain install $(RUST_TOOLCHAIN)$(NC)"; \
+		exit 1; \
+	fi
+	@if ! rustup target list --toolchain $(RUST_TOOLCHAIN) --installed | grep -q "^wasm32-unknown-unknown$$"; then \
+		echo "$(RED)Error: wasm32-unknown-unknown target missing for $(RUST_TOOLCHAIN).$(NC)"; \
+		echo "$(YELLOW)Run: rustup target add wasm32-unknown-unknown --toolchain $(RUST_TOOLCHAIN)$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)Using:$$($(RUSTUP_RUSTC) --version)$(NC)"
 
 rust-build: rust-check-toolchain
 	@echo "$(BLUE)=== Building Rust Multisig Application ===$(NC)"
 	@if [ -d "$(MULTISIG_APP_PROJECT_DIR)" ]; then \
 		cd $(MULTISIG_APP_PROJECT_DIR) && \
-		cargo build --locked --release --target wasm32-unknown-unknown && \
+		$(CARGO_RUN) build --locked --release --target wasm32-unknown-unknown && \
 		echo "$(GREEN)Build complete$(NC)"; \
 	else \
 		echo "$(RED)Project not found. Run 'make rust-test' first.$(NC)"; \
@@ -143,11 +172,50 @@ rust-build: rust-check-toolchain
 rust-clean:
 	@echo "$(YELLOW)Cleaning Rust build artifacts...$(NC)"
 	@if [ -d "$(MULTISIG_APP_PROJECT_DIR)" ]; then \
-		cd $(MULTISIG_APP_PROJECT_DIR) && cargo clean; \
+		cd $(MULTISIG_APP_PROJECT_DIR) && $(CARGO_RUN) clean; \
 		echo "$(GREEN)Rust build artifacts cleaned$(NC)"; \
 	else \
 		echo "$(YELLOW)No Rust project to clean$(NC)"; \
 	fi
+
+validate-workaround: rust-build
+	@echo "$(BLUE)=== Validating SDK opcode-252 workaround ===$(NC)"
+	@bash $(SCRIPT_DIR)/validate-sdk-workaround.sh
+
+validate-workaround-e2e: rust-build
+	@echo "$(BLUE)=== Validating SDK opcode-252 workaround (E2E) ===$(NC)"
+	@RUN_CREATE_APP_SMOKE=1 bash $(SCRIPT_DIR)/validate-sdk-workaround.sh
+
+e2e-canonical: rust-build
+	@echo "$(BLUE)=== Canonical E2E route (create-application) ===$(NC)"
+	@echo "$(YELLOW)Step 1/2: Build + opcode gate + create-application smoke (raw owner, aligned bin)$(NC)"
+	@RUN_CREATE_APP_SMOKE=1 bash $(SCRIPT_DIR)/validate-sdk-workaround.sh
+	@echo "$(YELLOW)Step 2/2: Regression matrix on aligned localnet (expects raw owner success)$(NC)"
+	@bash $(SCRIPT_DIR)/validate-create-app-regression.sh
+
+route-b-check:
+	@echo "$(BLUE)=== Route B alignment check (SDK vs protocol) ===$(NC)"
+	@bash $(SCRIPT_DIR)/validate-route-b.sh --check-only
+
+validate-route-b:
+	@echo "$(BLUE)=== Route B full validation (aligned env + smoke) ===$(NC)"
+	@bash $(SCRIPT_DIR)/validate-route-b.sh
+
+validate-create-app-regression:
+	@echo "$(BLUE)=== create-application regression validation ===$(NC)"
+	@bash $(SCRIPT_DIR)/validate-create-app-regression.sh
+
+deploy-conway: rust-build
+	@echo "$(BLUE)=== Conway deploy (publish + create-application) ===$(NC)"
+	@bash $(SCRIPT_DIR)/deploy-multisig-conway.sh
+
+validate-conway-74: rust-build
+	@echo "$(BLUE)=== Conway deployed 74-test validation ===$(NC)"
+	@bash $(SCRIPT_DIR)/validate-conway-deployed-74.sh
+
+validate-conway-safe-e2e: rust-build
+	@echo "$(BLUE)=== Conway Safe-like real E2E validation ===$(NC)"
+	@bash $(SCRIPT_DIR)/validate-conway-safe-e2e.sh
 
 rust-publish: rust-build
 	@echo "$(BLUE)=== Publishing Rust Multisig Application ===$(NC)"

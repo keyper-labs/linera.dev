@@ -109,7 +109,11 @@ OWNER_1="$CHAIN_ID"
 log_success "Owner 1: $OWNER_1"
 
 # Generate a second keypair for second owner
-OWNER_2_KEY=$(linera keygen | grep 'Public key:' | awk '{print $3}')
+OWNER_2_KEY=$(linera keygen | tr -d '\r\n')
+if [ -z "$OWNER_2_KEY" ]; then
+    log_error "Failed to generate second owner key"
+    exit 1
+fi
 OWNER_2="User:$OWNER_2_KEY"
 log_success "Owner 2: $OWNER_2"
 echo ""
@@ -118,24 +122,21 @@ echo ""
 log_step "Publishing multisig contract..."
 log_info "This may take a while..."
 
-# Note: The actual publish command will depend on Linera CLI v0.15.x syntax
-# For now, we'll show what the command would look like
+# Show current command sequence for deployment attempts
 log_info "Contract Wasm: $CONTRACT_WASM"
 log_info "Service Wasm: $SERVICE_WASM"
 log_info ""
-log_info "Command to publish (when ready):"
+log_info "Command sequence:"
 echo ""
 cat << EOF
-linera publish \\
-  "$CONTRACT_WASM" \\
-  --service "$SERVICE_WASM" \\
-  --init-application '{"owners": ["$OWNER_1", "$OWNER_2"], "threshold": $THRESHOLD}' \\
-  --faucet "$FAUCET_URL"
+MODULE_ID=\$(linera publish-module "$CONTRACT_WASM" "$SERVICE_WASM")
+linera create-application "\$MODULE_ID" \\
+  --json-argument '{"owners": ["$OWNER_2"], "threshold": $THRESHOLD, "proposal_lifetime": 604800, "time_delay": 0}'
 EOF
 echo ""
 
-log_warning "Note: Actual deployment requires Linera CLI v0.15.x with publish command support"
-log_info "The compiled binaries are ready for deployment when the CLI supports it"
+log_warning "create-application can still fail if SDK/protocol/runtime are not aligned"
+log_info "Use scripts/validate-sdk-workaround.sh with RUN_CREATE_APP_SMOKE=1 for deterministic validation"
 echo ""
 
 # Create test report
@@ -172,40 +173,34 @@ cat > "$WORK_DIR/test-report.md" << EOF
 
 ## Next Steps
 
-Once the Linera CLI v0.15.x fully supports application publishing, use:
+To attempt deployment with current CLI, use:
 
 \`\`\`bash
-# 1. Publish the application
-linera publish \\
-  "$CONTRACT_WASM" \\
-  --service "$SERVICE_WASM" \\
-  --init-application '{\"owners\": [\"$OWNER_1\", \"$OWNER_2\"], \"threshold\": $THRESHOLD}' \\
-  --faucet "$FAUCET_URL\"
+# 1. Publish the module
+MODULE_ID=\$(linera publish-module "$CONTRACT_WASM" "$SERVICE_WASM")
 
-# 2. Submit a transaction (requires both owners to confirm)
+# 2. Create app instance
+linera create-application "\$MODULE_ID" \\
+  --json-argument '{\"owners\": [\"$OWNER_2\"], \"threshold\": $THRESHOLD, \"proposal_lifetime\": 604800, \"time_delay\": 0}'
+
+# 3. Submit a transaction
 linera operation \\
   --application <APPLICATION_ID> \\
-  --operation SubmitTransaction \\
+  --operation SubmitProposal \\
   --arg-to <DESTINATION> \\
   --arg-value 1000 \\
   --arg-data "0x"
 
-# 3. Confirm as Owner 1
+# 4. Confirm proposal
 linera operation \\
   --application <APPLICATION_ID> \\
-  --operation ConfirmTransaction \\
-  --arg-transaction-id 0
-
-# 4. Confirm as Owner 2
-linera operation \\
-  --application <APPLICATION_ID> \\
-  --operation ConfirmTransaction \\
+  --operation ConfirmProposal \\
   --arg-transaction-id 0
 
 # 5. Execute (after threshold reached)
 linera operation \\
   --application <APPLICATION_ID> \\
-  --operation ExecuteTransaction \\
+  --operation ExecuteProposal \\
   --arg-transaction-id 0
 \`\`\`
 
@@ -240,7 +235,7 @@ query GetTransaction(id: 0) {
 
 ✅ Binaries compiled and validated
 ✅ Test environment ready
-⏳ Awaiting full CLI support for application publishing
+⚠ Full success still depends on SDK/protocol/runtime compatibility
 
 ---
 
@@ -257,6 +252,6 @@ log_info "Summary:"
 echo "  ✅ Wasm binaries validated"
 echo "  ✅ Test environment configured"
 echo "  ✅ Owners generated"
-echo "  ⏳ Ready for deployment when CLI supports it"
+echo "  ⚠ Deployment still depends on SDK/protocol/runtime compatibility"
 echo ""
 log_info "To clean up: rm -rf $WORK_DIR"

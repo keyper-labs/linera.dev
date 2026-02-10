@@ -47,6 +47,7 @@ Force Cargo to use the exact versions the SDK was developed against.
 #### `scripts/multisig-app/Cargo.toml`
 
 **Before:**
+
 ```toml
 [dependencies]
 linera-sdk = { version = "0.15.11" }
@@ -57,6 +58,7 @@ async-graphql = "7.0"
 ```
 
 **After:**
+
 ```toml
 [dependencies]
 linera-sdk = { version = "0.15.11" }
@@ -75,6 +77,7 @@ async-graphql-parser = "=7.0.17"
 #### `scripts/multisig-test-rust.sh` (`create_cargo_toml` function)
 
 **Before** (lines 485-516):
+
 ```bash
 create_cargo_toml() {
     log_info "Creating Cargo.toml..."
@@ -110,6 +113,7 @@ EOF
 ```
 
 **After** (lines 485-513):
+
 ```bash
 create_cargo_toml() {
     log_info "Creating Cargo.toml..."
@@ -143,6 +147,7 @@ EOF
 ```
 
 **What changed**:
+
 - Removed `features = ["contract", "service"]` from linera-sdk (see Issue 3)
 - Removed `linera-views` dependency (not needed for the test project)
 - Removed entire `[features]` section (referenced non-existent features)
@@ -195,6 +200,7 @@ profile = "minimal"
 #### `scripts/multisig-app/.cargo/config.toml` (updated comments)
 
 **Before:**
+
 ```toml
 # Cargo config for Linera Wasm compilation
 # Configured to avoid unsupported opcodes like memory.copy (0xFC 0x0A)
@@ -225,6 +231,7 @@ strip = true
 ```
 
 **After:**
+
 ```toml
 # Cargo config for Linera Wasm compilation
 # Configured to avoid unsupported opcodes like memory.copy (0xFC 0x0A)
@@ -263,6 +270,7 @@ strip = true
 #### `scripts/multisig-test-rust.sh` (new `create_rust_toolchain` function)
 
 **Added** after `create_cargo_toml()`:
+
 ```bash
 create_rust_toolchain() {
     log_info "Creating rust-toolchain.toml (pinning Rust 1.86.0)..."
@@ -286,6 +294,7 @@ EOF
 **And** in the `main()` function, added the call:
 
 **Before:**
+
 ```bash
     create_project
     create_contract
@@ -298,6 +307,7 @@ EOF
 ```
 
 **After:**
+
 ```bash
     create_project
     create_contract
@@ -313,6 +323,7 @@ EOF
 #### `scripts/Makefile` (new toolchain check + build fix)
 
 **Before:**
+
 ```makefile
 .PHONY: help init cli-test rust-test clean all
 
@@ -320,6 +331,7 @@ LINERA_SDK_VERSION ?= 0.12.0
 ```
 
 **After:**
+
 ```makefile
 .PHONY: help init cli-test rust-test rust-check-toolchain clean all
 
@@ -327,45 +339,48 @@ LINERA_SDK_VERSION ?= 0.15.11
 ```
 
 **Before** (`rust-build` target):
+
 ```makefile
 rust-build:
-	@echo "$(BLUE)=== Building Rust Multisig Application ===$(NC)"
-	@if [ -d "$(PROJECT_DIR)" ]; then \
-		cd $(PROJECT_DIR) && \
-		cargo build --release --features contract,service; \
-		echo "$(GREEN)Build complete$(NC)"; \
-	else \
-		echo "$(RED)Project not found. Run 'make rust-test' first.$(NC)"; \
-		exit 1; \
-	fi
+ @echo "$(BLUE)=== Building Rust Multisig Application ===$(NC)"
+ @if [ -d "$(PROJECT_DIR)" ]; then \
+  cd $(PROJECT_DIR) && \
+  cargo build --release --features contract,service; \
+  echo "$(GREEN)Build complete$(NC)"; \
+ else \
+  echo "$(RED)Project not found. Run 'make rust-test' first.$(NC)"; \
+  exit 1; \
+ fi
 ```
 
 **After** (`rust-build` + `rust-check-toolchain` targets):
+
 ```makefile
 rust-check-toolchain:
-	@echo "$(BLUE)=== Checking Rust Toolchain ===$(NC)"
-	@RUST_VERSION=$$(rustc --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1); \
-	if [ "$$RUST_VERSION" = "1.86" ]; then \
-		echo "$(GREEN)Rust 1.86 detected$(NC)"; \
-	else \
-		echo "$(YELLOW)Warning: Rust $$RUST_VERSION detected. Rust 1.86.0 required for Linera Wasm.$(NC)"; \
-		echo "$(YELLOW)Run: rustup install 1.86.0$(NC)"; \
-		echo "$(YELLOW)Projects with rust-toolchain.toml will use 1.86 automatically.$(NC)"; \
-	fi
+ @echo "$(BLUE)=== Checking Rust Toolchain ===$(NC)"
+ @RUST_VERSION=$$(rustc --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1); \
+ if [ "$$RUST_VERSION" = "1.86" ]; then \
+  echo "$(GREEN)Rust 1.86 detected$(NC)"; \
+ else \
+  echo "$(YELLOW)Warning: Rust $$RUST_VERSION detected. Rust 1.86.0 required for Linera Wasm.$(NC)"; \
+  echo "$(YELLOW)Run: rustup install 1.86.0$(NC)"; \
+  echo "$(YELLOW)Projects with rust-toolchain.toml will use 1.86 automatically.$(NC)"; \
+ fi
 
 rust-build: rust-check-toolchain
-	@echo "$(BLUE)=== Building Rust Multisig Application ===$(NC)"
-	@if [ -d "$(PROJECT_DIR)" ]; then \
-		cd $(PROJECT_DIR) && \
-		cargo build --release --target wasm32-unknown-unknown; \
-		echo "$(GREEN)Build complete$(NC)"; \
-	else \
-		echo "$(RED)Project not found. Run 'make rust-test' first.$(NC)"; \
-		exit 1; \
-	fi
+ @echo "$(BLUE)=== Building Rust Multisig Application ===$(NC)"
+ @if [ -d "$(PROJECT_DIR)" ]; then \
+  cd $(PROJECT_DIR) && \
+  cargo build --release --target wasm32-unknown-unknown; \
+  echo "$(GREEN)Build complete$(NC)"; \
+ else \
+  echo "$(RED)Project not found. Run 'make rust-test' first.$(NC)"; \
+  exit 1; \
+ fi
 ```
 
 **What changed**:
+
 - `LINERA_SDK_VERSION`: `0.12.0` -> `0.15.11`
 - `rust-build`: Removed `--features contract,service`, added `--target wasm32-unknown-unknown`, added `rust-check-toolchain` dependency
 - New `rust-check-toolchain` target: Validates Rust version and warns if not 1.86
@@ -379,11 +394,13 @@ rust-build: rust-check-toolchain
 The build scripts and Cargo.toml files used `features = ["contract", "service"]` for linera-sdk. These features do **not exist** in version 0.15.11.
 
 Actual features in linera-sdk 0.15.11 (verified via `cargo info linera-sdk`):
+
 ```
 async-trait, ethereum, linera-ethereum, test, wasmer, wasmtime
 ```
 
 Attempting to build with non-existent features produces:
+
 ```
 error: failed to select a version for `linera-sdk`.
 the package depends on `linera-sdk`, with features: `contract`
@@ -395,6 +412,7 @@ but `linera-sdk` does not have these features.
 All references to `features = ["contract", "service"]` were removed. See the code diffs in Issue 1 (Cargo.toml) and Issue 2 (Makefile) above.
 
 Specifically removed from:
+
 - `scripts/multisig-app/Cargo.toml`: `async-graphql = "7.0"` (replaced with sub-crate pins)
 - `scripts/multisig-test-rust.sh`: `features = ["contract", "service"]` from linera-sdk dependency, `linera-views` dependency, entire `[features]` section
 - `scripts/Makefile`: `--features contract,service` from `rust-build` target
