@@ -190,16 +190,23 @@ Expected output: All 20 tests pass when network is stable. During Conway testnet
 
 ### Next Phase (Production Development)
 
-| Milestone | Description | Estimate |
-|-----------|-------------|----------|
-| Backend Core | Node.js + @linera/client SDK | 120h |
-| Frontend Core | React + @linera/client SDK | 120h |
-| Integration | End-to-end integration | 80h |
-| Observability | Logging, monitoring, metrics | 40h |
-| QA & UAT | Quality assurance and user testing | 50h |
-| Handoff | Documentation and deployment | 20h |
+**Risk Adjustment**: The estimates below have been increased by 1.5x-2x from original projections based on real challenges encountered during PoC development:
 
-**Total Remaining**: ~430 hours
+- SDK documentation gaps required extensive trial-and-error
+- Undocumented runtime behaviors (nonce jumping, error responses)
+- Testnet instability increased debugging time
+- No established integration patterns for @linera/client
+
+| Milestone | Original | Adjusted | Rationale |
+|-----------|----------|----------|------------|
+| Backend Core | 120h | **180h** | SDK documentation gaps, undocumented behaviors |
+| Frontend Core | 120h | **160h** | @linera/client integration complexity |
+| Integration | 80h | **160h** | 2x multiplier for unexpected runtime issues |
+| Observability | 40h | **60h** | Debugging complexity requires better tooling |
+| QA & UAT | 50h | **100h** | Extensive testing needed for edge cases |
+| Handoff | 20h | **30h** | Extra documentation required for unknown SDK |
+
+**Total Remaining**: ~690 hours (increased from ~430h)
 
 ---
 
