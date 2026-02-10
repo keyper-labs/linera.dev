@@ -44,7 +44,8 @@ RUST_TOOLCHAIN="${RUST_TOOLCHAIN:-1.86.0}"
 SKIP_BUILD="${SKIP_BUILD:-0}"
 DEPLOY_ENV="${DEPLOY_ENV:-}"
 SERVICE_PORT="${SERVICE_PORT:-8120}"
-SERVICE_WAIT_SECS="${SERVICE_WAIT_SECS:-8}"
+SERVICE_WAIT_SECS="${SERVICE_WAIT_SECS:-2}"
+SERVICE_STARTUP_TIMEOUT="${SERVICE_STARTUP_TIMEOUT:-60}"
 CURL_TIMEOUT="${CURL_TIMEOUT:-120}"
 
 # Retry configuration for transient network errors
@@ -56,6 +57,7 @@ SESSION_DIR="$REPO_ROOT/.linera-deploy/e2e_verify_${TIMESTAMP}"
 RESULTS_LOG="$SESSION_DIR/results.log"
 RESULTS_MD="$SESSION_DIR/results.md"
 SERVICE_LOG="$SESSION_DIR/service.log"
+TX_COUNTER_FILE="$SESSION_DIR/.tx_count"
 
 # Resolve linera binary
 PINNED_LINERA_BIN="$REPO_ROOT/.tools/linera-0.15.11/bin/linera"
@@ -94,6 +96,20 @@ PASSED_TESTS=0
 FAILED_TESTS=0
 TX_COUNT=0
 
+init_tx_counter() {
+  mkdir -p "$SESSION_DIR"
+  echo "0" > "$TX_COUNTER_FILE"
+}
+
+bump_tx_count() {
+  local current=0
+  if [[ -f "$TX_COUNTER_FILE" ]]; then
+    current=$(cat "$TX_COUNTER_FILE" 2>/dev/null || echo "0")
+  fi
+  current=$((current + 1))
+  echo "$current" > "$TX_COUNTER_FILE"
+}
+
 assert_pass() {
   TOTAL_TESTS=$((TOTAL_TESTS + 1))
   local label="$1"
@@ -119,6 +135,8 @@ is_transient_network_error() {
     || [[ "$text" == *"tcp connect error"* ]] \
     || [[ "$text" == *"received fatal alert: InternalError"* ]] \
     || [[ "$text" == *"SubscriptionFailed"* ]] \
+    || [[ "$text" == *"dns error"* ]] \
+    || [[ "$text" == *"Failed to communicate with a quorum of validators"* ]] \
     || [[ "$text" == *"timed out"* ]] \
     || [[ "$text" == *"connection reset"* ]]
 }
@@ -186,11 +204,37 @@ start_service() {
   "$LINERA_BIN" service --port "$SERVICE_PORT" >> "$SERVICE_LOG" 2>&1 &
   disown
 
-  log_info "Waiting ${SERVICE_WAIT_SECS}s for service startup..."
+  GQL_URL="http://localhost:${SERVICE_PORT}/chains/${CHAIN_ID}/applications/${APPLICATION_ID}"
+  log_info "Waiting ${SERVICE_WAIT_SECS}s before probing service..."
   sleep "$SERVICE_WAIT_SECS"
 
-  GQL_URL="http://localhost:${SERVICE_PORT}/chains/${CHAIN_ID}/applications/${APPLICATION_ID}"
-  log_info "Service ready: $GQL_URL"
+  local deadline=$((SECONDS + SERVICE_STARTUP_TIMEOUT))
+  local probe='{"query":"{ owners threshold nonce }"}'
+  local response=""
+  local rc=0
+  while (( SECONDS < deadline )); do
+    set +e
+    response=$(curl -sS --max-time 5 \
+      -X POST "$GQL_URL" \
+      -H "Content-Type: application/json" \
+      -d "$probe" 2>&1)
+    rc=$?
+    set -e
+
+    if [[ "$rc" -eq 0 && "$response" == *"\"data\""* ]] && ! is_transient_network_error "$response"; then
+      log_info "Service ready: $GQL_URL"
+      return 0
+    fi
+    sleep 2
+  done
+
+  log_err "linera service no quedó listo en ${SERVICE_STARTUP_TIMEOUT}s (port $SERVICE_PORT)"
+  log_warn "Última respuesta del probe: $response"
+  if [[ -f "$SERVICE_LOG" ]]; then
+    log_warn "Últimas líneas de service log:"
+    tail -n 40 "$SERVICE_LOG" | tee -a "$RESULTS_LOG"
+  fi
+  exit 1
 }
 
 switch_owner() {
@@ -203,47 +247,47 @@ switch_owner() {
 # ---------------------------------------------------------------------------
 # GraphQL helpers
 # ---------------------------------------------------------------------------
+graphql_request() {
+  local payload="$1"
+  local label="$2"
+  local response
+
+  bump_tx_count
+  response=$(run_with_retry "graphql:$label" \
+    curl -sS --max-time "$CURL_TIMEOUT" \
+      -X POST "$GQL_URL" \
+      -H "Content-Type: application/json" \
+      -d "$payload")
+
+  if [[ -z "$response" ]]; then
+    log_err "GraphQL respuesta vacía en $label"
+    return 1
+  fi
+
+  echo "$response" >> "$RESULTS_LOG"
+  printf '%s' "$response"
+}
+
 gql_query() {
   local query="$1"
   local label="${2:-query}"
-  TX_COUNT=$((TX_COUNT + 1))
-
   local payload
   payload=$(printf '{"query":"%s"}' "$query")
-
-  local response
-  response=$(curl -s --max-time "$CURL_TIMEOUT" \
-    -X POST "$GQL_URL" \
-    -H "Content-Type: application/json" \
-    -d "$payload" 2>&1) || true
-
-  echo "$response" >> "$RESULTS_LOG"
-  echo "$response"
+  graphql_request "$payload" "$label"
 }
 
 gql_mutate() {
   local mutation="$1"
   local label="${2:-mutation}"
-  TX_COUNT=$((TX_COUNT + 1))
-
   local payload
   payload=$(printf '{"query":"mutation { %s }"}' "$mutation")
-
-  local response
-  response=$(curl -s --max-time "$CURL_TIMEOUT" \
-    -X POST "$GQL_URL" \
-    -H "Content-Type: application/json" \
-    -d "$payload" 2>&1) || true
-
-  echo "$response" >> "$RESULTS_LOG"
-  echo "$response"
+  graphql_request "$payload" "$label"
 }
 
 # Extract a JSON field value (simple jq-like for portability)
 json_field() {
   local json="$1"
   local field="$2"
-  # Use python3 if available, else basic grep
   if command -v python3 >/dev/null 2>&1; then
     echo "$json" | python3 -c "
 import sys, json
@@ -252,18 +296,53 @@ try:
     keys = '$field'.split('.')
     v = d
     for k in keys:
-        if isinstance(v, dict):
+        if isinstance(v, dict) and k in v:
             v = v.get(k)
         else:
             v = None
             break
     if v is not None:
-        print(v)
+        if isinstance(v, bool):
+            print('true' if v else 'false')
+        elif isinstance(v, (dict, list)):
+            print(json.dumps(v))
+        else:
+            print(v)
 except:
     pass
 " 2>/dev/null || true
   else
     echo "$json" | grep -o "\"$field\":[^,}]*" | head -1 | sed 's/.*://' | tr -d ' "' || true
+  fi
+}
+
+extract_tx_hash() {
+  local json="$1"
+  local operation="${2:-}"
+  if command -v python3 >/dev/null 2>&1; then
+    echo "$json" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    out = None
+    data = d.get('data')
+    if isinstance(data, str) and data:
+        out = data
+    elif isinstance(data, dict):
+        if '$operation':
+            v = data.get('$operation')
+            if isinstance(v, str) and v:
+                out = v
+        if out is None:
+            for v in data.values():
+                if isinstance(v, str) and v:
+                    out = v
+                    break
+    if out:
+        print(out)
+except:
+    pass
+" 2>/dev/null || true
   fi
 }
 
@@ -282,6 +361,13 @@ trap cleanup EXIT
 # =============================================================================
 mkdir -p "$SESSION_DIR"
 touch "$RESULTS_LOG"
+init_tx_counter
+
+RUNTIME_SESSION_DIR="$SESSION_DIR"
+RUNTIME_RESULTS_LOG="$RESULTS_LOG"
+RUNTIME_RESULTS_MD="$RESULTS_MD"
+RUNTIME_SERVICE_LOG="$SERVICE_LOG"
+RUNTIME_TX_COUNTER_FILE="$TX_COUNTER_FILE"
 
 echo -e "${BOLD}${CYAN}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
@@ -302,6 +388,14 @@ if [[ -n "$DEPLOY_ENV" && -f "$DEPLOY_ENV" ]]; then
   log_step "Reusing Existing Deployment"
   # shellcheck disable=SC1090
   source "$DEPLOY_ENV"
+  SESSION_DIR="$RUNTIME_SESSION_DIR"
+  RESULTS_LOG="$RUNTIME_RESULTS_LOG"
+  RESULTS_MD="$RUNTIME_RESULTS_MD"
+  SERVICE_LOG="$RUNTIME_SERVICE_LOG"
+  TX_COUNTER_FILE="$RUNTIME_TX_COUNTER_FILE"
+  mkdir -p "$SESSION_DIR"
+  touch "$RESULTS_LOG"
+  init_tx_counter
   log_info "Loaded deployment from: $DEPLOY_ENV"
   log_info "Chain: $CHAIN_ID"
   log_info "Application: $APPLICATION_ID"
@@ -343,7 +437,8 @@ else
 
   # Verify no bulk-memory opcodes
   if command -v wasm-objdump >/dev/null 2>&1; then
-    OPCODES=$(wasm-objdump -d "$CONTRACT_WASM" 2>/dev/null | grep -cE 'memory\.(copy|fill)' || echo 0)
+    OPCODES=$(wasm-objdump -d "$CONTRACT_WASM" 2>/dev/null | grep -cE 'memory\.(copy|fill)' || true)
+    OPCODES="${OPCODES:-0}"
     assert_pass "Zero bulk-memory opcodes in contract" "[[ '$OPCODES' == '0' ]]"
   else
     log_warn "wasm-objdump not found — skipping opcode check"
@@ -501,7 +596,7 @@ log_step "Test 2: Submit ChangeThreshold(1) — Owner1"
 RESP=$(gql_mutate 'submitChangeThreshold(threshold: 1)' "submit-change-threshold")
 log_tx "submitChangeThreshold response: $RESP"
 
-TX_HASH=$(json_field "$RESP" "data.submitChangeThreshold")
+TX_HASH=$(extract_tx_hash "$RESP" "submitChangeThreshold")
 assert_pass "ChangeThreshold mutation accepted" "[[ -n '$TX_HASH' ]]"
 
 # Verify proposal created
@@ -519,7 +614,7 @@ switch_owner "$OWNER2" "Owner2"
 RESP=$(gql_mutate 'confirmProposal(proposalId: 0)' "confirm-proposal-0")
 log_tx "confirmProposal response: $RESP"
 
-TX_HASH=$(json_field "$RESP" "data.confirmProposal")
+TX_HASH=$(extract_tx_hash "$RESP" "confirmProposal")
 assert_pass "Confirm mutation accepted" "[[ -n '$TX_HASH' ]]"
 
 # Verify 2 confirmations
@@ -550,7 +645,7 @@ log_step "Test 5: Transfer 1 Token to Owner2"
 RESP=$(gql_mutate "submitTransfer(to: \\\"$OWNER2\\\", value: 1)" "submit-transfer")
 log_tx "submitTransfer response: $RESP"
 
-TX_HASH=$(json_field "$RESP" "data.submitTransfer")
+TX_HASH=$(extract_tx_hash "$RESP" "submitTransfer")
 assert_pass "Transfer mutation accepted" "[[ -n '$TX_HASH' ]]"
 
 # Find the transfer proposal ID (nonce may have jumped)
@@ -595,7 +690,7 @@ log_step "Test 6: Restore Threshold to 2"
 RESP=$(gql_mutate 'submitChangeThreshold(threshold: 2)' "submit-change-threshold-2")
 log_tx "submitChangeThreshold(2) response: $RESP"
 
-TX_HASH=$(json_field "$RESP" "data.submitChangeThreshold")
+TX_HASH=$(extract_tx_hash "$RESP" "submitChangeThreshold")
 assert_pass "ChangeThreshold(2) mutation accepted" "[[ -n '$TX_HASH' ]]"
 
 # Find the ChangeThreshold(2) proposal
@@ -670,7 +765,7 @@ if [[ -n "$REVOKE_ID" ]]; then
   RESP=$(gql_mutate "revokeConfirmation(proposalId: $REVOKE_ID)" "revoke-confirmation")
   log_tx "revokeConfirmation response: $RESP"
 
-  TX_HASH=$(json_field "$RESP" "data.revokeConfirmation")
+  TX_HASH=$(extract_tx_hash "$RESP" "revokeConfirmation")
   assert_pass "Revoke mutation accepted" "[[ -n '$TX_HASH' ]]"
 
   # Verify revocation
@@ -693,7 +788,7 @@ NEW_OWNER="0x0000000000000000000000000000000000000000000000000000000000001234"
 RESP=$(gql_mutate "submitAddOwner(owner: \\\"$NEW_OWNER\\\")" "submit-add-owner")
 log_tx "submitAddOwner response: $RESP"
 
-TX_HASH=$(json_field "$RESP" "data.submitAddOwner")
+TX_HASH=$(extract_tx_hash "$RESP" "submitAddOwner")
 assert_pass "AddOwner mutation accepted" "[[ -n '$TX_HASH' ]]"
 
 # Find AddOwner proposal
@@ -723,7 +818,7 @@ if [[ -n "$ADD_ID" ]]; then
   RESP=$(gql_mutate "confirmProposal(proposalId: $ADD_ID)" "confirm-add-owner")
   log_tx "confirmProposal (AddOwner) response: $RESP"
 
-  TX_HASH=$(json_field "$RESP" "data.confirmProposal")
+  TX_HASH=$(extract_tx_hash "$RESP" "confirmProposal")
   assert_pass "Owner2 confirm AddOwner accepted" "[[ -n '$TX_HASH' ]]"
 
   # Verify 2 confirmations
@@ -790,6 +885,7 @@ assert_pass "At least 3 proposals executed" "[[ '${EXEC_COUNT:-0}' -ge 3 ]]"
 # =============================================================================
 
 log_step "Generating Report"
+TX_COUNT=$(cat "$TX_COUNTER_FILE" 2>/dev/null || echo "0")
 
 cat > "$RESULTS_MD" <<EOF
 # E2E Multisig Verification Results
