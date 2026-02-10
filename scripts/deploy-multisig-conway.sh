@@ -29,6 +29,111 @@ extract_protocol_version() {
   "$LINERA_BIN" --version 2>/dev/null | awk '/Linera protocol:/ { gsub(/^v/, "", $3); print $3; exit }'
 }
 
+is_transient_network_error() {
+  local text="$1"
+  [[ "$text" == *"Blobs not found"* ]] \
+    || [[ "$text" == *"Round number should be Fast"* ]] \
+    || [[ "$text" == *"Not signing timeout certificate"* ]] \
+    || [[ "$text" == *"The service is currently unavailable"* ]] \
+    || [[ "$text" == *"tcp connect error"* ]] \
+    || [[ "$text" == *"received fatal alert: InternalError"* ]] \
+    || [[ "$text" == *"SubscriptionFailed"* ]] \
+    || [[ "$text" == *"timed out"* ]] \
+    || [[ "$text" == *"connection reset"* ]]
+}
+
+run_with_retry() {
+  local label="$1"
+  shift
+  local max_retries="${DEPLOY_RETRIES:-8}"
+  local base_delay="${DEPLOY_RETRY_DELAY_SECS:-2}"
+  local attempt=1
+  local output=""
+  local rc=0
+  local delay=0
+
+  while [[ "$attempt" -le "$max_retries" ]]; do
+    set +e
+    output="$("$@" 2>&1)"
+    rc=$?
+    set -e
+
+    if [[ "$rc" -eq 0 ]]; then
+      printf '%s' "$output"
+      return 0
+    fi
+
+    if ! is_transient_network_error "$output"; then
+      printf '%s\n' "$output" >&2
+      return "$rc"
+    fi
+
+    if [[ "$attempt" -ge "$max_retries" ]]; then
+      printf '%s\n' "$output" >&2
+      return "$rc"
+    fi
+
+    delay=$((base_delay * attempt))
+    if [[ "$delay" -gt 20 ]]; then
+      delay=20
+    fi
+    log_warn "$label transient failure (attempt $attempt/$max_retries). Retrying in ${delay}s..." >&2
+    sleep "$delay"
+    attempt=$((attempt + 1))
+  done
+
+  printf '%s\n' "$output" >&2
+  return 1
+}
+
+wait_for_chain_ready() {
+  local chain_id="$1"
+  local attempts="${CHAIN_READY_RETRIES:-20}"
+  local delay="${CHAIN_READY_DELAY_SECS:-2}"
+  local rc=0
+  local output=""
+
+  for _ in $(seq 1 "$attempts"); do
+    set +e
+    output="$("$LINERA_BIN" show-ownership --chain-id "$chain_id" 2>&1)"
+    rc=$?
+    set -e
+    if [[ "$rc" -eq 0 ]]; then
+      return 0
+    fi
+    if ! is_transient_network_error "$output"; then
+      log_warn "show-ownership returned non-transient error while waiting for chain readiness:"
+      printf '%s\n' "$output" >&2
+    fi
+    sleep "$delay"
+  done
+
+  log_warn "Chain $chain_id still not fully visible on all validators after warm-up window."
+  return 1
+}
+
+extract_module_id() {
+  local output="$1"
+  local id=""
+  # ModuleId is typically longer than 64 hex chars (composite). Prefer long tokens first.
+  id="$(printf '%s\n' "$output" | grep -Eo '[0-9a-f]{128,}' | tail -n1 || true)"
+  if [[ -n "$id" ]]; then
+    printf '%s' "$id"
+    return 0
+  fi
+  # Fallback for runtimes that may emit shorter identifiers.
+  id="$(printf '%s\n' "$output" | grep -Eo '[0-9a-f]{64,}' | tail -n1 || true)"
+  printf '%s' "$id"
+}
+
+extract_application_id() {
+  local output="$1"
+  local id=""
+  # ApplicationId is expected to be a 64-hex token.
+  id="$(printf '%s\n' "$output" | grep -Eo '[0-9a-f]{64}' | tail -n1 || true)"
+  printf '%s' "$id"
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_DIR="$REPO_ROOT/scripts/multisig-app"
@@ -201,10 +306,10 @@ if [[ "$owner_count" -gt 1 ]]; then
   "$LINERA_BIN" wallet show 2>/dev/null | awk '/^Chain ID:/ { print $3 }' >"$before_chains_file"
 
   set +e
-  OPEN_OUTPUT="$("$LINERA_BIN" open-multi-owner-chain \
+  OPEN_OUTPUT="$(run_with_retry "open-multi-owner-chain" "$LINERA_BIN" open-multi-owner-chain \
     --from "$SOURCE_CHAIN_ID" \
     --owners "$owners_json" \
-    --initial-balance "$MULTI_OWNER_INITIAL_BALANCE" 2>&1)"
+    --initial-balance "$MULTI_OWNER_INITIAL_BALANCE")"
   rc=$?
   set -e
   if [[ $rc -ne 0 ]]; then
@@ -230,23 +335,25 @@ if [[ "$owner_count" -gt 1 ]]; then
   CHAIN_ID="$NEW_CHAIN_ID"
   "$LINERA_BIN" set-preferred-owner --chain-id "$CHAIN_ID" --owner "$OWNER_RAW" >/dev/null
   "$LINERA_BIN" sync "$CHAIN_ID" >/dev/null 2>&1 || true
+  wait_for_chain_ready "$CHAIN_ID" || true
   log_ok "Using multi-owner chain: $CHAIN_ID"
 fi
 
 JSON_ARG="$(printf '{"owners":%s,"threshold":%s,"proposal_lifetime":%s,"time_delay":%s}' "$owners_json" "$THRESHOLD" "$PROPOSAL_LIFETIME" "$TIME_DELAY")"
 
 log_info "Publishing module to Conway..."
-PUBLISH_OUTPUT="$($LINERA_BIN publish-module "$CONTRACT_WASM" "$SERVICE_WASM" "$CHAIN_ID")"
-MODULE_ID="$(printf '%s\n' "$PUBLISH_OUTPUT" | awk 'NF{line=$0} END{print line}' | tr -d '\r')"
+PUBLISH_OUTPUT="$(run_with_retry "publish-module" "$LINERA_BIN" publish-module "$CONTRACT_WASM" "$SERVICE_WASM" "$CHAIN_ID")"
+MODULE_ID="$(extract_module_id "$PUBLISH_OUTPUT")"
 if [[ -z "$MODULE_ID" ]]; then
   log_err "publish-module did not return module id."
+  printf '%s\n' "$PUBLISH_OUTPUT" >&2
   exit 1
 fi
 log_ok "Module published: $MODULE_ID"
 
 log_info "Creating application with argument: $JSON_ARG"
 set +e
-CREATE_OUTPUT="$($LINERA_BIN create-application "$MODULE_ID" "$CHAIN_ID" --json-argument "$JSON_ARG" 2>&1)"
+CREATE_OUTPUT="$(run_with_retry "create-application" "$LINERA_BIN" create-application "$MODULE_ID" "$CHAIN_ID" --json-argument "$JSON_ARG")"
 rc=$?
 set -e
 if [[ $rc -ne 0 ]]; then
@@ -255,7 +362,7 @@ if [[ $rc -ne 0 ]]; then
   exit 1
 fi
 
-APPLICATION_ID="$(printf '%s\n' "$CREATE_OUTPUT" | awk 'NF{line=$0} END{print line}' | tr -d '\r')"
+APPLICATION_ID="$(extract_application_id "$CREATE_OUTPUT")"
 if [[ -z "$APPLICATION_ID" ]]; then
   log_err "Could not parse application id from create-application output."
   printf '%s\n' "$CREATE_OUTPUT" >&2
